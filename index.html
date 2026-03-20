@@ -103,8 +103,36 @@ function App() {
   const [fileName, setFileName] = useState(null);
   const [stats, setStats] = useState(null);
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
+  const [editing, setEditing] = useState(null); // {pickupTime, returnTime}
   const fileRef = useRef(null);
   const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3500); };
+
+  const startEditing = (trip) => {
+    const pt = fmtTime(trip.pickupDate) || "10:00";
+    const rt = fmtTime(trip.returnDate) || "10:00";
+    // Convert "09:00" format to input-friendly "09:00"
+    setEditing({ pickupTime: pt.replace(/[^\d:]/g,""), returnTime: rt.replace(/[^\d:]/g,"") });
+  };
+
+  const saveTimeEdit = () => {
+    if (!selected || !editing) return;
+    const updateDate = (dateStr, newTime) => {
+      if (!dateStr || !newTime) return dateStr;
+      const d = new Date(dateStr);
+      const [h, m] = newTime.split(":").map(Number);
+      if (isNaN(h) || isNaN(m)) return dateStr;
+      d.setHours(h, m, 0, 0);
+      return d.toISOString();
+    };
+    const updatedTrip = { ...selected, pickupDate: updateDate(selected.pickupDate, editing.pickupTime), returnDate: updateDate(selected.returnDate, editing.returnTime) };
+    const updatedTrips = trips.map(t => t.id === selected.id ? updatedTrip : t);
+    setTrips(updatedTrips);
+    setSelected(updatedTrip);
+    saveTrips(updatedTrips, fileName);
+    computeStats(updatedTrips);
+    setEditing(null);
+    showToast("Horarios atualizados");
+  };
 
   useEffect(() => {
     (async () => { try { const r = (() => { const v = localStorage.getItem("gs-trips-excel"); return v ? { value: v } : null; })(); if(r?.value){const d=JSON.parse(r.value);if(d.trips){setTrips(d.trips);setFileName(d.fileName);computeStats(d.trips);}} } catch{} })();
@@ -241,7 +269,7 @@ function App() {
                   </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {group.events.map((ev,idx)=><EventCard key={`${ev.trip.id}-${ev.type}-${idx}`} ev={ev} onSelect={()=>{setSelected(ev.trip);setTab("detail");}}/>)}
+                  {group.events.map((ev,idx)=><EventCard key={`${ev.trip.id}-${ev.type}-${idx}`} ev={ev} onSelect={()=>{setSelected(ev.trip);setEditing(null);setTab("detail");}}/>)}
                 </div>
               </div>
             );
@@ -257,7 +285,7 @@ function App() {
         </>)}
 
         {tab==="detail"&&selected&&(<>
-          <button onClick={()=>setTab("trips")} style={{background:"none",border:"none",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",padding:0,marginBottom:14}}>← Voltar</button>
+          <button onClick={()=>{setTab("trips");setEditing(null);}} style={{background:"none",border:"none",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",padding:0,marginBottom:14}}>← Voltar</button>
           <div style={{...S.card,padding:20,marginBottom:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div>
@@ -277,8 +305,41 @@ function App() {
           </div>
           <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>👤 Cliente</div><DR l="Nome" v={selected.customerName}/>{selected.customerId&&<DR l="ID" v={`#${selected.customerId}`}/>}{selected.phone&&<DR l="Telefone" v={selected.phone}/>}{selected.email&&<DR l="Email" v={selected.email}/>}</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <div style={{...S.card,padding:16,borderColor:`${PICKUP_COLOR}30`}}><div style={{...S.section,color:PICKUP_COLOR}}>🟢 Saida</div><DR l="Local" v={selected.pickupLocation}/><DR l="Data" v={fmtDate(selected.pickupDate)}/><DR l="Hora" v={fmtTime(selected.pickupDate)}/></div>
-            <div style={{...S.card,padding:16,borderColor:`${RETURN_COLOR}30`}}><div style={{...S.section,color:RETURN_COLOR}}>🟠 Retorno</div><DR l="Local" v={selected.returnLocation}/><DR l="Data" v={fmtDate(selected.returnDate)}/><DR l="Hora" v={fmtTime(selected.returnDate)}/></div>
+            <div style={{...S.card,padding:16,borderColor:`${PICKUP_COLOR}30`}}>
+              <div style={{...S.section,color:PICKUP_COLOR}}>🟢 Saida</div>
+              <DR l="Local" v={selected.pickupLocation}/>
+              <DR l="Data" v={fmtDate(selected.pickupDate)}/>
+              {editing ? (
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
+                  <span style={{fontSize:11,color:"#555"}}>Hora</span>
+                  <input type="time" value={editing.pickupTime} onChange={e=>setEditing({...editing,pickupTime:e.target.value})}
+                    style={{background:"#0C0C0C",border:`1px solid ${PICKUP_COLOR}40`,borderRadius:6,padding:"4px 8px",color:PICKUP_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
+                </div>
+              ) : <DR l="Hora" v={fmtTime(selected.pickupDate)}/>}
+            </div>
+            <div style={{...S.card,padding:16,borderColor:`${RETURN_COLOR}30`}}>
+              <div style={{...S.section,color:RETURN_COLOR}}>🟠 Retorno</div>
+              <DR l="Local" v={selected.returnLocation}/>
+              <DR l="Data" v={fmtDate(selected.returnDate)}/>
+              {editing ? (
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
+                  <span style={{fontSize:11,color:"#555"}}>Hora</span>
+                  <input type="time" value={editing.returnTime} onChange={e=>setEditing({...editing,returnTime:e.target.value})}
+                    style={{background:"#0C0C0C",border:`1px solid ${RETURN_COLOR}40`,borderRadius:6,padding:"4px 8px",color:RETURN_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
+                </div>
+              ) : <DR l="Hora" v={fmtTime(selected.returnDate)}/>}
+            </div>
+          </div>
+          {/* Edit/Save buttons */}
+          <div style={{marginBottom:12}}>
+            {!editing ? (
+              <button onClick={()=>startEditing(selected)} style={{width:"100%",padding:"10px",borderRadius:10,border:"1px solid rgba(245,158,11,0.3)",background:"rgba(245,158,11,0.06)",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>✏️ Editar horarios</button>
+            ) : (
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={saveTimeEdit} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #D97706)",color:"#0C0C0C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Barlow Condensed', sans-serif",textTransform:"uppercase",letterSpacing:1}}>Salvar horarios</button>
+                <button onClick={()=>setEditing(null)} style={{padding:"10px 16px",borderRadius:10,border:"1px solid #333",background:"transparent",color:"#888",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Cancelar</button>
+              </div>
+            )}
           </div>
           <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>📊 Detalhes</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}><MS label="Dias" value={selected.days||daysBetween(selected.pickupDate,selected.returnDate)}/><MS label="Milhas" value={selected.mileage||0}/><MS label="Desconto" value={money(selected.discount)} small/><MS label="One-way" value={money(selected.oneWay)} small/></div></div>
           <div style={{...S.card,padding:16,marginBottom:12,borderColor:"rgba(245,158,11,0.15)"}}><div style={S.section}>💰 Financeiro</div>{selected.airportTax>0&&<DR l="Airport Tax" v={money(selected.airportTax)}/>}{selected.flRentalTax>0&&<DR l="FL Rental Tax" v={money(selected.flRentalTax)}/>}{selected.stateTax>0&&<DR l="State Tax" v={money(selected.stateTax)}/>}<DR l="Total" v={money(selected.total)} hl/><DR l="Pago" v={money(selected.paid)}/><DR l="Saldo" v={money(selected.balance)} hl={selected.balance>0}/></div>
