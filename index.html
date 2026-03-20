@@ -108,10 +108,16 @@ function App() {
   const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3500); };
 
   const startEditing = (trip) => {
-    const pt = fmtTime(trip.pickupDate) || "10:00";
-    const rt = fmtTime(trip.returnDate) || "10:00";
-    // Convert "09:00" format to input-friendly "09:00"
-    setEditing({ pickupTime: pt.replace(/[^\d:]/g,""), returnTime: rt.replace(/[^\d:]/g,"") });
+    setEditing({
+      pickupTime: (fmtTime(trip.pickupDate) || "10:00").replace(/[^\d:]/g,""),
+      returnTime: (fmtTime(trip.returnDate) || "10:00").replace(/[^\d:]/g,""),
+      pickupMileage: trip.pickupMileage || "",
+      returnMileage: trip.returnMileage || "",
+      total: trip.total || 0,
+      paid: trip.paid || 0,
+      balance: trip.balance || 0,
+      discount: trip.discount || 0,
+    });
   };
 
   const saveTimeEdit = () => {
@@ -124,14 +130,24 @@ function App() {
       d.setHours(h, m, 0, 0);
       return d.toISOString();
     };
-    const updatedTrip = { ...selected, pickupDate: updateDate(selected.pickupDate, editing.pickupTime), returnDate: updateDate(selected.returnDate, editing.returnTime) };
+    const updatedTrip = {
+      ...selected,
+      pickupDate: updateDate(selected.pickupDate, editing.pickupTime),
+      returnDate: updateDate(selected.returnDate, editing.returnTime),
+      pickupMileage: editing.pickupMileage,
+      returnMileage: editing.returnMileage,
+      total: Number(editing.total) || 0,
+      paid: Number(editing.paid) || 0,
+      balance: Number(editing.balance) || 0,
+      discount: Number(editing.discount) || 0,
+    };
     const updatedTrips = trips.map(t => t.id === selected.id ? updatedTrip : t);
     setTrips(updatedTrips);
     setSelected(updatedTrip);
     saveTrips(updatedTrips, fileName);
     computeStats(updatedTrips);
     setEditing(null);
-    showToast("Horarios atualizados");
+    showToast("Dados atualizados");
   };
 
   useEffect(() => {
@@ -392,40 +408,79 @@ function App() {
               <div style={{...S.section,color:PICKUP_COLOR}}>🟢 Saida</div>
               <DR l="Local" v={selected.pickupLocation}/>
               <DR l="Data" v={fmtDate(selected.pickupDate)}/>
-              {editing ? (
+              {editing ? (<>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
                   <span style={{fontSize:11,color:"#555"}}>Hora</span>
                   <input type="time" value={editing.pickupTime} onChange={e=>setEditing({...editing,pickupTime:e.target.value})}
                     style={{background:"#0C0C0C",border:`1px solid ${PICKUP_COLOR}40`,borderRadius:6,padding:"4px 8px",color:PICKUP_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
                 </div>
-              ) : <DR l="Hora" v={fmtTime(selected.pickupDate)}/>}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
+                  <span style={{fontSize:11,color:"#555"}}>Milhas</span>
+                  <input type="number" placeholder="0" value={editing.pickupMileage} onChange={e=>setEditing({...editing,pickupMileage:e.target.value})}
+                    style={{background:"#0C0C0C",border:`1px solid ${PICKUP_COLOR}40`,borderRadius:6,padding:"4px 8px",color:PICKUP_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
+                </div>
+              </>) : (<>
+                <DR l="Hora" v={fmtTime(selected.pickupDate)}/>
+                <DR l="Milhas" v={selected.pickupMileage || "—"}/>
+              </>)}
             </div>
             <div style={{...S.card,padding:16,borderColor:`${RETURN_COLOR}30`}}>
               <div style={{...S.section,color:RETURN_COLOR}}>🟠 Retorno</div>
               <DR l="Local" v={selected.returnLocation}/>
               <DR l="Data" v={fmtDate(selected.returnDate)}/>
-              {editing ? (
+              {editing ? (<>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
                   <span style={{fontSize:11,color:"#555"}}>Hora</span>
                   <input type="time" value={editing.returnTime} onChange={e=>setEditing({...editing,returnTime:e.target.value})}
                     style={{background:"#0C0C0C",border:`1px solid ${RETURN_COLOR}40`,borderRadius:6,padding:"4px 8px",color:RETURN_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
                 </div>
-              ) : <DR l="Hora" v={fmtTime(selected.returnDate)}/>}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
+                  <span style={{fontSize:11,color:"#555"}}>Milhas</span>
+                  <input type="number" placeholder="0" value={editing.returnMileage} onChange={e=>setEditing({...editing,returnMileage:e.target.value})}
+                    style={{background:"#0C0C0C",border:`1px solid ${RETURN_COLOR}40`,borderRadius:6,padding:"4px 8px",color:RETURN_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
+                </div>
+              </>) : (<>
+                <DR l="Hora" v={fmtTime(selected.returnDate)}/>
+                <DR l="Milhas" v={selected.returnMileage || "—"}/>
+              </>)}
             </div>
+          </div>
+          {/* Financeiro */}
+          <div style={{...S.card,padding:16,marginBottom:12,borderColor:"rgba(245,158,11,0.15)"}}>
+            <div style={S.section}>💰 Financeiro</div>
+            {editing ? (<>
+              <EditRow label="Total" value={editing.total} color="#F59E0B" onChange={v=>setEditing({...editing,total:v})}/>
+              <EditRow label="Pago" value={editing.paid} color="#22c55e" onChange={v=>setEditing({...editing,paid:v})}/>
+              <EditRow label="Saldo" value={editing.balance} color="#ef4444" onChange={v=>setEditing({...editing,balance:v})}/>
+              <EditRow label="Desconto" value={editing.discount} color="#a78bfa" onChange={v=>setEditing({...editing,discount:v})}/>
+            </>) : (<>
+              {selected.airportTax>0&&<DR l="Airport Tax" v={money(selected.airportTax)}/>}
+              {selected.flRentalTax>0&&<DR l="FL Rental Tax" v={money(selected.flRentalTax)}/>}
+              {selected.stateTax>0&&<DR l="State Tax" v={money(selected.stateTax)}/>}
+              {selected.discount!==0&&<DR l="Desconto" v={money(selected.discount)}/>}
+              <DR l="Total" v={money(selected.total)} hl/>
+              <DR l="Pago" v={money(selected.paid)}/>
+              <DR l="Saldo" v={money(selected.balance)} hl={selected.balance>0}/>
+            </>)}
           </div>
           {/* Edit/Save buttons */}
           <div style={{marginBottom:12}}>
             {!editing ? (
-              <button onClick={()=>startEditing(selected)} style={{width:"100%",padding:"10px",borderRadius:10,border:"1px solid rgba(245,158,11,0.3)",background:"rgba(245,158,11,0.06)",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>✏️ Editar horarios</button>
+              <button onClick={()=>startEditing(selected)} style={{width:"100%",padding:"10px",borderRadius:10,border:"1px solid rgba(245,158,11,0.3)",background:"rgba(245,158,11,0.06)",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>✏️ Editar dados</button>
             ) : (
               <div style={{display:"flex",gap:8}}>
-                <button onClick={saveTimeEdit} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #D97706)",color:"#0C0C0C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Barlow Condensed', sans-serif",textTransform:"uppercase",letterSpacing:1}}>Salvar horarios</button>
+                <button onClick={saveTimeEdit} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #D97706)",color:"#0C0C0C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Barlow Condensed', sans-serif",textTransform:"uppercase",letterSpacing:1}}>Salvar</button>
                 <button onClick={()=>setEditing(null)} style={{padding:"10px 16px",borderRadius:10,border:"1px solid #333",background:"transparent",color:"#888",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Cancelar</button>
               </div>
             )}
           </div>
-          <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>📊 Detalhes</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}><MS label="Dias" value={selected.days||daysBetween(selected.pickupDate,selected.returnDate)}/><MS label="Milhas" value={selected.mileage||0}/><MS label="Desconto" value={money(selected.discount)} small/><MS label="One-way" value={money(selected.oneWay)} small/></div></div>
-          <div style={{...S.card,padding:16,marginBottom:12,borderColor:"rgba(245,158,11,0.15)"}}><div style={S.section}>💰 Financeiro</div>{selected.airportTax>0&&<DR l="Airport Tax" v={money(selected.airportTax)}/>}{selected.flRentalTax>0&&<DR l="FL Rental Tax" v={money(selected.flRentalTax)}/>}{selected.stateTax>0&&<DR l="State Tax" v={money(selected.stateTax)}/>}<DR l="Total" v={money(selected.total)} hl/><DR l="Pago" v={money(selected.paid)}/><DR l="Saldo" v={money(selected.balance)} hl={selected.balance>0}/></div>
+          {/* Detalhes */}
+          <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>📊 Detalhes</div><div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8}}>
+            <MS label="Dias" value={selected.days||daysBetween(selected.pickupDate,selected.returnDate)}/>
+            <MS label="Mi saida" value={selected.pickupMileage||"—"} small/>
+            <MS label="Mi retorno" value={selected.returnMileage||"—"} small/>
+            <MS label="One-way" value={money(selected.oneWay)} small/>
+          </div></div>
           <div style={{...S.card,padding:16}}><div style={S.section}>📋 Operacional</div><DR l="Status" v={selected.status}/>{selected.reservationDate&&<DR l="Data reserva" v={selected.reservationDate}/>}{selected.channel&&<DR l="Canal" v={selected.channel}/>}{selected.reservedBy&&<DR l="Reservado por" v={selected.reservedBy}/>}{selected.openedBy&&<DR l="Aberto por" v={selected.openedBy}/>}{selected.closedBy&&<DR l="Fechado por" v={selected.closedBy}/>}{selected.cancelledBy&&<DR l="Cancelado por" v={selected.cancelledBy}/>}</div>
         </>)}
       </div>
@@ -473,6 +528,19 @@ function EventCard({ ev, onSelect }) {
           <div style={{fontSize:16,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed', sans-serif"}}>{money(trip.total)}</div>
           {trip.paid>0&&<div style={{fontSize:10,color:"#22c55e"}}>Pago: {money(trip.paid)}</div>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function EditRow({ label, value, color, onChange }) {
+  return (
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
+      <span style={{fontSize:11,color:"#555"}}>{label}</span>
+      <div style={{display:"flex",alignItems:"center",gap:4}}>
+        <span style={{fontSize:11,color:"#555"}}>US$</span>
+        <input type="number" step="0.01" value={value} onChange={e=>onChange(e.target.value)}
+          style={{background:"#0C0C0C",border:`1px solid ${color}40`,borderRadius:6,padding:"4px 8px",color:color,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:100,textAlign:"right"}}/>
       </div>
     </div>
   );
