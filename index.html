@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GS Car Rental — Trips</title>
+<title>GS Car Rental — Agenda</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23F59E0B'/><text x='16' y='22' font-size='16' font-weight='800' text-anchor='middle' fill='%230a0a0a' font-family='sans-serif'>GS</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -23,7 +23,7 @@ input, select, button { font-family: inherit; }
 <body>
 <div id="root"></div>
 <script type="text/babel" data-type="module">
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
 const S = {
   input: { width: "100%", boxSizing: "border-box", background: "#0C0C0C", border: "1px solid #222", borderRadius: 8, padding: "9px 12px", color: "#E8E8E8", fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none" },
@@ -32,16 +32,19 @@ const S = {
   section: { fontSize: 12, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: 1.5, color: "#888", marginBottom: 14, display: "flex", alignItems: "center", gap: 6 },
 };
 
+const PICKUP_COLOR = "#22c55e";
+const RETURN_COLOR = "#f97316";
+
 function fmtShort(d) { return d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"; }
 function fmtDate(d) { return d ? new Date(d).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }) : "—"; }
+function fmtDayHeader(d) { return d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" }) : ""; }
 function fmtTime(d) { return d ? new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""; }
 function isToday(d) { if (!d) return false; const a = new Date(d), t = new Date(); return a.getFullYear() === t.getFullYear() && a.getMonth() === t.getMonth() && a.getDate() === t.getDate(); }
 function startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d; }
 function daysBetween(a, b) { return (!a||!b) ? 0 : Math.max(1, Math.ceil((new Date(b) - new Date(a)) / 86400000)); }
 function money(v) { return typeof v === "number" ? `US$ ${v.toFixed(2)}` : "—"; }
-
-function storageGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } }
-function storageSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+function dateKey(d) { if (!d) return ""; const dt = new Date(d); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; }
+function dayLabel(dk) { if (dk === dateKey(new Date())) return "Hoje"; if (dk === dateKey(new Date(Date.now()+86400000))) return "Amanha"; return ""; }
 
 function parseExcel(data) {
   const wb = XLSX.read(data, { type: "array", cellDates: true });
@@ -49,135 +52,38 @@ function parseExcel(data) {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
   let headerIdx = -1;
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const r = rows[i];
-    if (!r) continue;
-    const joined = r.map(c => String(c || "")).join("|");
-    if (joined.includes("Reservation#") || joined.includes("RA#")) { headerIdx = i; break; }
+    const r = rows[i]; if (!r) continue;
+    if (r.map(c => String(c || "")).join("|").match(/Reservation#|RA#/)) { headerIdx = i; break; }
   }
   if (headerIdx < 0) return [];
   const headers = rows[headerIdx].map((h, i) => (h || `col_${i}`).toString().trim());
-  const col = (name) => headers.indexOf(name);
-  const colAny = (...names) => { for (const n of names) { const i = headers.indexOf(n); if (i >= 0) return i; } return -1; };
-  const isReservationsFormat = col("Reservation#") >= 0 && col("Vehicle ID") >= 0;
+  const col = (n) => headers.indexOf(n);
+  const colAny = (...ns) => { for (const n of ns) { const i = headers.indexOf(n); if (i >= 0) return i; } return -1; };
+  const isRes = col("Reservation#") >= 0 && col("Vehicle ID") >= 0;
   const trips = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
-    const r = rows[i];
-    if (!r) continue;
-    const resCol = isReservationsFormat ? col("Reservation#") : col("RA#");
-    const resNum = r[resCol];
-    if (!resNum) continue;
+    const r = rows[i]; if (!r) continue;
+    const resCol = isRes ? col("Reservation#") : col("RA#");
+    const resNum = r[resCol]; if (!resNum) continue;
     const resStr = String(resNum);
     if (resStr.match(/^[A-Za-z\s()]+$/) && !resStr.match(/^\d+$/)) continue;
-    if (isReservationsFormat) {
-      const pickupDate = r[col("Pickup Date")];
-      const returnDate = r[col("Return Date")];
-      const fullName = (r[col("Full Name")] || "").toString().trim();
-      trips.push({
-        id: resStr, resNumber: resStr,
-        customerName: fullName.replace(/\s{2,}/g, " ").replace(/\s+(turo|\.|\d+)$/i, "").trim(),
-        phone: r[col("Phone")] || "", vehicle: r[col("Vehicle ID")] || "", vehicleType: r[col("Vehicle Type")] || "",
-        pickupLocation: r[colAny("Loc.Out", "Pickup Location")] || "",
-        pickupDate: pickupDate instanceof Date ? pickupDate.toISOString() : pickupDate,
-        returnDate: returnDate instanceof Date ? returnDate.toISOString() : returnDate,
-        returnLocation: r[colAny("Loc.In", "Return Location")] || "",
-        status: r[col("Status")] || "", days: r[col("#days")] || 0,
-        reservationDate: r[col("Reservation Date")] || "", channel: r[col("Reservation Channel")] || "",
-        reservedBy: r[col("Reserved By")] || "", cancelledBy: r[col("Cancelled By")] || "",
-        cancellationDate: r[col("Cancellation Date")] || null,
-        total: r[col("Total")] || 0, paid: r[col("Paid")] || 0, balance: r[col("Balance")] || 0,
-        isCancelled: r[col("Is Cancelled")] === "Yes", isConfirmed: r[col("Is Confirmed")] === "Yes",
-        email: "", customerId: "", discount: 0, mileage: 0, oneWay: 0, airportTax: 0, flRentalTax: 0, stateTax: 0, invoiceTotal: 0, openedBy: "", closedBy: "",
-      });
+    if (isRes) {
+      const pd = r[col("Pickup Date")], rd = r[col("Return Date")];
+      const fn = (r[col("Full Name")] || "").toString().trim();
+      trips.push({ id: resStr, resNumber: resStr, customerName: fn.replace(/\s{2,}/g," ").replace(/\s+(turo|\.|\d+)$/i,"").trim(), phone: r[col("Phone")]||"", vehicle: r[col("Vehicle ID")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[colAny("Loc.Out","Pickup Location")]||"", pickupDate: pd instanceof Date ? pd.toISOString() : pd, returnDate: rd instanceof Date ? rd.toISOString() : rd, returnLocation: r[colAny("Loc.In","Return Location")]||"", status: r[col("Status")]||"", days: r[col("#days")]||0, reservationDate: r[col("Reservation Date")]||"", channel: r[col("Reservation Channel")]||"", reservedBy: r[col("Reserved By")]||"", cancelledBy: r[col("Cancelled By")]||"", cancellationDate: r[col("Cancellation Date")]||null, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, isCancelled: r[col("Is Cancelled")]==="Yes", isConfirmed: r[col("Is Confirmed")]==="Yes", email:"", customerId:"", discount:0, mileage:0, oneWay:0, airportTax:0, flRentalTax:0, stateTax:0, invoiceTotal:0, openedBy:"", closedBy:"" });
     } else {
-      const pickup = r[col("Pickup Date")]; const ret = r[col("Return Date")];
-      trips.push({
-        id: resStr, resNumber: r[colAny("Res#", "Reservation#")] || resStr,
-        customerId: r[col("Customer ID")] || "", firstName: r[col("First Name")] || "", lastName: r[col("Last Name")] || "",
-        customerName: `${r[col("First Name")] || ""} ${r[col("Last Name")] || ""}`.trim(),
-        phone: r[col("Customer Phone")] || "", email: r[col("Customer Email")] || "",
-        vehicle: r[col("Vehicle")] || "", vehicleType: r[col("Vehicle Type")] || "",
-        pickupLocation: r[col("Pickup Location")] || "",
-        pickupDate: pickup instanceof Date ? pickup.toISOString() : pickup,
-        returnDate: ret instanceof Date ? ret.toISOString() : ret,
-        returnLocation: r[col("Return Location")] || "", status: r[col("Status")] || "",
-        openedBy: r[col("Opened by")] || "", closedBy: r[col("Closed by")] || "",
-        days: r[col("Days")] || 0, discount: r[col("Discount")] || 0, mileage: r[col("Mileage")] || 0,
-        oneWay: r[col("One Way")] || 0, airportTax: r[col("Airport Tax")] || 0,
-        flRentalTax: r[col("Florida Rental Tax")] || 0, stateTax: r[col("State Tax")] || 0,
-        total: r[col("Total")] || 0, paid: r[col("Paid")] || 0, balance: r[col("Balance")] || 0,
-        invoiceTotal: r[col("Invoice Total")] || 0,
-        channel: "", reservedBy: "", cancelledBy: "", cancellationDate: null,
-        isCancelled: (r[col("Status")] || "").toLowerCase() === "cancelled", isConfirmed: false, reservationDate: "",
-      });
+      const pd = r[col("Pickup Date")], rd = r[col("Return Date")];
+      trips.push({ id: resStr, resNumber: r[colAny("Res#","Reservation#")]||resStr, customerId: r[col("Customer ID")]||"", customerName: `${r[col("First Name")]||""} ${r[col("Last Name")]||""}`.trim(), phone: r[col("Customer Phone")]||"", email: r[col("Customer Email")]||"", vehicle: r[col("Vehicle")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[col("Pickup Location")]||"", pickupDate: pd instanceof Date ? pd.toISOString() : pd, returnDate: rd instanceof Date ? rd.toISOString() : rd, returnLocation: r[col("Return Location")]||"", status: r[col("Status")]||"", openedBy: r[col("Opened by")]||"", closedBy: r[col("Closed by")]||"", days: r[col("Days")]||0, discount: r[col("Discount")]||0, mileage: r[col("Mileage")]||0, oneWay: r[col("One Way")]||0, airportTax: r[col("Airport Tax")]||0, flRentalTax: r[col("Florida Rental Tax")]||0, stateTax: r[col("State Tax")]||0, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, invoiceTotal: r[col("Invoice Total")]||0, channel:"", reservedBy:"", cancelledBy:"", cancellationDate:null, isCancelled:(r[col("Status")]||"").toLowerCase()==="cancelled", isConfirmed:false, reservationDate:"" });
     }
   }
   return trips;
 }
 
-const STATUS_COLORS = {
-  Open: { label: "Ativa", color: "#22c55e" },
-  Confirmed: { label: "Confirmada", color: "#3b82f6" },
-  Honored: { label: "Honorada", color: "#8b5cf6" },
-  Closed: { label: "Concluida", color: "#6b7280" },
-  Cancelled: { label: "Cancelada", color: "#ef4444" },
-};
-
-function StatusBadge({ status }) {
-  const s = STATUS_COLORS[status] || { label: status, color: "#555" };
-  return <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: s.color, background: `${s.color}18`, padding: "2px 8px", borderRadius: 999, border: `1px solid ${s.color}30` }}>{s.label}</span>;
-}
-
-function DR({ l, v, hl }) {
-  return <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1A1A1A" }}><span style={{ fontSize: 11, color: "#555" }}>{l}</span><span style={{ fontSize: 12, color: hl ? "#F59E0B" : "#CCC", fontWeight: hl ? 700 : 500, textAlign: "right", maxWidth: "65%" }}>{v}</span></div>;
-}
-
-function MS({ label, value, small }) {
-  return <div style={{ background: "#0C0C0C", borderRadius: 8, padding: "8px 10px", textAlign: "center" }}><div style={{ fontSize: small ? 12 : 16, fontWeight: 700, color: "#E8E8E8", fontFamily: "'Barlow Condensed', sans-serif" }}>{value}</div><div style={{ fontSize: 9, color: "#555", textTransform: "uppercase" }}>{label}</div></div>;
-}
-
-function StatCard({ label, value, color }) {
-  return <div style={{ background: "#111", borderRadius: 10, border: "1px solid #1a1a1a", padding: "10px 12px", textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 700, color, fontFamily: "'Barlow Condensed', sans-serif" }}>{value}</div><div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div></div>;
-}
-
-function TripCard({ trip, onSelect }) {
-  const days = trip.days || daysBetween(trip.pickupDate, trip.returnDate);
-  const pToday = isToday(trip.pickupDate), rToday = isToday(trip.returnDate);
-  return (
-    <div onClick={onSelect} style={{ ...S.card, padding: "14px 16px", cursor: "pointer", transition: "all 0.15s", borderColor: (pToday || rToday) ? "rgba(245,158,11,0.3)" : "#1a1a1a" }}
-      onMouseEnter={e => e.currentTarget.style.background = "#131313"} onMouseLeave={e => e.currentTarget.style.background = "#111"}>
-      <div style={{ display: "flex", gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6, flexWrap: "wrap" }}>
-            <StatusBadge status={trip.status} />
-            {pToday && <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "#F59E0B", background: "rgba(245,158,11,0.12)", padding: "2px 7px", borderRadius: 999, border: "1px solid rgba(245,158,11,0.3)" }}>Pickup hoje</span>}
-            {rToday && <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 7px", borderRadius: 999, border: "1px solid rgba(239,68,68,0.25)" }}>Devolucao hoje</span>}
-            <span style={{ fontSize: 10, color: "#444", fontFamily: "monospace" }}>RA#{trip.id}</span>
-            {trip.balance > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 7px", borderRadius: 999 }}>Saldo ${trip.balance.toFixed(0)}</span>}
-            {trip.customerName.toLowerCase().includes("turo") && <span style={{ fontSize: 9, fontWeight: 700, color: "#a78bfa", background: "rgba(139,92,246,0.1)", padding: "2px 7px", borderRadius: 999 }}>Turo</span>}
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#E8E8E8", marginBottom: 2 }}>{trip.customerName}</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#F5F5F5", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 4 }}>{trip.vehicle}</div>
-          <div style={{ fontSize: 10, color: "#666", marginBottom: 6 }}>{trip.vehicleType}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#999", marginBottom: 3 }}>
-            <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="#666" strokeWidth="1.2"/><line x1="5" y1="1" x2="5" y2="5" stroke="#666" strokeWidth="1.2" strokeLinecap="round"/><line x1="11" y1="1" x2="11" y2="5" stroke="#666" strokeWidth="1.2" strokeLinecap="round"/></svg>
-            {fmtShort(trip.pickupDate)} {fmtTime(trip.pickupDate)} <span style={{ color: "#444" }}>→</span> {fmtShort(trip.returnDate)} {fmtTime(trip.returnDate)} <span style={{ color: "#333" }}>·</span> <span style={{ color: "#666" }}>{days}d</span>
-          </div>
-          <div style={{ fontSize: 10, color: "#555", lineHeight: 1.6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}><svg width="7" height="7" viewBox="0 0 16 16"><circle cx="8" cy="8" r="4" fill="#22c55e"/></svg>{trip.pickupLocation}</div>
-            {trip.returnLocation !== trip.pickupLocation && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><svg width="7" height="7" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="none" stroke="#ef4444" strokeWidth="2.5"/></svg>{trip.returnLocation}</div>}
-          </div>
-        </div>
-        <div style={{ flexShrink: 0, textAlign: "right", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 90 }}>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: "#F59E0B", fontFamily: "'Barlow Condensed', sans-serif" }}>{money(trip.total)}</div>
-            {trip.paid > 0 && <div style={{ fontSize: 10, color: "#22c55e" }}>Pago: {money(trip.paid)}</div>}
-          </div>
-          {trip.mileage > 0 && <div style={{ fontSize: 10, color: "#555" }}>{trip.mileage} mi</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
+const STATUS_COLORS = { Open:{label:"Ativa",color:"#22c55e"}, Confirmed:{label:"Confirmada",color:"#3b82f6"}, Honored:{label:"Honorada",color:"#8b5cf6"}, Closed:{label:"Concluida",color:"#6b7280"}, Cancelled:{label:"Cancelada",color:"#ef4444"} };
+function StatusBadge({status}){ const s=STATUS_COLORS[status]||{label:status,color:"#555"}; return <span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,color:s.color,background:`${s.color}18`,padding:"2px 8px",borderRadius:999,border:`1px solid ${s.color}30`}}>{s.label}</span>; }
+function DR({l,v,hl}){ return <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>{l}</span><span style={{fontSize:12,color:hl?"#F59E0B":"#CCC",fontWeight:hl?700:500,textAlign:"right",maxWidth:"65%"}}>{v}</span></div>; }
+function MS({label,value,small}){ return <div style={{background:"#0C0C0C",borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontSize:small?12:16,fontWeight:700,color:"#E8E8E8",fontFamily:"'Barlow Condensed', sans-serif"}}>{value}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase"}}>{label}</div></div>; }
+function StatCard({label,value,color}){ return <div style={{background:"#111",borderRadius:10,border:"1px solid #1a1a1a",padding:"10px 12px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:700,color,fontFamily:"'Barlow Condensed', sans-serif"}}>{value}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase",letterSpacing:0.5}}>{label}</div></div>; }
 
 function App() {
   const [trips, setTrips] = useState([]);
@@ -188,181 +94,233 @@ function App() {
   const [toast, setToast] = useState(null);
   const [fileName, setFileName] = useState(null);
   const [stats, setStats] = useState(null);
+  const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const fileRef = useRef(null);
-  const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3500); };
 
   useEffect(() => {
-    const d = storageGet("gs-trips-excel");
-    if (d && d.trips) { setTrips(d.trips); setFileName(d.fileName); computeStats(d.trips); }
+    (async () => { try { const r = (() => { const v = localStorage.getItem("gs-trips-excel"); return v ? { value: v } : null; })(); if(r?.value){const d=JSON.parse(r.value);if(d.trips){setTrips(d.trips);setFileName(d.fileName);computeStats(d.trips);}} } catch{} })();
   }, []);
 
-  const saveTrips = (t, fn) => storageSet("gs-trips-excel", { trips: t, fileName: fn });
-
-  const computeStats = (t) => {
-    const today = startOfToday();
-    setStats({ total: t.length, confirmed: t.filter(x => x.status === "Confirmed").length, closed: t.filter(x => x.status === "Closed" || x.status === "Honored").length, cancelled: t.filter(x => x.status === "Cancelled").length, todayPickup: t.filter(x => isToday(x.pickupDate)).length, todayReturn: t.filter(x => isToday(x.returnDate)).length, futureActive: t.filter(x => new Date(x.returnDate) >= today && x.status !== "Cancelled").length, revenue: t.reduce((s, x) => s + (x.total || 0), 0), balance: t.reduce((s, x) => s + (x.balance || 0), 0) });
-  };
+  const saveTrips = async (t, fn) => { try { localStorage.setItem("gs-trips-excel", JSON.stringify({trips:t,fileName:fn})); } catch{} };
+  const computeStats = (t) => { setStats({ total:t.length, confirmed:t.filter(x=>x.status==="Confirmed").length, todayPickup:t.filter(x=>isToday(x.pickupDate)&&x.status!=="Cancelled").length, todayReturn:t.filter(x=>isToday(x.returnDate)&&x.status!=="Cancelled").length, revenue:t.reduce((s,x)=>s+(x.total||0),0), balance:t.reduce((s,x)=>s+(x.balance||0),0) }); };
 
   const handleUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const data = new Uint8Array(ev.target.result);
-        const parsed = parseExcel(data);
-        if (parsed.length === 0) { showToast("Nenhuma reserva encontrada", "error"); return; }
-        parsed.sort((a, b) => new Date(a.pickupDate) - new Date(b.pickupDate));
+        const parsed = parseExcel(new Uint8Array(ev.target.result));
+        if (!parsed.length) { showToast("Nenhuma reserva encontrada","error"); return; }
+        parsed.sort((a,b)=>new Date(a.pickupDate)-new Date(b.pickupDate));
         setTrips(parsed); setFileName(file.name); computeStats(parsed); saveTrips(parsed, file.name);
-        showToast(`${parsed.length} reservas importadas de ${file.name}`);
-      } catch (err) { showToast("Erro: " + err.message, "error"); }
+        showToast(`${parsed.length} reservas importadas`);
+      } catch(err) { showToast("Erro: "+err.message,"error"); }
     };
     reader.readAsArrayBuffer(file);
-    e.target.value = "";
   };
 
-  const today = startOfToday();
-  const filtered = trips.filter(t => {
-    const r = new Date(t.returnDate);
-    let ok = filter === "all" || (filter === "today_future" && r >= today && t.status !== "Cancelled") || (filter === "confirmed" && t.status === "Confirmed") || (filter === "today" && (isToday(t.pickupDate) || isToday(t.returnDate))) || (filter === "closed" && (t.status === "Closed" || t.status === "Honored")) || (filter === "cancelled" && t.status === "Cancelled");
-    if (!ok) return false;
-    const q = search.toLowerCase();
-    return !q || [t.customerName, t.vehicle, t.vehicleType, t.pickupLocation, t.returnLocation, t.id, t.resNumber, t.email, t.phone, t.channel].some(s => (s||"").toLowerCase().includes(q));
-  });
+  const events = useMemo(() => {
+    const evts = [];
+    for (const t of trips) {
+      if (t.status === "Cancelled") continue;
+      evts.push({ type:"pickup", date:t.pickupDate, dateKey:dateKey(t.pickupDate), time:fmtTime(t.pickupDate), trip:t, sortDate:new Date(t.pickupDate) });
+      evts.push({ type:"return", date:t.returnDate, dateKey:dateKey(t.returnDate), time:fmtTime(t.returnDate), trip:t, sortDate:new Date(t.returnDate) });
+    }
+    evts.sort((a,b)=>a.sortDate-b.sortDate||(a.type==="pickup"?-1:1));
+    return evts;
+  }, [trips]);
 
-  const counts = { today_future: trips.filter(t => new Date(t.returnDate) >= today && t.status !== "Cancelled").length, confirmed: trips.filter(t => t.status === "Confirmed").length, today: trips.filter(t => isToday(t.pickupDate) || isToday(t.returnDate)).length, closed: trips.filter(t => t.status === "Closed" || t.status === "Honored").length, cancelled: trips.filter(t => t.status === "Cancelled").length, all: trips.length };
+  const today = startOfToday();
+  const todayKey = dateKey(new Date());
+
+  const filteredEvents = useMemo(() => {
+    return events.filter(ev => {
+      if (filter==="today_future" && ev.sortDate<today) return false;
+      if (filter==="today" && ev.dateKey!==todayKey) return false;
+      if (filter==="tomorrow") { if (ev.dateKey!==dateKey(new Date(Date.now()+86400000))) return false; }
+      if (filter==="week") { const we=new Date(Date.now()+7*86400000); if(ev.sortDate<today||ev.sortDate>we) return false; }
+      if (eventTypeFilter==="pickup" && ev.type!=="pickup") return false;
+      if (eventTypeFilter==="return" && ev.type!=="return") return false;
+      const q=search.toLowerCase();
+      if(q){ const t=ev.trip; if(![t.customerName,t.vehicle,t.vehicleType,t.pickupLocation,t.returnLocation,t.id,t.resNumber,t.phone].some(s=>(s||"").toLowerCase().includes(q))) return false; }
+      return true;
+    });
+  }, [events,filter,eventTypeFilter,search,today,todayKey]);
+
+  const groupedByDay = useMemo(() => {
+    const groups=[]; let ck=null, cg=null;
+    for (const ev of filteredEvents) { if(ev.dateKey!==ck){ck=ev.dateKey;cg={dateKey:ck,events:[]};groups.push(cg);} cg.events.push(ev); }
+    return groups;
+  }, [filteredEvents]);
+
+  const todayEvents = events.filter(e=>e.dateKey===todayKey);
+  const counts = { today_future:events.filter(e=>e.sortDate>=today).length, today:todayEvents.length, tomorrow:events.filter(e=>e.dateKey===dateKey(new Date(Date.now()+86400000))).length, week:events.filter(e=>e.sortDate>=today&&e.sortDate<=new Date(Date.now()+7*86400000)).length, all:events.length };
 
   return (
-    <div>
-      {toast && <div style={{ position: "fixed", top: 16, right: 16, zIndex: 999, padding: "10px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600, background: toast.type === "error" ? "#7f1d1d" : toast.type === "warn" ? "#78350f" : "#14532d", color: toast.type === "error" ? "#fca5a5" : toast.type === "warn" ? "#fde68a" : "#86efac" }}>{toast.msg}</div>}
+    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'DM Sans', sans-serif",color:"#E8E8E8"}}>
 
-      <header style={{ background: "#111", borderBottom: "1px solid #1E1E1E", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 8, background: "linear-gradient(135deg, #F59E0B, #D97706)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#0C0C0C", fontFamily: "'Barlow Condensed', sans-serif" }}>GS</div>
+      {toast&&<div style={{position:"fixed",top:16,right:16,zIndex:999,padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,background:toast.type==="error"?"#7f1d1d":toast.type==="warn"?"#78350f":"#14532d",color:toast.type==="error"?"#fca5a5":toast.type==="warn"?"#fde68a":"#86efac"}}>{toast.msg}</div>}
+
+      <header style={{background:"#111",borderBottom:"1px solid #1E1E1E",position:"sticky",top:0,zIndex:100}}>
+        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:34,height:34,borderRadius:8,background:"linear-gradient(135deg, #F59E0B, #D97706)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#0C0C0C",fontFamily:"'Barlow Condensed', sans-serif"}}>GS</div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: 2 }}>GS Car Rental</div>
-              <div style={{ fontSize: 9, color: "#555", marginTop: -1 }}>{counts.confirmed} confirmadas · {counts.today_future} hoje+futuras · {trips.length} total</div>
+              <div style={{fontSize:14,fontWeight:700,fontFamily:"'Barlow Condensed', sans-serif",textTransform:"uppercase",letterSpacing:2}}>GS Car Rental</div>
+              <div style={{fontSize:9,color:"#555",marginTop:-1}}>{trips.length} reservas · {stats?.todayPickup||0} saidas hoje · {stats?.todayReturn||0} retornos hoje</div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 4 }}>
-            <button onClick={() => { setTab("trips"); setSelected(null); }} style={{ ...S.btn, background: tab === "trips" || tab === "detail" ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.04)", color: tab === "trips" || tab === "detail" ? "#F59E0B" : "#999", border: tab === "trips" || tab === "detail" ? "1px solid rgba(245,158,11,0.3)" : "1px solid #222", fontWeight: 600 }}>
-              Trips {counts.confirmed > 0 && <span style={{ background: "#3b82f6", color: "#fff", borderRadius: 999, fontSize: 10, fontWeight: 700, padding: "1px 6px", marginLeft: 4 }}>{counts.confirmed}</span>}
+          <div style={{display:"flex",gap:4}}>
+            <button onClick={()=>{setTab("trips");setSelected(null);}} style={{...S.btn,background:tab!=="detail"?"rgba(245,158,11,0.12)":"rgba(255,255,255,0.04)",color:tab!=="detail"?"#F59E0B":"#999",border:tab!=="detail"?"1px solid rgba(245,158,11,0.3)":"1px solid #222",fontWeight:600}}>
+              Agenda {todayEvents.length>0&&<span style={{background:"#F59E0B",color:"#0C0C0C",borderRadius:999,fontSize:10,fontWeight:700,padding:"1px 6px",marginLeft:4}}>{todayEvents.length}</span>}
             </button>
-            <button onClick={() => fileRef.current?.click()} style={{ ...S.btn, background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)", fontWeight: 600 }}>Upload Excel</button>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={handleUpload} />
+            <button onClick={()=>fileRef.current?.click()} style={{...S.btn,background:"rgba(139,92,246,0.12)",color:"#a78bfa",border:"1px solid rgba(139,92,246,0.3)",fontWeight:600}}>Upload</button>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={handleUpload}/>
           </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px 20px 60px" }}>
-        {tab === "trips" && (<>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", color: "#F5F5F5" }}>Booked</h1>
-              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666", textTransform: "capitalize" }}>{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</p>
-            </div>
-            {fileName && <span style={{ fontSize: 10, color: "#444", padding: "4px 10px", background: "#111", borderRadius: 6, border: "1px solid #1a1a1a" }}>{fileName}</span>}
+      <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px 60px"}}>
+        {tab==="trips"&&(<>
+          <div style={{marginBottom:4}}>
+            <h1 style={{margin:0,fontSize:28,fontWeight:800,fontFamily:"'Barlow Condensed', sans-serif",color:"#F5F5F5"}}>Agenda</h1>
+            <p style={{margin:"2px 0 0",fontSize:12,color:"#666",textTransform:"capitalize"}}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}{fileName&&<span style={{marginLeft:8,color:"#444"}}>· {fileName}</span>}</p>
           </div>
 
-          {stats && <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, margin: "14px 0" }}>
-            <StatCard label="Confirmadas" value={stats.confirmed} color="#3b82f6" />
-            <StatCard label="Pickup hoje" value={stats.todayPickup} color="#F59E0B" />
-            <StatCard label="Devolucao hoje" value={stats.todayReturn} color="#ef4444" />
-            <StatCard label="Receita" value={`$${Math.round(stats.revenue).toLocaleString()}`} color="#a78bfa" />
+          {stats&&<div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8,margin:"14px 0"}}>
+            <StatCard label="Saidas hoje" value={stats.todayPickup} color={PICKUP_COLOR}/>
+            <StatCard label="Retornos hoje" value={stats.todayReturn} color={RETURN_COLOR}/>
+            <StatCard label="Confirmadas" value={stats.confirmed} color="#3b82f6"/>
+            <StatCard label="Receita" value={`$${Math.round(stats.revenue).toLocaleString()}`} color="#a78bfa"/>
           </div>}
 
-          <div style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto", paddingBottom: 2 }}>
-            {[["today_future","Hoje + futuras"],["confirmed","Confirmadas"],["today","Hoje"],["closed","Concluidas"],["cancelled","Canceladas"],["all","Todas"]].map(([k,l]) => (
-              <button key={k} onClick={() => setFilter(k)} style={{ padding: "4px 11px", borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: filter === k ? "1px solid rgba(245,158,11,0.4)" : "1px solid #1a1a1a", background: filter === k ? "rgba(245,158,11,0.1)" : "transparent", color: filter === k ? "#F59E0B" : "#555", whiteSpace: "nowrap" }}>{l} <span style={{ opacity: 0.5 }}>({counts[k]})</span></button>
+          <div style={{display:"flex",gap:4,marginBottom:8,overflowX:"auto",paddingBottom:2}}>
+            {[["today_future","Hoje + futuras"],["today","Hoje"],["tomorrow","Amanha"],["week","7 dias"],["all","Todas"]].map(([k,l])=>(
+              <button key={k} onClick={()=>setFilter(k)} style={{padding:"4px 11px",borderRadius:999,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",border:filter===k?"1px solid rgba(245,158,11,0.4)":"1px solid #1a1a1a",background:filter===k?"rgba(245,158,11,0.1)":"transparent",color:filter===k?"#F59E0B":"#555",whiteSpace:"nowrap"}}>{l} <span style={{opacity:0.5}}>({counts[k]})</span></button>
             ))}
           </div>
 
-          <input style={{ ...S.input, marginBottom: 12, background: "#111", borderRadius: 10, fontSize: 12 }} placeholder="Buscar cliente, veiculo, local, RA#, email..." value={search} onChange={e => setSearch(e.target.value)} />
-
-          {trips.length === 0 && <div style={{ textAlign: "center", padding: "60px 20px", color: "#444" }}>
-            <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>📊</div>
-            <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 6 }}>Importe o relatorio do Rent Centric</div>
-            <div style={{ fontSize: 12, color: "#555", marginBottom: 16 }}>Clique em "Upload Excel" e selecione o arquivo</div>
-            <button onClick={() => fileRef.current?.click()} style={{ ...S.btn, background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)", fontWeight: 600, padding: "10px 24px", fontSize: 14 }}>Selecionar arquivo .xlsx</button>
-          </div>}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {filtered.map(t => <TripCard key={t.id} trip={t} onSelect={() => { setSelected(t); setTab("detail"); }} />)}
+          <div style={{display:"flex",gap:4,marginBottom:12}}>
+            {[["all","Todos"],["pickup","🟢 Saidas"],["return","🟠 Retornos"]].map(([k,l])=>{
+              const c=k==="pickup"?PICKUP_COLOR:k==="return"?RETURN_COLOR:"#888";
+              return <button key={k} onClick={()=>setEventTypeFilter(k)} style={{padding:"4px 11px",borderRadius:999,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",border:eventTypeFilter===k?`1px solid ${c}60`:"1px solid #1a1a1a",background:eventTypeFilter===k?`${c}15`:"transparent",color:eventTypeFilter===k?c:"#555",whiteSpace:"nowrap"}}>{l}</button>;
+            })}
           </div>
 
-          {filtered.length > 0 && <div style={{ marginTop: 14, padding: "10px 16px", background: "#111", borderRadius: 10, border: "1px solid #1a1a1a", display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 11, color: "#555" }}>{filtered.length} reserva(s)</span>
-            <div style={{ display: "flex", gap: 16 }}>
-              <span style={{ fontSize: 12, color: "#888" }}>Total: <b style={{ color: "#F59E0B", fontFamily: "'Barlow Condensed', sans-serif" }}>US$ {filtered.reduce((s, t) => s + (t.total || 0), 0).toFixed(2)}</b></span>
-              <span style={{ fontSize: 12, color: "#888" }}>Saldo: <b style={{ color: filtered.reduce((s, t) => s + (t.balance || 0), 0) > 0 ? "#ef4444" : "#22c55e", fontFamily: "'Barlow Condensed', sans-serif" }}>US$ {filtered.reduce((s, t) => s + (t.balance || 0), 0).toFixed(2)}</b></span>
-            </div>
-          </div>}
-        </>)}
+          <input style={{...S.input,marginBottom:14,background:"#111",borderRadius:10,fontSize:12}} placeholder="Buscar cliente, veiculo, local, RA#..." value={search} onChange={e=>setSearch(e.target.value)}/>
 
-        {tab === "detail" && selected && (<>
-          <button onClick={() => setTab("trips")} style={{ background: "none", border: "none", color: "#F59E0B", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, marginBottom: 14 }}>← Voltar</button>
-          <div style={{ ...S.card, padding: 20, marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#F59E0B", fontFamily: "'Barlow Condensed', sans-serif" }}>RA# {selected.id}</span>
-                  {selected.resNumber && selected.resNumber !== selected.id && <span style={{ fontSize: 10, color: "#555" }}>Res# {selected.resNumber}</span>}
-                  <StatusBadge status={selected.status} />
+          {trips.length===0&&<div style={{textAlign:"center",padding:"60px 20px",color:"#444"}}>
+            <div style={{fontSize:40,marginBottom:12,opacity:0.4}}>📊</div>
+            <div style={{fontSize:15,fontWeight:500,marginBottom:6}}>Importe o relatorio do Rent Centric</div>
+            <button onClick={()=>fileRef.current?.click()} style={{...S.btn,background:"rgba(139,92,246,0.15)",color:"#a78bfa",border:"1px solid rgba(139,92,246,0.3)",fontWeight:600,padding:"10px 24px",fontSize:14,marginTop:12}}>Selecionar arquivo</button>
+          </div>}
+
+          {groupedByDay.map(group=>{
+            const dl=dayLabel(group.dateKey);
+            const isCurrent=group.dateKey===todayKey;
+            const pk=group.events.filter(e=>e.type==="pickup").length;
+            const rt=group.events.filter(e=>e.type==="return").length;
+            return (
+              <div key={group.dateKey} style={{marginBottom:22}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px 0",borderBottom:isCurrent?"2px solid #F59E0B":"1px solid #222"}}>
+                  <div style={{fontSize:16,fontWeight:700,fontFamily:"'Barlow Condensed', sans-serif",color:isCurrent?"#F59E0B":"#E8E8E8",textTransform:"capitalize"}}>
+                    {dl&&<span style={{marginRight:6}}>{dl} —</span>}{fmtDayHeader(group.dateKey)}
+                  </div>
+                  <div style={{display:"flex",gap:6,marginLeft:"auto"}}>
+                    {pk>0&&<span style={{fontSize:10,fontWeight:600,color:PICKUP_COLOR,background:`${PICKUP_COLOR}15`,padding:"2px 8px",borderRadius:999,border:`1px solid ${PICKUP_COLOR}30`}}>🟢 {pk}</span>}
+                    {rt>0&&<span style={{fontSize:10,fontWeight:600,color:RETURN_COLOR,background:`${RETURN_COLOR}15`,padding:"2px 8px",borderRadius:999,border:`1px solid ${RETURN_COLOR}30`}}>🟠 {rt}</span>}
+                  </div>
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#F5F5F5", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 2 }}>{selected.vehicle}</div>
-                <div style={{ fontSize: 12, color: "#888" }}>{selected.vehicleType}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {group.events.map((ev,idx)=><EventCard key={`${ev.trip.id}-${ev.type}-${idx}`} ev={ev} onSelect={()=>{setSelected(ev.trip);setTab("detail");}}/>)}
+                </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 10, color: "#555" }}>Total</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#F59E0B", fontFamily: "'Barlow Condensed', sans-serif" }}>{money(selected.total)}</div>
-                {selected.balance > 0 && <div style={{ fontSize: 11, color: "#ef4444" }}>Saldo: {money(selected.balance)}</div>}
-              </div>
+            );
+          })}
+
+          {filteredEvents.length>0&&<div style={{marginTop:14,padding:"10px 16px",background:"#111",borderRadius:10,border:"1px solid #1a1a1a",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+            <span style={{fontSize:11,color:"#555"}}>{filteredEvents.length} evento(s) · {groupedByDay.length} dia(s)</span>
+            <div style={{display:"flex",gap:12}}>
+              <span style={{fontSize:10,color:PICKUP_COLOR}}>🟢 {filteredEvents.filter(e=>e.type==="pickup").length} saidas</span>
+              <span style={{fontSize:10,color:RETURN_COLOR}}>🟠 {filteredEvents.filter(e=>e.type==="return").length} retornos</span>
             </div>
-          </div>
-          <div style={{ ...S.card, padding: 16, marginBottom: 12 }}>
-            <div style={S.section}>👤 Cliente</div>
-            <DR l="Nome" v={selected.customerName} />
-            {selected.customerId && <DR l="ID" v={`#${selected.customerId}`} />}
-            {selected.phone && <DR l="Telefone" v={selected.phone} />}
-            {selected.email && <DR l="Email" v={selected.email} />}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <div style={{ ...S.card, padding: 16 }}><div style={S.section}>📍 Retirada</div><DR l="Local" v={selected.pickupLocation} /><DR l="Data" v={fmtDate(selected.pickupDate)} /><DR l="Hora" v={fmtTime(selected.pickupDate)} /></div>
-            <div style={{ ...S.card, padding: 16 }}><div style={S.section}>🏁 Devolucao</div><DR l="Local" v={selected.returnLocation} /><DR l="Data" v={fmtDate(selected.returnDate)} /><DR l="Hora" v={fmtTime(selected.returnDate)} /></div>
-          </div>
-          <div style={{ ...S.card, padding: 16, marginBottom: 12 }}>
-            <div style={S.section}>📊 Detalhes</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-              <MS label="Dias" value={selected.days || daysBetween(selected.pickupDate, selected.returnDate)} />
-              <MS label="Milhas" value={selected.mileage || 0} />
-              <MS label="Desconto" value={money(selected.discount)} small />
-              <MS label="One-way" value={money(selected.oneWay)} small />
-            </div>
-          </div>
-          <div style={{ ...S.card, padding: 16, marginBottom: 12, borderColor: "rgba(245,158,11,0.15)" }}>
-            <div style={S.section}>💰 Financeiro</div>
-            {selected.airportTax > 0 && <DR l="Airport Tax" v={money(selected.airportTax)} />}
-            {selected.flRentalTax > 0 && <DR l="Florida Rental Tax" v={money(selected.flRentalTax)} />}
-            {selected.stateTax > 0 && <DR l="State Tax" v={money(selected.stateTax)} />}
-            {selected.discount !== 0 && <DR l="Desconto" v={money(selected.discount)} />}
-            <DR l="Invoice Total" v={money(selected.invoiceTotal)} />
-            <DR l="Total" v={money(selected.total)} hl />
-            <DR l="Pago" v={money(selected.paid)} />
-            <DR l="Saldo" v={money(selected.balance)} hl={selected.balance > 0} />
-          </div>
-          <div style={{ ...S.card, padding: 16 }}>
-            <div style={S.section}>📋 Operacional</div>
-            <DR l="Status" v={selected.status} />
-            {selected.reservationDate && <DR l="Data da reserva" v={typeof selected.reservationDate === "string" ? selected.reservationDate : fmtDate(selected.reservationDate)} />}
-            {selected.channel && <DR l="Canal" v={selected.channel} />}
-            {selected.reservedBy && <DR l="Reservado por" v={selected.reservedBy} />}
-            {selected.openedBy && <DR l="Aberto por" v={selected.openedBy} />}
-            {selected.closedBy && <DR l="Fechado por" v={selected.closedBy} />}
-            {selected.cancelledBy && <DR l="Cancelado por" v={selected.cancelledBy} />}
-            {selected.cancellationDate && <DR l="Data cancelamento" v={fmtDate(selected.cancellationDate)} />}
-          </div>
+          </div>}
         </>)}
+
+        {tab==="detail"&&selected&&(<>
+          <button onClick={()=>setTab("trips")} style={{background:"none",border:"none",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",padding:0,marginBottom:14}}>← Voltar</button>
+          <div style={{...S.card,padding:20,marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                  <span style={{fontSize:11,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed', sans-serif"}}>RA# {selected.id}</span>
+                  <StatusBadge status={selected.status}/>
+                </div>
+                <div style={{fontSize:20,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed', sans-serif",marginBottom:2}}>{selected.vehicle}</div>
+                <div style={{fontSize:12,color:"#888"}}>{selected.vehicleType}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:10,color:"#555"}}>Total</div>
+                <div style={{fontSize:28,fontWeight:800,color:"#F59E0B",fontFamily:"'Barlow Condensed', sans-serif"}}>{money(selected.total)}</div>
+                {selected.balance>0&&<div style={{fontSize:11,color:"#ef4444"}}>Saldo: {money(selected.balance)}</div>}
+              </div>
+            </div>
+          </div>
+          <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>👤 Cliente</div><DR l="Nome" v={selected.customerName}/>{selected.customerId&&<DR l="ID" v={`#${selected.customerId}`}/>}{selected.phone&&<DR l="Telefone" v={selected.phone}/>}{selected.email&&<DR l="Email" v={selected.email}/>}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            <div style={{...S.card,padding:16,borderColor:`${PICKUP_COLOR}30`}}><div style={{...S.section,color:PICKUP_COLOR}}>🟢 Saida</div><DR l="Local" v={selected.pickupLocation}/><DR l="Data" v={fmtDate(selected.pickupDate)}/><DR l="Hora" v={fmtTime(selected.pickupDate)}/></div>
+            <div style={{...S.card,padding:16,borderColor:`${RETURN_COLOR}30`}}><div style={{...S.section,color:RETURN_COLOR}}>🟠 Retorno</div><DR l="Local" v={selected.returnLocation}/><DR l="Data" v={fmtDate(selected.returnDate)}/><DR l="Hora" v={fmtTime(selected.returnDate)}/></div>
+          </div>
+          <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>📊 Detalhes</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}><MS label="Dias" value={selected.days||daysBetween(selected.pickupDate,selected.returnDate)}/><MS label="Milhas" value={selected.mileage||0}/><MS label="Desconto" value={money(selected.discount)} small/><MS label="One-way" value={money(selected.oneWay)} small/></div></div>
+          <div style={{...S.card,padding:16,marginBottom:12,borderColor:"rgba(245,158,11,0.15)"}}><div style={S.section}>💰 Financeiro</div>{selected.airportTax>0&&<DR l="Airport Tax" v={money(selected.airportTax)}/>}{selected.flRentalTax>0&&<DR l="FL Rental Tax" v={money(selected.flRentalTax)}/>}{selected.stateTax>0&&<DR l="State Tax" v={money(selected.stateTax)}/>}<DR l="Total" v={money(selected.total)} hl/><DR l="Pago" v={money(selected.paid)}/><DR l="Saldo" v={money(selected.balance)} hl={selected.balance>0}/></div>
+          <div style={{...S.card,padding:16}}><div style={S.section}>📋 Operacional</div><DR l="Status" v={selected.status}/>{selected.reservationDate&&<DR l="Data reserva" v={selected.reservationDate}/>}{selected.channel&&<DR l="Canal" v={selected.channel}/>}{selected.reservedBy&&<DR l="Reservado por" v={selected.reservedBy}/>}{selected.openedBy&&<DR l="Aberto por" v={selected.openedBy}/>}{selected.closedBy&&<DR l="Fechado por" v={selected.closedBy}/>}{selected.cancelledBy&&<DR l="Cancelado por" v={selected.cancelledBy}/>}</div>
+        </>)}
+      </div>
+    </div>
+  );
+}
+
+function EventCard({ ev, onSelect }) {
+  const { type, trip, time } = ev;
+  const isPickup = type === "pickup";
+  const color = isPickup ? PICKUP_COLOR : RETURN_COLOR;
+  const label = isPickup ? "SAIDA" : "RETORNO";
+  const location = isPickup ? trip.pickupLocation : trip.returnLocation;
+  const otherDate = isPickup ? trip.returnDate : trip.pickupDate;
+  const days = trip.days || daysBetween(trip.pickupDate, trip.returnDate);
+
+  return (
+    <div onClick={onSelect} style={{...S.card,overflow:"hidden",cursor:"pointer",transition:"all 0.15s",borderLeft:`3px solid ${color}`}}
+      onMouseEnter={e=>e.currentTarget.style.background="#131313"} onMouseLeave={e=>e.currentTarget.style.background="#111"}>
+      <div style={{display:"flex",gap:12,padding:"12px 14px"}}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:52}}>
+          <div style={{fontSize:18,marginBottom:2}}>{isPickup?"🟢":"🟠"}</div>
+          <div style={{fontSize:9,fontWeight:700,color,letterSpacing:0.5}}>{label}</div>
+          {time&&<div style={{fontSize:12,fontWeight:600,color:"#E8E8E8",marginTop:2}}>{time}</div>}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4,flexWrap:"wrap"}}>
+            <StatusBadge status={trip.status}/>
+            <span style={{fontSize:10,color:"#444",fontFamily:"monospace"}}>#{trip.id}</span>
+            {trip.balance>0&&<span style={{fontSize:9,fontWeight:700,color:"#ef4444",background:"rgba(239,68,68,0.1)",padding:"2px 7px",borderRadius:999}}>Saldo ${trip.balance.toFixed(0)}</span>}
+            {trip.customerName.toLowerCase().includes("turo")&&<span style={{fontSize:9,fontWeight:700,color:"#a78bfa",background:"rgba(139,92,246,0.1)",padding:"2px 7px",borderRadius:999}}>Turo</span>}
+          </div>
+          <div style={{fontSize:13,fontWeight:600,color:"#E8E8E8",marginBottom:2}}>{trip.customerName}</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed', sans-serif",marginBottom:3}}>{trip.vehicle}</div>
+          <div style={{fontSize:10,color:"#666",marginBottom:4}}>{trip.vehicleType}</div>
+          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#888",flexWrap:"wrap"}}>
+            <span style={{color}}>{location}</span>
+            <span style={{color:"#333"}}>·</span>
+            <span style={{color:"#555"}}>{days}d</span>
+            <span style={{color:"#333"}}>·</span>
+            <span style={{color:"#555"}}>{isPickup?"retorno":"saiu"} {fmtShort(otherDate)}</span>
+          </div>
+        </div>
+        <div style={{flexShrink:0,textAlign:"right",display:"flex",flexDirection:"column",justifyContent:"center",minWidth:80}}>
+          <div style={{fontSize:16,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed', sans-serif"}}>{money(trip.total)}</div>
+          {trip.paid>0&&<div style={{fontSize:10,color:"#22c55e"}}>Pago: {money(trip.paid)}</div>}
+        </div>
       </div>
     </div>
   );
