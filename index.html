@@ -47,6 +47,14 @@ function dateKey(d) { if (!d) return ""; const dt = new Date(d); return `${dt.ge
 function dayLabel(dk) { if (dk === dateKey(new Date())) return "Hoje"; if (dk === dateKey(new Date(Date.now()+86400000))) return "Amanha"; return ""; }
 
 function parseExcel(data) {
+  const fixDate = (d) => {
+    if (!d) return "";
+    if (d instanceof Date) return d.toISOString();
+    const s = String(d).trim();
+    // String date like "2026-03-20" -> add T12:00:00 to prevent UTC timezone shift
+    if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s + "T12:00:00";
+    return s;
+  };
   const wb = XLSX.read(data, { type: "array", cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
@@ -70,10 +78,10 @@ function parseExcel(data) {
     if (isRes) {
       const pd = r[col("Pickup Date")], rd = r[col("Return Date")];
       const fn = (r[col("Full Name")] || "").toString().trim();
-      trips.push({ id: resStr, resNumber: resStr, customerName: fn.replace(/\s{2,}/g," ").replace(/\s+(turo|\.|\d+)$/i,"").trim(), phone: r[col("Phone")]||"", vehicle: r[col("Vehicle ID")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[colAny("Loc.Out","Pickup Location")]||"", pickupDate: pd instanceof Date ? pd.toISOString() : pd, returnDate: rd instanceof Date ? rd.toISOString() : rd, returnLocation: r[colAny("Loc.In","Return Location")]||"", status: r[col("Status")]||"", days: r[col("#days")]||0, reservationDate: r[col("Reservation Date")]||"", channel: r[col("Reservation Channel")]||"", reservedBy: r[col("Reserved By")]||"", cancelledBy: r[col("Cancelled By")]||"", cancellationDate: r[col("Cancellation Date")]||null, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, isCancelled: r[col("Is Cancelled")]==="Yes", isConfirmed: r[col("Is Confirmed")]==="Yes", email:"", customerId:"", discount:0, mileage:0, oneWay:0, airportTax:0, flRentalTax:0, stateTax:0, invoiceTotal:0, openedBy:"", closedBy:"" });
+      trips.push({ id: resStr, resNumber: resStr, customerName: fn.replace(/\s{2,}/g," ").replace(/\s+(turo|\.|\d+)$/i,"").trim(), phone: r[col("Phone")]||"", vehicle: r[col("Vehicle ID")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[colAny("Loc.Out","Pickup Location")]||"", pickupDate: fixDate(pd), returnDate: fixDate(rd), returnLocation: r[colAny("Loc.In","Return Location")]||"", status: r[col("Status")]||"", days: r[col("#days")]||0, reservationDate: r[col("Reservation Date")]||"", channel: r[col("Reservation Channel")]||"", reservedBy: r[col("Reserved By")]||"", cancelledBy: r[col("Cancelled By")]||"", cancellationDate: r[col("Cancellation Date")]||null, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, isCancelled: r[col("Is Cancelled")]==="Yes", isConfirmed: r[col("Is Confirmed")]==="Yes", email:"", customerId:"", discount:0, mileage:0, oneWay:0, airportTax:0, flRentalTax:0, stateTax:0, invoiceTotal:0, openedBy:"", closedBy:"" });
     } else {
       const pd = r[col("Pickup Date")], rd = r[col("Return Date")];
-      trips.push({ id: resStr, resNumber: r[colAny("Res#","Reservation#")]||resStr, customerId: r[col("Customer ID")]||"", customerName: `${r[col("First Name")]||""} ${r[col("Last Name")]||""}`.trim(), phone: r[col("Customer Phone")]||"", email: r[col("Customer Email")]||"", vehicle: r[col("Vehicle")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[col("Pickup Location")]||"", pickupDate: pd instanceof Date ? pd.toISOString() : pd, returnDate: rd instanceof Date ? rd.toISOString() : rd, returnLocation: r[col("Return Location")]||"", status: r[col("Status")]||"", openedBy: r[col("Opened by")]||"", closedBy: r[col("Closed by")]||"", days: r[col("Days")]||0, discount: r[col("Discount")]||0, mileage: r[col("Mileage")]||0, oneWay: r[col("One Way")]||0, airportTax: r[col("Airport Tax")]||0, flRentalTax: r[col("Florida Rental Tax")]||0, stateTax: r[col("State Tax")]||0, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, invoiceTotal: r[col("Invoice Total")]||0, channel:"", reservedBy:"", cancelledBy:"", cancellationDate:null, isCancelled:(r[col("Status")]||"").toLowerCase()==="cancelled", isConfirmed:false, reservationDate:"" });
+      trips.push({ id: resStr, resNumber: r[colAny("Res#","Reservation#")]||resStr, customerId: r[col("Customer ID")]||"", customerName: `${r[col("First Name")]||""} ${r[col("Last Name")]||""}`.trim(), phone: r[col("Customer Phone")]||"", email: r[col("Customer Email")]||"", vehicle: r[col("Vehicle")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[col("Pickup Location")]||"", pickupDate: fixDate(pd), returnDate: fixDate(rd), returnLocation: r[col("Return Location")]||"", status: r[col("Status")]||"", openedBy: r[col("Opened by")]||"", closedBy: r[col("Closed by")]||"", days: r[col("Days")]||0, discount: r[col("Discount")]||0, mileage: r[col("Mileage")]||0, oneWay: r[col("One Way")]||0, airportTax: r[col("Airport Tax")]||0, flRentalTax: r[col("Florida Rental Tax")]||0, stateTax: r[col("State Tax")]||0, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, invoiceTotal: r[col("Invoice Total")]||0, channel:"", reservedBy:"", cancelledBy:"", cancellationDate:null, isCancelled:(r[col("Status")]||"").toLowerCase()==="cancelled", isConfirmed:false, reservationDate:"" });
     }
   }
   return trips;
