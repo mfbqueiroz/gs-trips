@@ -3,18 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>GS Car Rental — Agenda</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23F59E0B'/><text x='16' y='22' font-size='16' font-weight='800' text-anchor='middle' fill='%230a0a0a' font-family='sans-serif'>GS</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #0a0a0a; font-family: 'DM Sans', sans-serif; color: #E8E8E8; }
-#root { min-height: 100vh; }
-input, select, button { font-family: inherit; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #111; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0a;font-family:'DM Sans',sans-serif;color:#E8E8E8}#root{min-height:100vh}input,select,button{font-family:inherit}::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}</style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -25,522 +19,387 @@ input, select, button { font-family: inherit; }
 <script type="text/babel" data-type="module">
 const { useState, useEffect, useRef, useMemo } = React;
 
-const S = {
-  input: { width: "100%", boxSizing: "border-box", background: "#0C0C0C", border: "1px solid #222", borderRadius: 8, padding: "9px 12px", color: "#E8E8E8", fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none" },
-  card: { background: "#111", border: "1px solid #1a1a1a", borderRadius: 12 },
-  btn: { padding: "7px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
-  section: { fontSize: 12, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: 1.5, color: "#888", marginBottom: 14, display: "flex", alignItems: "center", gap: 6 },
-};
+const PK = "#22c55e", RT = "#f97316", ADMIN_PASS = "gs2026";
+const si = { width:"100%",boxSizing:"border-box",background:"#0C0C0C",border:"1px solid #222",borderRadius:8,padding:"9px 12px",color:"#E8E8E8",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none" };
+const sc = { background:"#111",border:"1px solid #1a1a1a",borderRadius:12 };
+const sb = { padding:"7px 14px",borderRadius:8,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s" };
+const ss = { fontSize:12,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:1.5,color:"#888",marginBottom:14,display:"flex",alignItems:"center",gap:6 };
+const ei = (c) => ({background:"#0C0C0C",border:`1px solid ${c}40`,borderRadius:6,padding:"4px 8px",color:c,fontSize:13,fontWeight:600,fontFamily:"'DM Sans',sans-serif",outline:"none",width:90,textAlign:"center"});
 
-const PICKUP_COLOR = "#22c55e";
-const RETURN_COLOR = "#f97316";
+function fS(d){return d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}):"—";}
+function fD(d){return d?new Date(d).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short",year:"numeric"}):"—";}
+function fH(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}):""}
+function fT(d){return d?new Date(d).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"";}
+function isTd(d){if(!d)return false;const a=new Date(d),t=new Date();return a.getFullYear()===t.getFullYear()&&a.getMonth()===t.getMonth()&&a.getDate()===t.getDate();}
+function sot(){const d=new Date();d.setHours(0,0,0,0);return d;}
+function dB(a,b){return(!a||!b)?0:Math.max(1,Math.ceil((new Date(b)-new Date(a))/864e5));}
+function $(v){return typeof v==="number"?`US$ ${v.toFixed(2)}`:"—";}
+function dk(d){if(!d)return"";const t=new Date(d);return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;}
+function dlbl(k){if(k===dk(new Date()))return"Hoje";if(k===dk(new Date(Date.now()+864e5)))return"Amanha";return"";}
 
-function fmtShort(d) { return d ? new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"; }
-function fmtDate(d) { return d ? new Date(d).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }) : "—"; }
-function fmtDayHeader(d) { return d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" }) : ""; }
-function fmtTime(d) { return d ? new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""; }
-function isToday(d) { if (!d) return false; const a = new Date(d), t = new Date(); return a.getFullYear() === t.getFullYear() && a.getMonth() === t.getMonth() && a.getDate() === t.getDate(); }
-function startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d; }
-function daysBetween(a, b) { return (!a||!b) ? 0 : Math.max(1, Math.ceil((new Date(b) - new Date(a)) / 86400000)); }
-function money(v) { return typeof v === "number" ? `US$ ${v.toFixed(2)}` : "—"; }
-function dateKey(d) { if (!d) return ""; const dt = new Date(d); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; }
-function dayLabel(dk) { if (dk === dateKey(new Date())) return "Hoje"; if (dk === dateKey(new Date(Date.now()+86400000))) return "Amanha"; return ""; }
-
-function parseExcel(data) {
-  const fixDate = (d) => {
-    if (!d) return "";
-    if (d instanceof Date) return d.toISOString();
-    const s = String(d).trim();
-    // String date like "2026-03-20" -> add T12:00:00 to prevent UTC timezone shift
-    if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s + "T12:00:00";
-    return s;
-  };
-  const wb = XLSX.read(data, { type: "array", cellDates: true });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-  let headerIdx = -1;
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const r = rows[i]; if (!r) continue;
-    if (r.map(c => String(c || "")).join("|").match(/Reservation#|RA#/)) { headerIdx = i; break; }
-  }
-  if (headerIdx < 0) return [];
-  const headers = rows[headerIdx].map((h, i) => (h || `col_${i}`).toString().trim());
-  const col = (n) => headers.indexOf(n);
-  const colAny = (...ns) => { for (const n of ns) { const i = headers.indexOf(n); if (i >= 0) return i; } return -1; };
-  const isRes = col("Reservation#") >= 0 && col("Vehicle ID") >= 0;
-  const trips = [];
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const r = rows[i]; if (!r) continue;
-    const resCol = isRes ? col("Reservation#") : col("RA#");
-    const resNum = r[resCol]; if (!resNum) continue;
-    const resStr = String(resNum);
-    if (resStr.match(/^[A-Za-z\s()]+$/) && !resStr.match(/^\d+$/)) continue;
-    if (isRes) {
-      const pd = r[col("Pickup Date")], rd = r[col("Return Date")];
-      const fn = (r[col("Full Name")] || "").toString().trim();
-      trips.push({ id: resStr, resNumber: resStr, customerName: fn.replace(/\s{2,}/g," ").replace(/\s+(turo|\.|\d+)$/i,"").trim(), phone: r[col("Phone")]||"", vehicle: r[col("Vehicle ID")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[colAny("Loc.Out","Pickup Location")]||"", pickupDate: fixDate(pd), returnDate: fixDate(rd), returnLocation: r[colAny("Loc.In","Return Location")]||"", status: r[col("Status")]||"", days: r[col("#days")]||0, reservationDate: r[col("Reservation Date")]||"", channel: r[col("Reservation Channel")]||"", reservedBy: r[col("Reserved By")]||"", cancelledBy: r[col("Cancelled By")]||"", cancellationDate: r[col("Cancellation Date")]||null, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, isCancelled: r[col("Is Cancelled")]==="Yes", isConfirmed: r[col("Is Confirmed")]==="Yes", email:"", customerId:"", discount:0, mileage:0, oneWay:0, airportTax:0, flRentalTax:0, stateTax:0, invoiceTotal:0, openedBy:"", closedBy:"" });
-    } else {
-      const pd = r[col("Pickup Date")], rd = r[col("Return Date")];
-      trips.push({ id: resStr, resNumber: r[colAny("Res#","Reservation#")]||resStr, customerId: r[col("Customer ID")]||"", customerName: `${r[col("First Name")]||""} ${r[col("Last Name")]||""}`.trim(), phone: r[col("Customer Phone")]||"", email: r[col("Customer Email")]||"", vehicle: r[col("Vehicle")]||"", vehicleType: r[col("Vehicle Type")]||"", pickupLocation: r[col("Pickup Location")]||"", pickupDate: fixDate(pd), returnDate: fixDate(rd), returnLocation: r[col("Return Location")]||"", status: r[col("Status")]||"", openedBy: r[col("Opened by")]||"", closedBy: r[col("Closed by")]||"", days: r[col("Days")]||0, discount: r[col("Discount")]||0, mileage: r[col("Mileage")]||0, oneWay: r[col("One Way")]||0, airportTax: r[col("Airport Tax")]||0, flRentalTax: r[col("Florida Rental Tax")]||0, stateTax: r[col("State Tax")]||0, total: r[col("Total")]||0, paid: r[col("Paid")]||0, balance: r[col("Balance")]||0, invoiceTotal: r[col("Invoice Total")]||0, channel:"", reservedBy:"", cancelledBy:"", cancellationDate:null, isCancelled:(r[col("Status")]||"").toLowerCase()==="cancelled", isConfirmed:false, reservationDate:"" });
+function parseExcel(data){
+  const fix=(d)=>{if(!d)return"";if(d instanceof Date)return d.toISOString();const s=String(d).trim();return s.match(/^\d{4}-\d{2}-\d{2}$/)?s+"T12:00:00":s;};
+  const wb=XLSX.read(data,{type:"array",cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  let hi=-1;
+  for(let i=0;i<Math.min(rows.length,15);i++){const r=rows[i];if(r&&r.map(c=>String(c||"")).join("|").match(/Reservation#|RA#/)){hi=i;break;}}
+  if(hi<0)return[];
+  const hd=rows[hi].map((h,i)=>(h||`c${i}`).toString().trim());
+  const c=n=>hd.indexOf(n),ca=(...ns)=>{for(const n of ns){const i=hd.indexOf(n);if(i>=0)return i;}return-1;};
+  const isR=c("Reservation#")>=0&&c("Vehicle ID")>=0;
+  const trips=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];if(!r)continue;
+    const rn=r[isR?c("Reservation#"):c("RA#")];if(!rn)continue;
+    const rs=String(rn);if(rs.match(/^[A-Za-z\s()]+$/)&&!rs.match(/^\d+$/))continue;
+    if(isR){
+      const fn=(r[c("Full Name")]||"").toString().trim();
+      trips.push({id:rs,resNumber:rs,customerName:fn.replace(/\s{2,}/g," ").replace(/\s+(turo|\.|\d+)$/i,"").trim(),phone:r[c("Phone")]||"",vehicle:r[c("Vehicle ID")]||"",vehicleType:r[c("Vehicle Type")]||"",pickupLocation:r[ca("Loc.Out","Pickup Location")]||"",pickupDate:fix(r[c("Pickup Date")]),returnDate:fix(r[c("Return Date")]),returnLocation:r[ca("Loc.In","Return Location")]||"",status:r[c("Status")]||"",days:r[c("#days")]||0,reservationDate:r[c("Reservation Date")]||"",channel:r[c("Reservation Channel")]||"",reservedBy:r[c("Reserved By")]||"",cancelledBy:r[c("Cancelled By")]||"",total:r[c("Total")]||0,paid:r[c("Paid")]||0,balance:r[c("Balance")]||0,isCancelled:r[c("Is Cancelled")]==="Yes",email:"",customerId:"",discount:0,oneWay:0,airportTax:0,flRentalTax:0,stateTax:0,pickupMileage:"",returnMileage:""});
+    }else{
+      trips.push({id:rs,resNumber:r[ca("Res#","Reservation#")]||rs,customerId:r[c("Customer ID")]||"",customerName:`${r[c("First Name")]||""} ${r[c("Last Name")]||""}`.trim(),phone:r[c("Customer Phone")]||"",email:r[c("Customer Email")]||"",vehicle:r[c("Vehicle")]||"",vehicleType:r[c("Vehicle Type")]||"",pickupLocation:r[c("Pickup Location")]||"",pickupDate:fix(r[c("Pickup Date")]),returnDate:fix(r[c("Return Date")]),returnLocation:r[c("Return Location")]||"",status:r[c("Status")]||"",days:r[c("Days")]||0,discount:r[c("Discount")]||0,oneWay:r[c("One Way")]||0,airportTax:r[c("Airport Tax")]||0,flRentalTax:r[c("Florida Rental Tax")]||0,stateTax:r[c("State Tax")]||0,total:r[c("Total")]||0,paid:r[c("Paid")]||0,balance:r[c("Balance")]||0,channel:"",reservedBy:"",cancelledBy:"",isCancelled:(r[c("Status")]||"").toLowerCase()==="cancelled",reservationDate:"",pickupMileage:"",returnMileage:""});
     }
   }
   return trips;
 }
 
-const STATUS_COLORS = { Open:{label:"Ativa",color:"#22c55e"}, Confirmed:{label:"Confirmada",color:"#3b82f6"}, Honored:{label:"Honorada",color:"#8b5cf6"}, Closed:{label:"Concluida",color:"#6b7280"}, Cancelled:{label:"Cancelada",color:"#ef4444"} };
-function StatusBadge({status}){ const s=STATUS_COLORS[status]||{label:status,color:"#555"}; return <span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,color:s.color,background:`${s.color}18`,padding:"2px 8px",borderRadius:999,border:`1px solid ${s.color}30`}}>{s.label}</span>; }
-function DR({l,v,hl}){ return <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>{l}</span><span style={{fontSize:12,color:hl?"#F59E0B":"#CCC",fontWeight:hl?700:500,textAlign:"right",maxWidth:"65%"}}>{v}</span></div>; }
-function MS({label,value,small}){ return <div style={{background:"#0C0C0C",borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontSize:small?12:16,fontWeight:700,color:"#E8E8E8",fontFamily:"'Barlow Condensed', sans-serif"}}>{value}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase"}}>{label}</div></div>; }
-function StatCard({label,value,color}){ return <div style={{background:"#111",borderRadius:10,border:"1px solid #1a1a1a",padding:"10px 12px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:700,color,fontFamily:"'Barlow Condensed', sans-serif"}}>{value}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase",letterSpacing:0.5}}>{label}</div></div>; }
+const STC={Open:{l:"Ativa",c:"#22c55e"},Confirmed:{l:"Confirmada",c:"#3b82f6"},Honored:{l:"Honorada",c:"#8b5cf6"},Closed:{l:"Concluida",c:"#6b7280"},Cancelled:{l:"Cancelada",c:"#ef4444"}};
+function SB({status}){const s=STC[status]||{l:status,c:"#555"};return<span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,color:s.c,background:`${s.c}18`,padding:"2px 8px",borderRadius:999,border:`1px solid ${s.c}30`}}>{s.l}</span>;}
+function DR({l,v,hl}){return<div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>{l}</span><span style={{fontSize:12,color:hl?"#F59E0B":"#CCC",fontWeight:hl?700:500,textAlign:"right",maxWidth:"65%"}}>{v}</span></div>;}
+function MS({l,v,sm}){return<div style={{background:"#0C0C0C",borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontSize:sm?12:16,fontWeight:700,color:"#E8E8E8",fontFamily:"'Barlow Condensed',sans-serif"}}>{v}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase"}}>{l}</div></div>;}
+function StC({l,v,c}){return<div style={{background:"#111",borderRadius:10,border:"1px solid #1a1a1a",padding:"10px 12px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:700,color:c,fontFamily:"'Barlow Condensed',sans-serif"}}>{v}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase",letterSpacing:.5}}>{l}</div></div>;}
+function ER({l,v,c,fn}){return<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>{l}</span><div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:11,color:"#555"}}>US$</span><input type="number" step="0.01" value={v} onChange={e=>fn(e.target.value)} style={{...ei(c),width:100,textAlign:"right"}}/></div></div>;}
 
-function App() {
-  const [trips, setTrips] = useState([]);
-  const [filter, setFilter] = useState("today_future");
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [tab, setTab] = useState("trips");
-  const [toast, setToast] = useState(null);
-  const [fileName, setFileName] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [eventTypeFilter, setEventTypeFilter] = useState("all");
-  const [editing, setEditing] = useState(null); // {pickupTime, returnTime}
-  const fileRef = useRef(null);
-  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3500); };
+function EC({ev,onSelect,admin}){
+  const{type,trip,time}=ev,isP=type==="pickup",cl=isP?PK:RT,lb=isP?"SAIDA":"RETORNO";
+  const loc=isP?trip.pickupLocation:trip.returnLocation,od=isP?trip.returnDate:trip.pickupDate;
+  const days=trip.days||dB(trip.pickupDate,trip.returnDate);
+  return(
+    <div onClick={onSelect} style={{...sc,overflow:"hidden",cursor:"pointer",transition:"all .15s",borderLeft:`3px solid ${cl}`}} onMouseEnter={e=>e.currentTarget.style.background="#131313"} onMouseLeave={e=>e.currentTarget.style.background="#111"}>
+      <div style={{display:"flex",gap:12,padding:"12px 14px"}}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:52}}>
+          <div style={{fontSize:18,marginBottom:2}}>{isP?"🟢":"🟠"}</div>
+          <div style={{fontSize:9,fontWeight:700,color:cl,letterSpacing:.5}}>{lb}</div>
+          {time&&<div style={{fontSize:12,fontWeight:600,color:"#E8E8E8",marginTop:2}}>{time}</div>}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4,flexWrap:"wrap"}}>
+            <SB status={trip.status}/>
+            <span style={{fontSize:10,color:"#444",fontFamily:"monospace"}}>#{trip.id}</span>
+            {admin&&trip.balance>0&&<span style={{fontSize:9,fontWeight:700,color:"#ef4444",background:"rgba(239,68,68,.1)",padding:"2px 7px",borderRadius:999}}>Saldo ${trip.balance.toFixed(0)}</span>}
+            {(trip.pickupLocation||"").includes("Turo")&&<span style={{fontSize:9,fontWeight:700,color:"#a78bfa",background:"rgba(139,92,246,.1)",padding:"2px 7px",borderRadius:999}}>Turo</span>}
+          </div>
+          <div style={{fontSize:13,fontWeight:600,color:"#E8E8E8",marginBottom:2}}>{trip.customerName}</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed',sans-serif",marginBottom:3}}>{trip.vehicle}</div>
+          <div style={{fontSize:10,color:"#666",marginBottom:4}}>{trip.vehicleType}</div>
+          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#888",flexWrap:"wrap"}}>
+            <span style={{color:cl}}>{loc}</span><span style={{color:"#333"}}>·</span><span style={{color:"#555"}}>{days}d</span><span style={{color:"#333"}}>·</span><span style={{color:"#555"}}>{isP?"retorno":"saiu"} {fS(od)}</span>
+          </div>
+        </div>
+        {admin&&<div style={{flexShrink:0,textAlign:"right",display:"flex",flexDirection:"column",justifyContent:"center",minWidth:80}}>
+          <div style={{fontSize:16,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed',sans-serif"}}>{$(trip.total)}</div>
+          {trip.paid>0&&<div style={{fontSize:10,color:"#22c55e"}}>Pago: {$(trip.paid)}</div>}
+        </div>}
+      </div>
+    </div>
+  );
+}
 
-  const startEditing = (trip) => {
-    setEditing({
-      pickupTime: (fmtTime(trip.pickupDate) || "10:00").replace(/[^\d:]/g,""),
-      returnTime: (fmtTime(trip.returnDate) || "10:00").replace(/[^\d:]/g,""),
-      pickupMileage: trip.pickupMileage || "",
-      returnMileage: trip.returnMileage || "",
-      total: trip.total || 0,
-      paid: trip.paid || 0,
-      balance: trip.balance || 0,
-      discount: trip.discount || 0,
-    });
-  };
+function App(){
+  const[trips,setTrips]=useState([]);
+  const[filter,setFilter]=useState("today_future");
+  const[search,setSearch]=useState("");
+  const[dateFrom,setDateFrom]=useState("");
+  const[dateTo,setDateTo]=useState("");
+  const[sel,setSel]=useState(null);
+  const[tab,setTab]=useState("trips");
+  const[toast,setToast]=useState(null);
+  const[fn,setFn]=useState(null);
+  const[stats,setStats]=useState(null);
+  const[etf,setEtf]=useState("all");
+  const[ed,setEd]=useState(null);
+  const[pub,setPub]=useState(false);
+  const[link,setLink]=useState(null);
+  const[admin,setAdmin]=useState(false);
+  const[showPw,setShowPw]=useState(false);
+  const[pw,setPw]=useState("");
+  const fr=useRef(null);
+  const toast2=(m,t="success")=>{setToast({m,t});setTimeout(()=>setToast(null),3500);};
 
-  const saveTimeEdit = () => {
-    if (!selected || !editing) return;
-    const updateDate = (dateStr, newTime) => {
-      if (!dateStr || !newTime) return dateStr;
-      const d = new Date(dateStr);
-      const [h, m] = newTime.split(":").map(Number);
-      if (isNaN(h) || isNaN(m)) return dateStr;
-      d.setHours(h, m, 0, 0);
-      return d.toISOString();
-    };
-    const updatedTrip = {
-      ...selected,
-      pickupDate: updateDate(selected.pickupDate, editing.pickupTime),
-      returnDate: updateDate(selected.returnDate, editing.returnTime),
-      pickupMileage: editing.pickupMileage,
-      returnMileage: editing.returnMileage,
-      total: Number(editing.total) || 0,
-      paid: Number(editing.paid) || 0,
-      balance: Number(editing.balance) || 0,
-      discount: Number(editing.discount) || 0,
-    };
-    const updatedTrips = trips.map(t => t.id === selected.id ? updatedTrip : t);
-    setTrips(updatedTrips);
-    setSelected(updatedTrip);
-    saveTrips(updatedTrips, fileName);
-    computeStats(updatedTrips);
-    setEditing(null);
-    showToast("Dados atualizados");
-  };
+  const cs=(t)=>{setStats({total:t.length,confirmed:t.filter(x=>x.status==="Confirmed").length,tp:t.filter(x=>isTd(x.pickupDate)&&x.status!=="Cancelled").length,tr:t.filter(x=>isTd(x.returnDate)&&x.status!=="Cancelled").length,rev:t.reduce((s,x)=>s+(x.total||0),0),bal:t.reduce((s,x)=>s+(x.balance||0),0)});};
+  const sv=async(t,f)=>{try{localStorage.setItem("gs-trips-excel", JSON.stringify({trips:t,fileName:f}));}catch{}};
 
-  useEffect(() => {
-    // Check URL for shared data ID
-    const params = new URLSearchParams(window.location.search);
-    const sharedId = params.get("id");
-    if (sharedId) {
-      fetch(`https://jsonblob.com/api/jsonBlob/${sharedId}`, { headers: { "Accept": "application/json" } })
-        .then(r => r.json())
-        .then(d => { if (d.trips) { setTrips(d.trips); setFileName("Equipe · atualizado " + new Date(d.updated).toLocaleString("pt-BR")); computeStats(d.trips); } })
-        .catch(() => showToast("Erro ao carregar dados compartilhados", "error"));
-      return;
-    }
-    // Check for preloaded data
-    if (window.__GS_PRELOADED__ && window.__GS_PRELOADED__.length > 0) {
-      const t = window.__GS_PRELOADED__;
-      setTrips(t); setFileName("Publicado"); computeStats(t);
-      return;
-    }
-    (async () => { try { const r = (() => { const v = localStorage.getItem("gs-trips-excel"); return v ? { value: v } : null; })(); if(r?.value){const d=JSON.parse(r.value);if(d.trips){setTrips(d.trips);setFileName(d.fileName);computeStats(d.trips);}} } catch{} })();
-  }, []);
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search);
+    const sid=p.get("id");
+    if(sid){fetch(`https://jsonblob.com/api/jsonBlob/${sid}`,{headers:{"Accept":"application/json"}}).then(r=>r.json()).then(d=>{if(d.trips){setTrips(d.trips);setFn("Equipe · "+new Date(d.updated).toLocaleString("pt-BR"));cs(d.trips);}}).catch(()=>toast2("Erro ao carregar","error"));return;}
+    (async()=>{try{const r=(() => { const v = localStorage.getItem("gs-trips-excel"); return v ? { value: v } : null; })();if(r?.value){const d=JSON.parse(r.value);if(d.trips){setTrips(d.trips);setFn(d.fileName);cs(d.trips);}}}catch{}})();
+  },[]);
 
-  const saveTrips = async (t, fn) => { try { localStorage.setItem("gs-trips-excel", JSON.stringify({trips:t,fileName:fn})); } catch{} };
-  const computeStats = (t) => { setStats({ total:t.length, confirmed:t.filter(x=>x.status==="Confirmed").length, todayPickup:t.filter(x=>isToday(x.pickupDate)&&x.status!=="Cancelled").length, todayReturn:t.filter(x=>isToday(x.returnDate)&&x.status!=="Cancelled").length, revenue:t.reduce((s,x)=>s+(x.total||0),0), balance:t.reduce((s,x)=>s+(x.balance||0),0) }); };
-
-  const [publishing, setPublishing] = useState(false);
-  const [shareLink, setShareLink] = useState(null);
-
-  const publishForTeam = async () => {
-    if (trips.length === 0) { showToast("Importe um Excel primeiro", "warn"); return; }
-    setPublishing(true);
-    try {
-      const payload = JSON.stringify({ trips, updated: new Date().toISOString() });
-      let savedId = null;
-      try { savedId = localStorage.getItem("gs-publish-id"); } catch {}
-
-      if (savedId) {
-        // Update existing blob
-        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${savedId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: payload
-        });
-        if (res.ok) {
-          const base = window.location.origin + window.location.pathname;
-          const link = base + "?id=" + savedId;
-          setShareLink(link);
-          showToast("Atualizado! Link pronto.");
-        } else { throw new Error("Erro ao atualizar"); }
-      } else {
-        // Create new blob
-        const res = await fetch("https://jsonblob.com/api/jsonBlob", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: payload
-        });
-        if (res.ok || res.status === 201) {
-          const loc = res.headers.get("Location") || "";
-          const blobId = loc.split("/").pop();
-          if (blobId) {
-            try { localStorage.setItem("gs-publish-id", blobId); } catch {}
-            const base = window.location.origin + window.location.pathname;
-            const link = base + "?id=" + blobId;
-            setShareLink(link);
-            showToast("Publicado! Copie o link.");
-          } else { throw new Error("Nao conseguiu gerar o ID"); }
-        } else { throw new Error("Erro ao publicar"); }
+  // Upload merges with existing data — updates existing reservations, adds new ones
+  const hu=(e)=>{
+    const f=e.target.files?.[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=(ev)=>{try{
+      const parsed=parseExcel(new Uint8Array(ev.target.result));
+      if(!parsed.length){toast2("Nenhuma reserva","error");return;}
+      // Merge: update existing by id, keep edited fields (mileage etc), add new
+      const existing=new Map(trips.map(t=>[t.id,t]));
+      const merged=[];
+      const seen=new Set();
+      for(const p of parsed){
+        seen.add(p.id);
+        const old=existing.get(p.id);
+        if(old){
+          // Keep manually edited fields, update rest from new file
+          merged.push({...p,pickupMileage:old.pickupMileage||p.pickupMileage,returnMileage:old.returnMileage||p.returnMileage,pickupDate:old.pickupDate!==p.pickupDate&&old.pickupMileage?old.pickupDate:p.pickupDate,returnDate:old.returnDate!==p.returnDate&&old.returnMileage?old.returnDate:p.returnDate});
+        }else{merged.push(p);}
       }
-    } catch (e) {
-      showToast("Erro: " + e.message, "error");
+      // Keep old trips not in new file (historical data)
+      for(const t of trips){if(!seen.has(t.id))merged.push(t);}
+      merged.sort((a,b)=>new Date(a.pickupDate)-new Date(b.pickupDate));
+      setTrips(merged);setFn(f.name);cs(merged);sv(merged,f.name);
+      toast2(`${parsed.length} reservas processadas (${merged.length} total)`);
+    }catch(e){toast2("Erro: "+e.message,"error");}};
+    rd.readAsArrayBuffer(f);
+  };
+
+  const startEdit=(t)=>{setEd({pt:(fT(t.pickupDate)||"10:00").replace(/[^\d:]/g,""),rt:(fT(t.returnDate)||"10:00").replace(/[^\d:]/g,""),pm:t.pickupMileage||"",rm:t.returnMileage||"",total:t.total||0,paid:t.paid||0,balance:t.balance||0,discount:t.discount||0});};
+  const saveEdit=()=>{
+    if(!sel||!ed)return;
+    const ud=(ds,nt)=>{if(!ds||!nt)return ds;const d=new Date(ds);const[h,m]=nt.split(":").map(Number);if(isNaN(h)||isNaN(m))return ds;d.setHours(h,m,0,0);return d.toISOString();};
+    const ut={...sel,pickupDate:ud(sel.pickupDate,ed.pt),returnDate:ud(sel.returnDate,ed.rt),pickupMileage:ed.pm,returnMileage:ed.rm,total:Number(ed.total)||0,paid:Number(ed.paid)||0,balance:Number(ed.balance)||0,discount:Number(ed.discount)||0};
+    const up=trips.map(t=>t.id===sel.id?ut:t);
+    setTrips(up);setSel(ut);sv(up,fn);cs(up);setEd(null);toast2("Dados atualizados");
+  };
+
+  const doLogin=()=>{if(pw===ADMIN_PASS){setAdmin(true);setShowPw(false);setPw("");toast2("Modo admin ativado");}else{toast2("Senha incorreta","error");setPw("");}};
+
+  const publish=async()=>{
+    if(!trips.length){toast2("Importe um Excel primeiro","warn");return;}
+    setPub(true);
+    try{
+      const pl=JSON.stringify({trips,updated:new Date().toISOString()});
+      let sid=null;try{sid=localStorage.getItem("gs-pub-id");}catch{}
+      if(sid){
+        const r=await fetch(`https://jsonblob.com/api/jsonBlob/${sid}`,{method:"PUT",headers:{"Content-Type":"application/json","Accept":"application/json"},body:pl});
+        if(r.ok){setLink(window.location.origin+window.location.pathname+"?id="+sid);toast2("Atualizado!");}else throw new Error("Erro");
+      }else{
+        const r=await fetch("https://jsonblob.com/api/jsonBlob",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:pl});
+        if(r.ok||r.status===201){const loc=r.headers.get("Location")||"";const bid=loc.split("/").pop();if(bid){try{localStorage.setItem("gs-pub-id",bid);}catch{}setLink(window.location.origin+window.location.pathname+"?id="+bid);toast2("Publicado!");}else throw new Error("Sem ID");}else throw new Error("Erro");
+      }
+    }catch(e){toast2("Erro: "+e.message,"error");}
+    setPub(false);
+  };
+
+  const cpLink=()=>{if(!link)return;navigator.clipboard.writeText(link).then(()=>toast2("Link copiado!")).catch(()=>{const t=document.createElement("textarea");t.value=link;document.body.appendChild(t);t.select();document.execCommand("copy");document.body.removeChild(t);toast2("Link copiado!");});};
+
+  const events=useMemo(()=>{
+    const e=[];for(const t of trips){if(t.status==="Cancelled")continue;
+    e.push({type:"pickup",dk:dk(t.pickupDate),time:fT(t.pickupDate),trip:t,sd:new Date(t.pickupDate)});
+    e.push({type:"return",dk:dk(t.returnDate),time:fT(t.returnDate),trip:t,sd:new Date(t.returnDate)});}
+    e.sort((a,b)=>a.sd-b.sd||(a.type==="pickup"?-1:1));return e;
+  },[trips]);
+
+  const today=sot(),tdk=dk(new Date()),tmdk=dk(new Date(Date.now()+864e5));
+
+  const fe=useMemo(()=>events.filter(ev=>{
+    // Date range filter
+    if(dateFrom){const df=new Date(dateFrom+"T00:00:00");if(ev.sd<df)return false;}
+    if(dateTo){const dt=new Date(dateTo+"T23:59:59");if(ev.sd>dt)return false;}
+    // Preset filters (only apply if no date range set)
+    if(!dateFrom&&!dateTo){
+      if(filter==="today_future"&&ev.sd<today)return false;
+      if(filter==="today"&&ev.dk!==tdk)return false;
+      if(filter==="tomorrow"&&ev.dk!==tmdk)return false;
+      if(filter==="week"){const w=new Date(Date.now()+7*864e5);if(ev.sd<today||ev.sd>w)return false;}
     }
-    setPublishing(false);
-  };
+    if(etf==="pickup"&&ev.type!=="pickup")return false;
+    if(etf==="return"&&ev.type!=="return")return false;
+    const q=search.toLowerCase();
+    if(q&&![ev.trip.customerName,ev.trip.vehicle,ev.trip.vehicleType,ev.trip.pickupLocation,ev.trip.returnLocation,ev.trip.id,ev.trip.phone].some(s=>(s||"").toLowerCase().includes(q)))return false;
+    return true;
+  }),[events,filter,etf,search,today,tdk,tmdk,dateFrom,dateTo]);
 
-  const copyLink = () => {
-    if (!shareLink) return;
-    navigator.clipboard.writeText(shareLink).then(() => showToast("Link copiado!")).catch(() => {
-      // Fallback
-      const ta = document.createElement("textarea"); ta.value = shareLink; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
-      showToast("Link copiado!");
-    });
-  };
+  const gbd=useMemo(()=>{const g=[];let ck=null,cg=null;for(const ev of fe){if(ev.dk!==ck){ck=ev.dk;cg={dk:ck,evs:[]};g.push(cg);}cg.evs.push(ev);}return g;},[fe]);
+  const te=events.filter(e=>e.dk===tdk);
+  const cts={tf:events.filter(e=>e.sd>=today).length,td:te.length,tm:events.filter(e=>e.dk===tmdk).length,wk:events.filter(e=>e.sd>=today&&e.sd<=new Date(Date.now()+7*864e5)).length,all:events.length};
 
-  const handleUpload = (e) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const parsed = parseExcel(new Uint8Array(ev.target.result));
-        if (!parsed.length) { showToast("Nenhuma reserva encontrada","error"); return; }
-        parsed.sort((a,b)=>new Date(a.pickupDate)-new Date(b.pickupDate));
-        setTrips(parsed); setFileName(file.name); computeStats(parsed); saveTrips(parsed, file.name);
-        showToast(`${parsed.length} reservas importadas`);
-      } catch(err) { showToast("Erro: "+err.message,"error"); }
-    };
-    reader.readAsArrayBuffer(file);
-  };
+  const s=sel;
+  const hasDateRange=dateFrom||dateTo;
 
-  const events = useMemo(() => {
-    const evts = [];
-    for (const t of trips) {
-      if (t.status === "Cancelled") continue;
-      evts.push({ type:"pickup", date:t.pickupDate, dateKey:dateKey(t.pickupDate), time:fmtTime(t.pickupDate), trip:t, sortDate:new Date(t.pickupDate) });
-      evts.push({ type:"return", date:t.returnDate, dateKey:dateKey(t.returnDate), time:fmtTime(t.returnDate), trip:t, sortDate:new Date(t.returnDate) });
-    }
-    evts.sort((a,b)=>a.sortDate-b.sortDate||(a.type==="pickup"?-1:1));
-    return evts;
-  }, [trips]);
+  return(
+    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'DM Sans',sans-serif",color:"#E8E8E8"}}>
+      {toast&&<div style={{position:"fixed",top:16,right:16,zIndex:999,padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,background:toast.t==="error"?"#7f1d1d":toast.t==="warn"?"#78350f":"#14532d",color:toast.t==="error"?"#fca5a5":toast.t==="warn"?"#fde68a":"#86efac"}}>{toast.m}</div>}
 
-  const today = startOfToday();
-  const todayKey = dateKey(new Date());
-
-  const filteredEvents = useMemo(() => {
-    return events.filter(ev => {
-      if (filter==="today_future" && ev.sortDate<today) return false;
-      if (filter==="today" && ev.dateKey!==todayKey) return false;
-      if (filter==="tomorrow") { if (ev.dateKey!==dateKey(new Date(Date.now()+86400000))) return false; }
-      if (filter==="week") { const we=new Date(Date.now()+7*86400000); if(ev.sortDate<today||ev.sortDate>we) return false; }
-      if (eventTypeFilter==="pickup" && ev.type!=="pickup") return false;
-      if (eventTypeFilter==="return" && ev.type!=="return") return false;
-      const q=search.toLowerCase();
-      if(q){ const t=ev.trip; if(![t.customerName,t.vehicle,t.vehicleType,t.pickupLocation,t.returnLocation,t.id,t.resNumber,t.phone].some(s=>(s||"").toLowerCase().includes(q))) return false; }
-      return true;
-    });
-  }, [events,filter,eventTypeFilter,search,today,todayKey]);
-
-  const groupedByDay = useMemo(() => {
-    const groups=[]; let ck=null, cg=null;
-    for (const ev of filteredEvents) { if(ev.dateKey!==ck){ck=ev.dateKey;cg={dateKey:ck,events:[]};groups.push(cg);} cg.events.push(ev); }
-    return groups;
-  }, [filteredEvents]);
-
-  const todayEvents = events.filter(e=>e.dateKey===todayKey);
-  const counts = { today_future:events.filter(e=>e.sortDate>=today).length, today:todayEvents.length, tomorrow:events.filter(e=>e.dateKey===dateKey(new Date(Date.now()+86400000))).length, week:events.filter(e=>e.sortDate>=today&&e.sortDate<=new Date(Date.now()+7*86400000)).length, all:events.length };
-
-  return (
-    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'DM Sans', sans-serif",color:"#E8E8E8"}}>
-
-      {toast&&<div style={{position:"fixed",top:16,right:16,zIndex:999,padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,background:toast.type==="error"?"#7f1d1d":toast.type==="warn"?"#78350f":"#14532d",color:toast.type==="error"?"#fca5a5":toast.type==="warn"?"#fde68a":"#86efac"}}>{toast.msg}</div>}
+      {/* Password modal */}
+      {showPw&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setShowPw(false)}>
+        <div style={{...sc,padding:24,width:300}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:16,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",color:"#F5F5F5",marginBottom:12}}>Modo Administrador</div>
+          <p style={{fontSize:12,color:"#666",marginBottom:14}}>Digite a senha para ver valores financeiros</p>
+          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()} placeholder="Senha" style={{...si,marginBottom:12}} autoFocus/>
+          <button onClick={doLogin} style={{width:"100%",padding:"10px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#F59E0B,#D97706)",color:"#0C0C0C",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:1}}>Entrar</button>
+        </div>
+      </div>}
 
       <header style={{background:"#111",borderBottom:"1px solid #1E1E1E",position:"sticky",top:0,zIndex:100}}>
         <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:34,height:34,borderRadius:8,background:"linear-gradient(135deg, #F59E0B, #D97706)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#0C0C0C",fontFamily:"'Barlow Condensed', sans-serif"}}>GS</div>
+            <div style={{width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#F59E0B,#D97706)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#0C0C0C",fontFamily:"'Barlow Condensed',sans-serif"}}>GS</div>
             <div>
-              <div style={{fontSize:14,fontWeight:700,fontFamily:"'Barlow Condensed', sans-serif",textTransform:"uppercase",letterSpacing:2}}>GS Car Rental</div>
-              <div style={{fontSize:9,color:"#555",marginTop:-1}}>{trips.length} reservas · {stats?.todayPickup||0} saidas hoje · {stats?.todayReturn||0} retornos hoje</div>
+              <div style={{fontSize:14,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:2}}>GS Car Rental</div>
+              <div style={{fontSize:9,color:"#555",marginTop:-1}}>{trips.length} reservas · {stats?.tp||0} saidas · {stats?.tr||0} retornos{admin&&" · 🔓 Admin"}</div>
             </div>
           </div>
-          <div style={{display:"flex",gap:4}}>
-            <button onClick={()=>{setTab("trips");setSelected(null);}} style={{...S.btn,background:tab!=="detail"?"rgba(245,158,11,0.12)":"rgba(255,255,255,0.04)",color:tab!=="detail"?"#F59E0B":"#999",border:tab!=="detail"?"1px solid rgba(245,158,11,0.3)":"1px solid #222",fontWeight:600}}>
-              Agenda {todayEvents.length>0&&<span style={{background:"#F59E0B",color:"#0C0C0C",borderRadius:999,fontSize:10,fontWeight:700,padding:"1px 6px",marginLeft:4}}>{todayEvents.length}</span>}
-            </button>
-            <button onClick={()=>fileRef.current?.click()} style={{...S.btn,background:"rgba(139,92,246,0.12)",color:"#a78bfa",border:"1px solid rgba(139,92,246,0.3)",fontWeight:600}}>Upload</button>
-            {trips.length>0&&<button onClick={publishForTeam} disabled={publishing} style={{...S.btn,background:publishing?"#333":"rgba(34,197,94,0.12)",color:publishing?"#666":"#22c55e",border:"1px solid rgba(34,197,94,0.3)",fontWeight:600}}>{publishing?"Publicando...":"Publicar"}</button>}
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={handleUpload}/>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+            <button onClick={()=>{setTab("trips");setSel(null);setEd(null);}} style={{...sb,background:tab!=="detail"?"rgba(245,158,11,.12)":"rgba(255,255,255,.04)",color:tab!=="detail"?"#F59E0B":"#999",border:tab!=="detail"?"1px solid rgba(245,158,11,.3)":"1px solid #222",fontWeight:600}}>Agenda{te.length>0&&<span style={{background:"#F59E0B",color:"#0C0C0C",borderRadius:999,fontSize:10,fontWeight:700,padding:"1px 6px",marginLeft:4}}>{te.length}</span>}</button>
+            <button onClick={()=>fr.current?.click()} style={{...sb,background:"rgba(139,92,246,.12)",color:"#a78bfa",border:"1px solid rgba(139,92,246,.3)",fontWeight:600}}>Upload</button>
+            {trips.length>0&&<button onClick={publish} disabled={pub} style={{...sb,background:pub?"#333":"rgba(34,197,94,.12)",color:pub?"#666":"#22c55e",border:"1px solid rgba(34,197,94,.3)",fontWeight:600}}>{pub?"...":"Publicar"}</button>}
+            <button onClick={()=>admin?setAdmin(false):setShowPw(true)} style={{...sb,background:admin?"rgba(245,158,11,.12)":"rgba(255,255,255,.04)",color:admin?"#F59E0B":"#666",border:admin?"1px solid rgba(245,158,11,.3)":"1px solid #222",fontWeight:600}}>{admin?"🔓":"🔒"}</button>
+            <input ref={fr} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={hu}/>
           </div>
         </div>
       </header>
 
       <div style={{maxWidth:960,margin:"0 auto",padding:"16px 20px 60px"}}>
-        {tab==="trips"&&(<>
+        {tab==="trips"&&<>
           <div style={{marginBottom:4}}>
-            <h1 style={{margin:0,fontSize:28,fontWeight:800,fontFamily:"'Barlow Condensed', sans-serif",color:"#F5F5F5"}}>Agenda</h1>
-            <p style={{margin:"2px 0 0",fontSize:12,color:"#666",textTransform:"capitalize"}}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}{fileName&&<span style={{marginLeft:8,color:"#444"}}>· {fileName}</span>}</p>
+            <h1 style={{margin:0,fontSize:28,fontWeight:800,fontFamily:"'Barlow Condensed',sans-serif",color:"#F5F5F5"}}>Agenda</h1>
+            <p style={{margin:"2px 0 0",fontSize:12,color:"#666",textTransform:"capitalize"}}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}{fn&&<span style={{marginLeft:8,color:"#444"}}>· {fn}</span>}</p>
           </div>
 
-          {stats&&<div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8,margin:"14px 0"}}>
-            <StatCard label="Saidas hoje" value={stats.todayPickup} color={PICKUP_COLOR}/>
-            <StatCard label="Retornos hoje" value={stats.todayReturn} color={RETURN_COLOR}/>
-            <StatCard label="Confirmadas" value={stats.confirmed} color="#3b82f6"/>
-            <StatCard label="Receita" value={`$${Math.round(stats.revenue).toLocaleString()}`} color="#a78bfa"/>
+          {stats&&<div style={{display:"grid",gridTemplateColumns:admin?"repeat(4,1fr)":"repeat(3,1fr)",gap:8,margin:"14px 0"}}>
+            <StC l="Saidas hoje" v={stats.tp} c={PK}/>
+            <StC l="Retornos hoje" v={stats.tr} c={RT}/>
+            <StC l="Confirmadas" v={stats.confirmed} c="#3b82f6"/>
+            {admin&&<StC l="Receita" v={`$${Math.round(stats.rev).toLocaleString()}`} c="#a78bfa"/>}
           </div>}
 
-          {/* Share link bar */}
-          {shareLink&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:10,marginBottom:12}}>
-            <span style={{fontSize:11,color:"#22c55e",fontWeight:600,whiteSpace:"nowrap"}}>Link da equipe:</span>
-            <input readOnly value={shareLink} style={{...S.input,background:"transparent",border:"none",color:"#86efac",fontSize:11,padding:"2px 4px",flex:1}} onClick={e=>e.target.select()}/>
-            <button onClick={copyLink} style={{...S.btn,background:"#22c55e",color:"#0C0C0C",border:"none",fontWeight:700,whiteSpace:"nowrap",padding:"6px 14px"}}>Copiar</button>
+          {link&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"rgba(34,197,94,.06)",border:"1px solid rgba(34,197,94,.2)",borderRadius:10,marginBottom:12}}>
+            <span style={{fontSize:11,color:"#22c55e",fontWeight:600,whiteSpace:"nowrap"}}>Link:</span>
+            <input readOnly value={link} style={{...si,background:"transparent",border:"none",color:"#86efac",fontSize:11,padding:"2px 4px",flex:1}} onClick={e=>e.target.select()}/>
+            <button onClick={cpLink} style={{...sb,background:"#22c55e",color:"#0C0C0C",border:"none",fontWeight:700,whiteSpace:"nowrap",padding:"6px 14px"}}>Copiar</button>
           </div>}
 
-          {/* Date filters */}
-          <div style={{display:"flex",gap:4,marginBottom:8,overflowX:"auto",paddingBottom:2}}>
-            {[["today_future","Hoje + futuras"],["today","Hoje"],["tomorrow","Amanha"],["week","7 dias"],["all","Todas"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setFilter(k)} style={{padding:"4px 11px",borderRadius:999,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",border:filter===k?"1px solid rgba(245,158,11,0.4)":"1px solid #1a1a1a",background:filter===k?"rgba(245,158,11,0.1)":"transparent",color:filter===k?"#F59E0B":"#555",whiteSpace:"nowrap"}}>{l} <span style={{opacity:0.5}}>({counts[k]})</span></button>
-            ))}
+          {/* Date range search */}
+          <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:4,flex:1}}>
+              <span style={{fontSize:10,color:"#555",whiteSpace:"nowrap"}}>De:</span>
+              <input type="date" value={dateFrom} onChange={e=>{setDateFrom(e.target.value);if(e.target.value)setFilter("custom");}} style={{...si,padding:"6px 8px",fontSize:11,flex:1}}/>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:4,flex:1}}>
+              <span style={{fontSize:10,color:"#555",whiteSpace:"nowrap"}}>Ate:</span>
+              <input type="date" value={dateTo} onChange={e=>{setDateTo(e.target.value);if(e.target.value)setFilter("custom");}} style={{...si,padding:"6px 8px",fontSize:11,flex:1}}/>
+            </div>
+            {hasDateRange&&<button onClick={()=>{setDateFrom("");setDateTo("");setFilter("today_future");}} style={{...sb,color:"#ef4444",background:"rgba(239,68,68,.06)",border:"1px solid rgba(239,68,68,.2)",padding:"6px 10px",fontSize:11}}>✕</button>}
           </div>
+
+          {!hasDateRange&&<div style={{display:"flex",gap:4,marginBottom:8,overflowX:"auto",paddingBottom:2}}>
+            {[["today_future","Hoje+",cts.tf],["today","Hoje",cts.td],["tomorrow","Amanha",cts.tm],["week","7 dias",cts.wk],["all","Todas",cts.all]].map(([k,l,n])=>
+              <button key={k} onClick={()=>setFilter(k)} style={{padding:"4px 11px",borderRadius:999,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",border:filter===k?"1px solid rgba(245,158,11,.4)":"1px solid #1a1a1a",background:filter===k?"rgba(245,158,11,.1)":"transparent",color:filter===k?"#F59E0B":"#555",whiteSpace:"nowrap"}}>{l} <span style={{opacity:.5}}>({n})</span></button>
+            )}
+          </div>}
 
           <div style={{display:"flex",gap:4,marginBottom:12}}>
             {[["all","Todos"],["pickup","🟢 Saidas"],["return","🟠 Retornos"]].map(([k,l])=>{
-              const c=k==="pickup"?PICKUP_COLOR:k==="return"?RETURN_COLOR:"#888";
-              return <button key={k} onClick={()=>setEventTypeFilter(k)} style={{padding:"4px 11px",borderRadius:999,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",border:eventTypeFilter===k?`1px solid ${c}60`:"1px solid #1a1a1a",background:eventTypeFilter===k?`${c}15`:"transparent",color:eventTypeFilter===k?c:"#555",whiteSpace:"nowrap"}}>{l}</button>;
+              const c=k==="pickup"?PK:k==="return"?RT:"#888";
+              return<button key={k} onClick={()=>setEtf(k)} style={{padding:"4px 11px",borderRadius:999,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",border:etf===k?`1px solid ${c}60`:"1px solid #1a1a1a",background:etf===k?`${c}15`:"transparent",color:etf===k?c:"#555",whiteSpace:"nowrap"}}>{l}</button>;
             })}
           </div>
 
-          <input style={{...S.input,marginBottom:14,background:"#111",borderRadius:10,fontSize:12}} placeholder="Buscar cliente, veiculo, local, RA#..." value={search} onChange={e=>setSearch(e.target.value)}/>
+          <input style={{...si,marginBottom:14,background:"#111",borderRadius:10,fontSize:12}} placeholder="Buscar cliente, veiculo, local, RA#..." value={search} onChange={e=>setSearch(e.target.value)}/>
 
           {trips.length===0&&<div style={{textAlign:"center",padding:"60px 20px",color:"#444"}}>
-            <div style={{fontSize:40,marginBottom:12,opacity:0.4}}>📊</div>
+            <div style={{fontSize:40,marginBottom:12,opacity:.4}}>📊</div>
             <div style={{fontSize:15,fontWeight:500,marginBottom:6}}>Importe o relatorio do Rent Centric</div>
-            <button onClick={()=>fileRef.current?.click()} style={{...S.btn,background:"rgba(139,92,246,0.15)",color:"#a78bfa",border:"1px solid rgba(139,92,246,0.3)",fontWeight:600,padding:"10px 24px",fontSize:14,marginTop:12}}>Selecionar arquivo</button>
+            <button onClick={()=>fr.current?.click()} style={{...sb,background:"rgba(139,92,246,.15)",color:"#a78bfa",border:"1px solid rgba(139,92,246,.3)",fontWeight:600,padding:"10px 24px",fontSize:14,marginTop:12}}>Selecionar arquivo</button>
           </div>}
 
-          {groupedByDay.map(group=>{
-            const dl=dayLabel(group.dateKey);
-            const isCurrent=group.dateKey===todayKey;
-            const pk=group.events.filter(e=>e.type==="pickup").length;
-            const rt=group.events.filter(e=>e.type==="return").length;
-            return (
-              <div key={group.dateKey} style={{marginBottom:22}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px 0",borderBottom:isCurrent?"2px solid #F59E0B":"1px solid #222"}}>
-                  <div style={{fontSize:16,fontWeight:700,fontFamily:"'Barlow Condensed', sans-serif",color:isCurrent?"#F59E0B":"#E8E8E8",textTransform:"capitalize"}}>
-                    {dl&&<span style={{marginRight:6}}>{dl} —</span>}{fmtDayHeader(group.dateKey)}
-                  </div>
-                  <div style={{display:"flex",gap:6,marginLeft:"auto"}}>
-                    {pk>0&&<span style={{fontSize:10,fontWeight:600,color:PICKUP_COLOR,background:`${PICKUP_COLOR}15`,padding:"2px 8px",borderRadius:999,border:`1px solid ${PICKUP_COLOR}30`}}>🟢 {pk}</span>}
-                    {rt>0&&<span style={{fontSize:10,fontWeight:600,color:RETURN_COLOR,background:`${RETURN_COLOR}15`,padding:"2px 8px",borderRadius:999,border:`1px solid ${RETURN_COLOR}30`}}>🟠 {rt}</span>}
-                  </div>
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {group.events.map((ev,idx)=><EventCard key={`${ev.trip.id}-${ev.type}-${idx}`} ev={ev} onSelect={()=>{setSelected(ev.trip);setEditing(null);setTab("detail");}}/>)}
+          {gbd.map(g=>{const dl=dlbl(g.dk),ic=g.dk===tdk,pk=g.evs.filter(e=>e.type==="pickup").length,rt=g.evs.filter(e=>e.type==="return").length;
+            return<div key={g.dk} style={{marginBottom:22}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px 0",borderBottom:ic?"2px solid #F59E0B":"1px solid #222"}}>
+                <div style={{fontSize:16,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",color:ic?"#F59E0B":"#E8E8E8",textTransform:"capitalize"}}>{dl&&<span style={{marginRight:6}}>{dl} —</span>}{fH(g.dk)}</div>
+                <div style={{display:"flex",gap:6,marginLeft:"auto"}}>
+                  {pk>0&&<span style={{fontSize:10,fontWeight:600,color:PK,background:`${PK}15`,padding:"2px 8px",borderRadius:999,border:`1px solid ${PK}30`}}>🟢 {pk}</span>}
+                  {rt>0&&<span style={{fontSize:10,fontWeight:600,color:RT,background:`${RT}15`,padding:"2px 8px",borderRadius:999,border:`1px solid ${RT}30`}}>🟠 {rt}</span>}
                 </div>
               </div>
-            );
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>{g.evs.map((ev,i)=><EC key={`${ev.trip.id}-${ev.type}-${i}`} ev={ev} admin={admin} onSelect={()=>{setSel(ev.trip);setEd(null);setTab("detail");}}/>)}</div>
+            </div>;
           })}
 
-          {filteredEvents.length>0&&<div style={{marginTop:14,padding:"10px 16px",background:"#111",borderRadius:10,border:"1px solid #1a1a1a",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-            <span style={{fontSize:11,color:"#555"}}>{filteredEvents.length} evento(s) · {groupedByDay.length} dia(s)</span>
+          {fe.length>0&&<div style={{marginTop:14,padding:"10px 16px",background:"#111",borderRadius:10,border:"1px solid #1a1a1a",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+            <span style={{fontSize:11,color:"#555"}}>{fe.length} evento(s) · {gbd.length} dia(s)</span>
             <div style={{display:"flex",gap:12}}>
-              <span style={{fontSize:10,color:PICKUP_COLOR}}>🟢 {filteredEvents.filter(e=>e.type==="pickup").length} saidas</span>
-              <span style={{fontSize:10,color:RETURN_COLOR}}>🟠 {filteredEvents.filter(e=>e.type==="return").length} retornos</span>
+              <span style={{fontSize:10,color:PK}}>🟢 {fe.filter(e=>e.type==="pickup").length}</span>
+              <span style={{fontSize:10,color:RT}}>🟠 {fe.filter(e=>e.type==="return").length}</span>
+              {admin&&<span style={{fontSize:10,color:"#F59E0B"}}>💰 {$(fe.reduce((s,e)=>e.type==="pickup"?s+e.trip.total:s,0))}</span>}
             </div>
           </div>}
-        </>)}
+        </>}
 
-        {tab==="detail"&&selected&&(<>
-          <button onClick={()=>{setTab("trips");setEditing(null);}} style={{background:"none",border:"none",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",padding:0,marginBottom:14}}>← Voltar</button>
-          <div style={{...S.card,padding:20,marginBottom:12}}>
+        {/* DETAIL */}
+        {tab==="detail"&&s&&<>
+          <button onClick={()=>{setTab("trips");setEd(null);}} style={{background:"none",border:"none",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",padding:0,marginBottom:14}}>← Voltar</button>
+          <div style={{...sc,padding:20,marginBottom:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                  <span style={{fontSize:11,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed', sans-serif"}}>RA# {selected.id}</span>
-                  <StatusBadge status={selected.status}/>
-                </div>
-                <div style={{fontSize:20,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed', sans-serif",marginBottom:2}}>{selected.vehicle}</div>
-                <div style={{fontSize:12,color:"#888"}}>{selected.vehicleType}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{fontSize:11,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed',sans-serif"}}>RA# {s.id}</span><SB status={s.status}/></div>
+                <div style={{fontSize:20,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed',sans-serif",marginBottom:2}}>{s.vehicle}</div>
+                <div style={{fontSize:12,color:"#888"}}>{s.vehicleType}</div>
               </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:10,color:"#555"}}>Total</div>
-                <div style={{fontSize:28,fontWeight:800,color:"#F59E0B",fontFamily:"'Barlow Condensed', sans-serif"}}>{money(selected.total)}</div>
-                {selected.balance>0&&<div style={{fontSize:11,color:"#ef4444"}}>Saldo: {money(selected.balance)}</div>}
-              </div>
+              {admin&&<div style={{textAlign:"right"}}><div style={{fontSize:10,color:"#555"}}>Total</div><div style={{fontSize:28,fontWeight:800,color:"#F59E0B",fontFamily:"'Barlow Condensed',sans-serif"}}>{$(s.total)}</div>{s.balance>0&&<div style={{fontSize:11,color:"#ef4444"}}>Saldo: {$(s.balance)}</div>}</div>}
             </div>
           </div>
-          <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>👤 Cliente</div><DR l="Nome" v={selected.customerName}/>{selected.customerId&&<DR l="ID" v={`#${selected.customerId}`}/>}{selected.phone&&<DR l="Telefone" v={selected.phone}/>}{selected.email&&<DR l="Email" v={selected.email}/>}</div>
+
+          <div style={{...sc,padding:16,marginBottom:12}}><div style={ss}>👤 Cliente</div><DR l="Nome" v={s.customerName}/>{s.customerId&&<DR l="ID" v={`#${s.customerId}`}/>}{s.phone&&<DR l="Telefone" v={s.phone}/>}{s.email&&<DR l="Email" v={s.email}/>}</div>
+
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <div style={{...S.card,padding:16,borderColor:`${PICKUP_COLOR}30`}}>
-              <div style={{...S.section,color:PICKUP_COLOR}}>🟢 Saida</div>
-              <DR l="Local" v={selected.pickupLocation}/>
-              <DR l="Data" v={fmtDate(selected.pickupDate)}/>
-              {editing ? (<>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
-                  <span style={{fontSize:11,color:"#555"}}>Hora</span>
-                  <input type="time" value={editing.pickupTime} onChange={e=>setEditing({...editing,pickupTime:e.target.value})}
-                    style={{background:"#0C0C0C",border:`1px solid ${PICKUP_COLOR}40`,borderRadius:6,padding:"4px 8px",color:PICKUP_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
-                  <span style={{fontSize:11,color:"#555"}}>Milhas</span>
-                  <input type="number" placeholder="0" value={editing.pickupMileage} onChange={e=>setEditing({...editing,pickupMileage:e.target.value})}
-                    style={{background:"#0C0C0C",border:`1px solid ${PICKUP_COLOR}40`,borderRadius:6,padding:"4px 8px",color:PICKUP_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
-                </div>
-              </>) : (<>
-                <DR l="Hora" v={fmtTime(selected.pickupDate)}/>
-                <DR l="Milhas" v={selected.pickupMileage || "—"}/>
-              </>)}
+            <div style={{...sc,padding:16,borderColor:`${PK}30`}}>
+              <div style={{...ss,color:PK}}>🟢 Saida</div>
+              <DR l="Local" v={s.pickupLocation}/><DR l="Data" v={fD(s.pickupDate)}/>
+              {ed?<>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>Hora</span><input type="time" value={ed.pt} onChange={e=>setEd({...ed,pt:e.target.value})} style={ei(PK)}/></div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>Milhas</span><input type="number" placeholder="0" value={ed.pm} onChange={e=>setEd({...ed,pm:e.target.value})} style={ei(PK)}/></div>
+              </>:<><DR l="Hora" v={fT(s.pickupDate)}/><DR l="Milhas" v={s.pickupMileage||"—"}/></>}
             </div>
-            <div style={{...S.card,padding:16,borderColor:`${RETURN_COLOR}30`}}>
-              <div style={{...S.section,color:RETURN_COLOR}}>🟠 Retorno</div>
-              <DR l="Local" v={selected.returnLocation}/>
-              <DR l="Data" v={fmtDate(selected.returnDate)}/>
-              {editing ? (<>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
-                  <span style={{fontSize:11,color:"#555"}}>Hora</span>
-                  <input type="time" value={editing.returnTime} onChange={e=>setEditing({...editing,returnTime:e.target.value})}
-                    style={{background:"#0C0C0C",border:`1px solid ${RETURN_COLOR}40`,borderRadius:6,padding:"4px 8px",color:RETURN_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
-                  <span style={{fontSize:11,color:"#555"}}>Milhas</span>
-                  <input type="number" placeholder="0" value={editing.returnMileage} onChange={e=>setEditing({...editing,returnMileage:e.target.value})}
-                    style={{background:"#0C0C0C",border:`1px solid ${RETURN_COLOR}40`,borderRadius:6,padding:"4px 8px",color:RETURN_COLOR,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:90,textAlign:"center"}}/>
-                </div>
-              </>) : (<>
-                <DR l="Hora" v={fmtTime(selected.returnDate)}/>
-                <DR l="Milhas" v={selected.returnMileage || "—"}/>
-              </>)}
+            <div style={{...sc,padding:16,borderColor:`${RT}30`}}>
+              <div style={{...ss,color:RT}}>🟠 Retorno</div>
+              <DR l="Local" v={s.returnLocation}/><DR l="Data" v={fD(s.returnDate)}/>
+              {ed?<>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>Hora</span><input type="time" value={ed.rt} onChange={e=>setEd({...ed,rt:e.target.value})} style={ei(RT)}/></div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>Milhas</span><input type="number" placeholder="0" value={ed.rm} onChange={e=>setEd({...ed,rm:e.target.value})} style={ei(RT)}/></div>
+              </>:<><DR l="Hora" v={fT(s.returnDate)}/><DR l="Milhas" v={s.returnMileage||"—"}/></>}
             </div>
           </div>
-          {/* Financeiro */}
-          <div style={{...S.card,padding:16,marginBottom:12,borderColor:"rgba(245,158,11,0.15)"}}>
-            <div style={S.section}>💰 Financeiro</div>
-            {editing ? (<>
-              <EditRow label="Total" value={editing.total} color="#F59E0B" onChange={v=>setEditing({...editing,total:v})}/>
-              <EditRow label="Pago" value={editing.paid} color="#22c55e" onChange={v=>setEditing({...editing,paid:v})}/>
-              <EditRow label="Saldo" value={editing.balance} color="#ef4444" onChange={v=>setEditing({...editing,balance:v})}/>
-              <EditRow label="Desconto" value={editing.discount} color="#a78bfa" onChange={v=>setEditing({...editing,discount:v})}/>
-            </>) : (<>
-              {selected.airportTax>0&&<DR l="Airport Tax" v={money(selected.airportTax)}/>}
-              {selected.flRentalTax>0&&<DR l="FL Rental Tax" v={money(selected.flRentalTax)}/>}
-              {selected.stateTax>0&&<DR l="State Tax" v={money(selected.stateTax)}/>}
-              {selected.discount!==0&&<DR l="Desconto" v={money(selected.discount)}/>}
-              <DR l="Total" v={money(selected.total)} hl/>
-              <DR l="Pago" v={money(selected.paid)}/>
-              <DR l="Saldo" v={money(selected.balance)} hl={selected.balance>0}/>
-            </>)}
-          </div>
-          {/* Edit/Save buttons */}
+
+          {/* Financeiro — admin only */}
+          {admin&&<div style={{...sc,padding:16,marginBottom:12,borderColor:"rgba(245,158,11,.15)"}}>
+            <div style={ss}>💰 Financeiro</div>
+            {ed?<>
+              <ER l="Total" v={ed.total} c="#F59E0B" fn={v=>setEd({...ed,total:v})}/>
+              <ER l="Pago" v={ed.paid} c="#22c55e" fn={v=>setEd({...ed,paid:v})}/>
+              <ER l="Saldo" v={ed.balance} c="#ef4444" fn={v=>setEd({...ed,balance:v})}/>
+              <ER l="Desconto" v={ed.discount} c="#a78bfa" fn={v=>setEd({...ed,discount:v})}/>
+            </>:<>
+              {s.discount!==0&&<DR l="Desconto" v={$(s.discount)}/>}
+              <DR l="Total" v={$(s.total)} hl/><DR l="Pago" v={$(s.paid)}/><DR l="Saldo" v={$(s.balance)} hl={s.balance>0}/>
+            </>}
+          </div>}
+
           <div style={{marginBottom:12}}>
-            {!editing ? (
-              <button onClick={()=>startEditing(selected)} style={{width:"100%",padding:"10px",borderRadius:10,border:"1px solid rgba(245,158,11,0.3)",background:"rgba(245,158,11,0.06)",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>✏️ Editar dados</button>
-            ) : (
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={saveTimeEdit} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #D97706)",color:"#0C0C0C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Barlow Condensed', sans-serif",textTransform:"uppercase",letterSpacing:1}}>Salvar</button>
-                <button onClick={()=>setEditing(null)} style={{padding:"10px 16px",borderRadius:10,border:"1px solid #333",background:"transparent",color:"#888",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Cancelar</button>
-              </div>
-            )}
+            {!ed?<button onClick={()=>startEdit(s)} style={{width:"100%",padding:"10px",borderRadius:10,border:"1px solid rgba(245,158,11,.3)",background:"rgba(245,158,11,.06)",color:"#F59E0B",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>✏️ Editar dados</button>
+            :<div style={{display:"flex",gap:8}}>
+              <button onClick={saveEdit} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#F59E0B,#D97706)",color:"#0C0C0C",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:1}}>Salvar</button>
+              <button onClick={()=>setEd(null)} style={{padding:"10px 16px",borderRadius:10,border:"1px solid #333",background:"transparent",color:"#888",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Cancelar</button>
+            </div>}
           </div>
-          {/* Detalhes */}
-          <div style={{...S.card,padding:16,marginBottom:12}}><div style={S.section}>📊 Detalhes</div><div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8}}>
-            <MS label="Dias" value={selected.days||daysBetween(selected.pickupDate,selected.returnDate)}/>
-            <MS label="Mi saida" value={selected.pickupMileage||"—"} small/>
-            <MS label="Mi retorno" value={selected.returnMileage||"—"} small/>
-            <MS label="One-way" value={money(selected.oneWay)} small/>
+
+          <div style={{...sc,padding:16,marginBottom:12}}><div style={ss}>📊 Detalhes</div><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+            <MS l="Dias" v={s.days||dB(s.pickupDate,s.returnDate)}/><MS l="Mi saida" v={s.pickupMileage||"—"} sm/><MS l="Mi retorno" v={s.returnMileage||"—"} sm/><MS l="One-way" v={$(s.oneWay)} sm/>
           </div></div>
-          <div style={{...S.card,padding:16}}><div style={S.section}>📋 Operacional</div><DR l="Status" v={selected.status}/>{selected.reservationDate&&<DR l="Data reserva" v={selected.reservationDate}/>}{selected.channel&&<DR l="Canal" v={selected.channel}/>}{selected.reservedBy&&<DR l="Reservado por" v={selected.reservedBy}/>}{selected.openedBy&&<DR l="Aberto por" v={selected.openedBy}/>}{selected.closedBy&&<DR l="Fechado por" v={selected.closedBy}/>}{selected.cancelledBy&&<DR l="Cancelado por" v={selected.cancelledBy}/>}</div>
-        </>)}
-      </div>
-    </div>
-  );
-}
 
-function EventCard({ ev, onSelect }) {
-  const { type, trip, time } = ev;
-  const isPickup = type === "pickup";
-  const color = isPickup ? PICKUP_COLOR : RETURN_COLOR;
-  const label = isPickup ? "SAIDA" : "RETORNO";
-  const location = isPickup ? trip.pickupLocation : trip.returnLocation;
-  const otherDate = isPickup ? trip.returnDate : trip.pickupDate;
-  const days = trip.days || daysBetween(trip.pickupDate, trip.returnDate);
-
-  return (
-    <div onClick={onSelect} style={{...S.card,overflow:"hidden",cursor:"pointer",transition:"all 0.15s",borderLeft:`3px solid ${color}`}}
-      onMouseEnter={e=>e.currentTarget.style.background="#131313"} onMouseLeave={e=>e.currentTarget.style.background="#111"}>
-      <div style={{display:"flex",gap:12,padding:"12px 14px"}}>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:52}}>
-          <div style={{fontSize:18,marginBottom:2}}>{isPickup?"🟢":"🟠"}</div>
-          <div style={{fontSize:9,fontWeight:700,color,letterSpacing:0.5}}>{label}</div>
-          {time&&<div style={{fontSize:12,fontWeight:600,color:"#E8E8E8",marginTop:2}}>{time}</div>}
-        </div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4,flexWrap:"wrap"}}>
-            <StatusBadge status={trip.status}/>
-            <span style={{fontSize:10,color:"#444",fontFamily:"monospace"}}>#{trip.id}</span>
-            {trip.balance>0&&<span style={{fontSize:9,fontWeight:700,color:"#ef4444",background:"rgba(239,68,68,0.1)",padding:"2px 7px",borderRadius:999}}>Saldo ${trip.balance.toFixed(0)}</span>}
-            {trip.customerName.toLowerCase().includes("turo")&&<span style={{fontSize:9,fontWeight:700,color:"#a78bfa",background:"rgba(139,92,246,0.1)",padding:"2px 7px",borderRadius:999}}>Turo</span>}
-          </div>
-          <div style={{fontSize:13,fontWeight:600,color:"#E8E8E8",marginBottom:2}}>{trip.customerName}</div>
-          <div style={{fontSize:13,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed', sans-serif",marginBottom:3}}>{trip.vehicle}</div>
-          <div style={{fontSize:10,color:"#666",marginBottom:4}}>{trip.vehicleType}</div>
-          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#888",flexWrap:"wrap"}}>
-            <span style={{color}}>{location}</span>
-            <span style={{color:"#333"}}>·</span>
-            <span style={{color:"#555"}}>{days}d</span>
-            <span style={{color:"#333"}}>·</span>
-            <span style={{color:"#555"}}>{isPickup?"retorno":"saiu"} {fmtShort(otherDate)}</span>
-          </div>
-        </div>
-        <div style={{flexShrink:0,textAlign:"right",display:"flex",flexDirection:"column",justifyContent:"center",minWidth:80}}>
-          <div style={{fontSize:16,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed', sans-serif"}}>{money(trip.total)}</div>
-          {trip.paid>0&&<div style={{fontSize:10,color:"#22c55e"}}>Pago: {money(trip.paid)}</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EditRow({ label, value, color, onChange }) {
-  return (
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}>
-      <span style={{fontSize:11,color:"#555"}}>{label}</span>
-      <div style={{display:"flex",alignItems:"center",gap:4}}>
-        <span style={{fontSize:11,color:"#555"}}>US$</span>
-        <input type="number" step="0.01" value={value} onChange={e=>onChange(e.target.value)}
-          style={{background:"#0C0C0C",border:`1px solid ${color}40`,borderRadius:6,padding:"4px 8px",color:color,fontSize:13,fontWeight:600,fontFamily:"'DM Sans', sans-serif",outline:"none",width:100,textAlign:"right"}}/>
+          <div style={{...sc,padding:16}}><div style={ss}>📋 Operacional</div><DR l="Status" v={s.status}/>{s.reservationDate&&<DR l="Data reserva" v={s.reservationDate}/>}{s.channel&&<DR l="Canal" v={s.channel}/>}{s.reservedBy&&<DR l="Reservado por" v={s.reservedBy}/>}{s.cancelledBy&&<DR l="Cancelado por" v={s.cancelledBy}/>}</div>
+        </>}
       </div>
     </div>
   );
