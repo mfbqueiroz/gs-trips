@@ -135,11 +135,34 @@ function App() {
   };
 
   useEffect(() => {
+    // Check for preloaded data (published version for team)
+    if (window.__GS_PRELOADED__ && window.__GS_PRELOADED__.length > 0) {
+      const t = window.__GS_PRELOADED__;
+      setTrips(t); setFileName("Publicado"); computeStats(t);
+      return;
+    }
     (async () => { try { const r = (() => { const v = localStorage.getItem("gs-trips-excel"); return v ? { value: v } : null; })(); if(r?.value){const d=JSON.parse(r.value);if(d.trips){setTrips(d.trips);setFileName(d.fileName);computeStats(d.trips);}} } catch{} })();
   }, []);
 
   const saveTrips = async (t, fn) => { try { localStorage.setItem("gs-trips-excel", JSON.stringify({trips:t,fileName:fn})); } catch{} };
   const computeStats = (t) => { setStats({ total:t.length, confirmed:t.filter(x=>x.status==="Confirmed").length, todayPickup:t.filter(x=>isToday(x.pickupDate)&&x.status!=="Cancelled").length, todayReturn:t.filter(x=>isToday(x.returnDate)&&x.status!=="Cancelled").length, revenue:t.reduce((s,x)=>s+(x.total||0),0), balance:t.reduce((s,x)=>s+(x.balance||0),0) }); };
+
+  const publishForTeam = () => {
+    if (trips.length === 0) { showToast("Importe um Excel primeiro", "warn"); return; }
+    // Get the current page HTML
+    const pageHtml = document.documentElement.outerHTML;
+    // Inject the trips data as a preloaded variable before the closing </head>
+    const dataScript = '<script>window.__GS_PRELOADED__=' + JSON.stringify(trips) + ';<\/script>';
+    const newHtml = '<!DOCTYPE html>\n' + pageHtml.replace('</head>', dataScript + '\n</head>');
+    const blob = new Blob([newHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("index.html baixado! Suba no GitHub para a equipe ver.");
+  };
 
   const handleUpload = (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -212,6 +235,7 @@ function App() {
               Agenda {todayEvents.length>0&&<span style={{background:"#F59E0B",color:"#0C0C0C",borderRadius:999,fontSize:10,fontWeight:700,padding:"1px 6px",marginLeft:4}}>{todayEvents.length}</span>}
             </button>
             <button onClick={()=>fileRef.current?.click()} style={{...S.btn,background:"rgba(139,92,246,0.12)",color:"#a78bfa",border:"1px solid rgba(139,92,246,0.3)",fontWeight:600}}>Upload</button>
+            {trips.length>0&&<button onClick={publishForTeam} style={{...S.btn,background:"rgba(34,197,94,0.12)",color:"#22c55e",border:"1px solid rgba(34,197,94,0.3)",fontWeight:600}}>Publicar</button>}
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={handleUpload}/>
           </div>
         </div>
