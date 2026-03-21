@@ -454,11 +454,12 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <div class="section-header">
         <div class="section-title">Agenda</div>
         <div class="btn-group" id="agenda-filters">
-          <button class="btn active" data-f="all" onclick="setFilter(this,'all')">Todos</button>
-          <button class="btn" data-f="departure" onclick="setFilter(this,'departure')">▲ Saídas</button>
-          <button class="btn" data-f="return" onclick="setFilter(this,'return')">▼ Retornos</button>
+          <button class="btn active" data-f="future" onclick="setFilter(this,'future')">Em diante</button>
           <button class="btn" data-f="today" onclick="setFilter(this,'today')">Hoje</button>
           <button class="btn" data-f="week" onclick="setFilter(this,'week')">7 dias</button>
+          <button class="btn" data-f="departure" onclick="setFilter(this,'departure')">▲ Saídas</button>
+          <button class="btn" data-f="return" onclick="setFilter(this,'return')">▼ Retornos</button>
+          <button class="btn" data-f="all" onclick="setFilter(this,'all')">Todos</button>
         </div>
       </div>
 
@@ -615,7 +616,7 @@ const EV_KW   = ['tesla','optiq','ev','electric','elétrico'];
 let S = {
   role: null, token: null,
   data: { reservations: [], fleet: [], lastUpdated: null },
-  tab: 'agenda', filter: 'all',
+  tab: 'agenda', filter: 'future',
   finYear: new Date().getFullYear(), finMonth: null,
   flY: new Date().getFullYear(), flM: new Date().getMonth(),
   charts: {}, modal: null, saveTimer: null, mgmtOpen: false,
@@ -651,7 +652,7 @@ function doLogin() {
 }
 
 function doLogout() {
-  S = { ...S, role:null, token:null, data:{reservations:[],fleet:[],lastUpdated:null}, tab:'agenda', filter:'all', modal:null };
+  S = { ...S, role:null, token:null, data:{reservations:[],fleet:[],lastUpdated:null}, tab:'agenda', filter:'future', modal:null };
   document.getElementById('pwd-input').value = '';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -979,11 +980,12 @@ function renderAgenda() {
     if (r.returnDate) events.push({ date:r.returnDate, type:'return', res:r });
   });
 
-  if (S.filter === 'departure') events = events.filter(e => e.type==='departure');
-  else if (S.filter === 'return') events = events.filter(e => e.type==='return');
+  if (S.filter === 'departure') events = events.filter(e => e.type==='departure' && e.date>=today);
+  else if (S.filter === 'return') events = events.filter(e => e.type==='return' && e.date>=today);
   else if (S.filter === 'today') events = events.filter(e => e.date===today);
   else if (S.filter === 'week') events = events.filter(e => e.date>=today && e.date<=weekEnd);
-  else events = events.filter(e => e.date>=past7 && e.date<=fut60);
+  else if (S.filter === 'all') { /* no filter - show everything */ }
+  else events = events.filter(e => e.date>=today && e.date<=fut60); // future (default)
 
   if (!events.length) {
     document.getElementById('agenda-out').innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nenhum evento no período</div></div>`;
