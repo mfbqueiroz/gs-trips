@@ -2,589 +2,1481 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>GS Car Rental</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23F59E0B'/><text x='16' y='22' font-size='16' font-weight='800' text-anchor='middle' fill='%230a0a0a' font-family='sans-serif'>GS</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0a;font-family:'DM Sans',sans-serif;color:#E8E8E8}#root{min-height:100vh}input,select,button{font-family:inherit}::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}</style>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GS Trips — Car Rental Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0B0B0E;
+  --surface: #141418;
+  --card: #1C1C22;
+  --card2: #222228;
+  --border: #2A2A35;
+  --border2: #32323F;
+  --amber: #F59E0B;
+  --amber-dim: #7c4f06;
+  --amber-light: #FCD34D;
+  --amber-bg: rgba(245,158,11,0.1);
+  --green: #10B981;
+  --green-dim: rgba(16,185,129,0.15);
+  --orange: #F97316;
+  --orange-dim: rgba(249,115,22,0.15);
+  --red: #EF4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --blue: #3B82F6;
+  --blue-dim: rgba(59,130,246,0.15);
+  --purple: #8B5CF6;
+  --text: #EDEDF0;
+  --muted: #6B7280;
+  --muted2: #9CA3AF;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{cursor:pointer;font-family:inherit;border:none;background:none}
+input,select,textarea{font-family:inherit}
+a{color:inherit;text-decoration:none}
+
+/* ── LOGIN ── */
+#login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(245,158,11,0.18) 0%,transparent 70%),var(--bg);
+}
+.login-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:52px 44px;width:360px;text-align:center;
+  box-shadow:0 0 60px rgba(245,158,11,0.06),var(--shadow);
+}
+.login-logo{
+  font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:36px;
+  color:var(--amber);letter-spacing:0.06em;margin-bottom:2px;
+}
+.login-logo span{color:var(--muted);font-weight:400;font-size:28px}
+.login-tagline{color:var(--muted);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:36px}
+.login-label{display:block;text-align:left;font-size:11px;color:var(--muted2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+.login-input{
+  width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);padding:13px 16px;font-size:18px;text-align:center;letter-spacing:0.2em;
+  margin-bottom:12px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;
+}
+.login-input:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,0.12)}
+.login-btn{
+  width:100%;background:var(--amber);color:#000;font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:16px;letter-spacing:0.1em;text-transform:uppercase;
+  padding:13px;border-radius:var(--radius-sm);transition:opacity 0.15s,transform 0.1s;
+}
+.login-btn:hover{opacity:0.92}
+.login-btn:active{transform:scale(0.98)}
+.login-error{color:var(--red);font-size:12px;margin-top:10px;min-height:16px;transition:opacity 0.2s}
+
+/* ── APP LAYOUT ── */
+#app{display:none;flex-direction:column;height:100vh;overflow:hidden}
+header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 20px;display:flex;align-items:center;gap:12px;height:52px;flex-shrink:0;
+  position:sticky;top:0;z-index:200;
+}
+.logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:var(--amber);letter-spacing:0.06em;white-space:nowrap;user-select:none}
+.logo span{color:var(--muted);font-weight:400}
+.tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{
+  background:none;border:none;color:var(--muted);font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;
+  padding:7px 14px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;
+}
+.tab-btn:hover{color:var(--text);background:var(--card)}
+.tab-btn.active{color:var(--amber);background:var(--amber-bg)}
+.header-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.save-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background 0.3s;flex-shrink:0}
+.save-dot.saving{background:var(--amber);animation:pulse 1s infinite}
+.save-dot.saved{background:var(--green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.hdr-btn{
+  background:var(--card);border:1px solid var(--border);color:var(--muted2);
+  padding:5px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;text-transform:uppercase;
+  transition:all 0.15s;
+}
+.hdr-btn:hover{border-color:var(--amber);color:var(--amber)}
+.role-badge{
+  background:var(--amber-bg);border:1px solid var(--amber-dim);color:var(--amber);
+  padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:0.08em;text-transform:uppercase;
+}
+
+main{flex:1;overflow-y:auto;overflow-x:hidden}
+
+/* ── PANELS ── */
+.tab-panel{display:none;padding:20px 20px 40px}
+.tab-panel.active{display:block}
+
+/* ── COMMON ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.section-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;letter-spacing:0.02em}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  padding:7px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;text-transform:uppercase;
+  transition:all 0.15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--amber);color:var(--amber)}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#000}
+.btn.primary:hover{opacity:0.9}
+.btn.active{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.btn-group{display:flex;gap:4px;flex-wrap:wrap}
+
+/* ── IMPORT ZONE ── */
+.import-zone{
+  border:2px dashed var(--border2);border-radius:var(--radius);padding:20px 24px;
+  display:flex;align-items:center;gap:16px;color:var(--muted);cursor:pointer;
+  transition:all 0.2s;margin-bottom:20px;
+}
+.import-zone:hover,.import-zone.drag-over{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.import-icon{font-size:24px;flex-shrink:0}
+.import-text{font-size:13px}
+.import-text strong{display:block;font-size:14px;margin-bottom:2px;color:var(--text)}
+
+/* ── AGENDA ── */
+.day-group{margin-bottom:20px}
+.day-label{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+  letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
+  margin-bottom:8px;padding:0 2px;display:flex;align-items:center;gap:8px;
+}
+.day-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.day-label.today-label{color:var(--amber)}
+.day-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px}
+
+.res-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 14px;cursor:pointer;transition:all 0.15s;
+  border-left:3px solid var(--border);position:relative;
+}
+.res-card:hover{border-color:var(--amber);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.3)}
+.res-card.departure{border-left-color:var(--green)}
+.res-card.return{border-left-color:var(--orange)}
+.res-card.overdue{border-left-color:var(--red);background:var(--red-dim)}
+.res-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.res-pill{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
+  letter-spacing:0.1em;text-transform:uppercase;padding:2px 8px;border-radius:20px;
+}
+.res-pill.departure{background:var(--green-dim);color:var(--green)}
+.res-pill.return{background:var(--orange-dim);color:var(--orange)}
+.res-pill.overdue{background:var(--red-dim);color:var(--red)}
+.res-num{font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:600}
+.res-name{font-weight:600;font-size:14px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.res-car{font-size:12px;color:var(--muted2);margin-bottom:6px}
+.res-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.res-loc{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+  color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:4px;
+}
+.res-chip{font-size:10px;color:var(--muted2);background:var(--card2);padding:2px 6px;border-radius:4px}
+.res-val{font-size:11px;color:var(--green);font-weight:600}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;font-weight:600}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:26px;line-height:1}
+.stat-val.green{color:var(--green)}
+.stat-val.orange{color:var(--orange)}
+.stat-val.amber{color:var(--amber)}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.stat-mask{font-size:18px;color:var(--border2);letter-spacing:0.3em;margin-top:2px}
+
+/* ── CHARTS ── */
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.chart-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.04em;color:var(--muted2);margin-bottom:14px;text-transform:uppercase}
+.chart-wrap{position:relative;height:200px}
+.chart-wrap.small{height:160px}
+
+.month-strip{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px}
+.month-chip{
+  background:var(--card);border:1px solid var(--border);color:var(--muted);
+  padding:5px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em;text-transform:uppercase;
+  transition:all 0.15s;cursor:pointer;
+}
+.month-chip:hover{color:var(--text)}
+.month-chip.active{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+
+.year-nav{display:flex;align-items:center;gap:10px}
+.year-nav-btn{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  width:30px;height:30px;border-radius:var(--radius-sm);font-size:15px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+}
+.year-nav-btn:hover{border-color:var(--amber);color:var(--amber)}
+.year-label{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;min-width:60px;text-align:center}
+
+/* ── TABLE ── */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.search-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.search-input{
+  flex:1;min-width:160px;background:var(--card);border:1px solid var(--border);
+  color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;
+  outline:none;transition:border-color 0.2s;
+}
+.search-input:focus{border-color:var(--amber)}
+.filter-sel{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  padding:8px 10px;border-radius:var(--radius-sm);font-size:12px;outline:none;cursor:pointer;
+}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{
+  text-align:left;padding:9px 14px;color:var(--muted);font-size:10px;
+  letter-spacing:0.08em;text-transform:uppercase;font-weight:700;
+  border-bottom:1px solid var(--border);white-space:nowrap;background:var(--card2);
+}
+td{padding:11px 14px;border-bottom:1px solid rgba(42,42,53,0.5);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer;transition:background 0.1s}
+tbody tr:hover{background:rgba(245,158,11,0.04)}
+.status-badge{
+  display:inline-block;padding:2px 8px;border-radius:20px;font-size:9px;
+  font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+}
+.s-confirmed{background:var(--green-dim);color:var(--green)}
+.s-pending{background:rgba(245,158,11,0.15);color:var(--amber)}
+.s-cancelled{background:var(--red-dim);color:var(--red)}
+.s-closed{background:rgba(107,114,128,0.2);color:var(--muted2)}
+
+/* ── FROTA CALENDAR ── */
+.frota-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.fleet-nav{display:flex;align-items:center;gap:10px}
+.fleet-cal-scroll{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+.fleet-cal{border-collapse:collapse;font-size:11px;min-width:700px;width:100%}
+.fleet-cal thead th{
+  padding:6px 4px;text-align:center;color:var(--muted);font-size:9px;
+  letter-spacing:0.06em;text-transform:uppercase;font-weight:700;
+  border-bottom:1px solid var(--border);background:var(--card2);
+}
+.fleet-cal thead th.col-today{color:var(--amber)}
+.fleet-cal td{padding:2px;border:1px solid rgba(42,42,53,0.3);background:var(--card)}
+.car-label-cell{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+  padding:6px 10px;white-space:nowrap;border-right:2px solid var(--border) !important;
+  min-width:72px;background:var(--card2) !important;
+}
+.car-label-cell.inactive{color:var(--muted);text-decoration:line-through;opacity:0.45}
+.day-cell{
+  width:26px;min-width:26px;height:26px;
+  border-radius:3px;transition:opacity 0.1s;
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;
+}
+.day-cell.empty{background:transparent}
+.day-cell.departure{background:rgba(16,185,129,0.35);color:var(--green);cursor:pointer}
+.day-cell.active-trip{background:rgba(59,130,246,0.2);color:var(--blue);cursor:pointer}
+.day-cell.return{background:rgba(249,115,22,0.35);color:var(--orange);cursor:pointer}
+.day-cell.today-cell{outline:2px solid var(--amber);outline-offset:-2px}
+.day-cell:hover{opacity:0.75}
+.day-cell.weekend-bg{background:rgba(42,42,53,0.5)}
+
+/* Fleet management panel */
+.fleet-mgmt{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.fleet-mgmt-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.fleet-item{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:6px;transition:opacity 0.2s}
+.fleet-item.inactive-veh{opacity:0.4}
+.fleet-item-info{flex:1}
+.fleet-item-id{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px}
+.fleet-item-type{font-size:11px;color:var(--muted)}
+.toggle-active{
+  padding:4px 12px;border-radius:var(--radius-sm);border:1px solid;font-size:10px;font-weight:700;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:0.06em;text-transform:uppercase;transition:all 0.15s;
+}
+.toggle-active.on{border-color:var(--green);color:var(--green)}
+.toggle-active.off{border-color:var(--red);color:var(--red)}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);
+  z-index:1000;display:none;align-items:flex-start;justify-content:center;
+  padding:20px 16px;overflow-y:auto;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  width:100%;max-width:560px;margin:auto;overflow:hidden;box-shadow:var(--shadow);
+}
+.modal-hdr{
+  background:var(--card2);padding:16px 20px;display:flex;align-items:flex-start;
+  justify-content:space-between;border-bottom:1px solid var(--border);
+}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px}
+.modal-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.modal-x{color:var(--muted);font-size:20px;padding:2px 6px;border-radius:4px;transition:color 0.15s;line-height:1}
+.modal-x:hover{color:var(--text)}
+.modal-body{padding:20px}
+.m-section{margin-bottom:22px}
+.m-section-title{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.m-section-title::after{content:'';flex:1;height:1px;background:rgba(245,158,11,0.2)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.info-grid.one-col{grid-template-columns:1fr}
+.info-box{background:var(--card2);border-radius:var(--radius-sm);padding:10px 12px}
+.info-box.full{grid-column:1/-1}
+.info-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;font-weight:600}
+.info-val{font-size:14px;font-weight:500}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fld-group{display:flex;flex-direction:column;gap:4px}
+.fld-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.07em;font-weight:600}
+.fld-input{
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  padding:9px 10px;border-radius:var(--radius-sm);font-size:14px;outline:none;
+  transition:border-color 0.2s;width:100%;
+}
+.fld-input:focus{border-color:var(--amber)}
+.fld-input:disabled{opacity:0.4;cursor:not-allowed}
+textarea.fld-input{resize:vertical;min-height:70px}
+.fuel-row{display:flex;gap:4px}
+.fuel-opt{
+  flex:1;background:var(--card2);border:1px solid var(--border);color:var(--muted);
+  padding:7px 4px;border-radius:var(--radius-sm);font-size:11px;font-weight:700;
+  text-align:center;transition:all 0.15s;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.04em;
+}
+.fuel-opt:hover:not(:disabled){border-color:var(--amber)}
+.fuel-opt.sel{background:rgba(245,158,11,0.18);border-color:var(--amber);color:var(--amber)}
+.fuel-opt:disabled{opacity:0.3;cursor:not-allowed}
+.fuel-est{
+  margin-top:8px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
+  border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;color:var(--amber);
+}
+.fuel-est.ev{color:var(--blue);background:var(--blue-dim);border-color:rgba(59,130,246,0.2)}
+.photos-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.photo-thumb{
+  width:70px;height:70px;object-fit:cover;border-radius:var(--radius-sm);
+  border:1px solid var(--border);cursor:zoom-in;transition:opacity 0.15s;
+}
+.photo-thumb:hover{opacity:0.75}
+.photo-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 0.15s}
+.photo-wrap-item{position:relative;display:inline-block}
+.photo-wrap-item:hover .photo-del{opacity:1}
+.photo-add-btn{
+  width:70px;height:70px;border:2px dashed var(--border2);border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px;
+  cursor:pointer;transition:all 0.15s;
+}
+.photo-add-btn:hover{border-color:var(--amber);color:var(--amber)}
+.miles-delta{font-size:11px;color:var(--amber);padding:3px 2px;min-height:16px}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-icon{font-size:44px;margin-bottom:12px;opacity:0.5}
+.empty-text{font-size:14px}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--card2);border:1px solid var(--border2);border-radius:8px;
+  padding:10px 20px;font-size:13px;color:var(--text);z-index:3000;
+  transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+
+/* ── LOADER ── */
+#loader{
+  position:fixed;inset:0;background:rgba(11,11,14,0.75);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:900;flex-direction:column;gap:14px;
+}
+#loader.on{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 0.65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-txt{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase}
+
+/* ── LEGEND ── */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+
+@media(max-width:640px){
+  header{padding:0 12px;gap:8px}
+  .tab-btn{padding:7px 10px;font-size:12px}
+  .tab-btn .tab-icon{display:none}
+  .logo span{display:none}
+  .info-grid{grid-template-columns:1fr}
+  .fld-row{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .tab-panel{padding:16px 12px 40px}
+}
+</style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel" data-type="module">
-const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-const APP_PASS="gs2026",ADMIN_PASS="gsadmin",PK="#22c55e",RT="#f97316";
-const si={width:"100%",boxSizing:"border-box",background:"#0C0C0C",border:"1px solid #222",borderRadius:8,padding:"9px 12px",color:"#E8E8E8",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none"};
-const sc={background:"#111",border:"1px solid #1a1a1a",borderRadius:12};
-const sb={padding:"7px 14px",borderRadius:8,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"};
-const ss={fontSize:12,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:1.5,color:"#888",marginBottom:14,display:"flex",alignItems:"center",gap:6};
-const eI=(c)=>({background:"#0C0C0C",border:`1px solid ${c}40`,borderRadius:6,padding:"4px 8px",color:c,fontSize:13,fontWeight:600,fontFamily:"'DM Sans',sans-serif",outline:"none",width:90,textAlign:"center"});
-const FUEL=["","E","1/4","1/2","3/4","F"];
-const MONTHS=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">GS<span> TRIPS</span></div>
+    <div class="login-tagline">GS Car Rental · Operations Dashboard</div>
+    <label class="login-label" for="pwd-input">Senha de Acesso</label>
+    <input type="password" id="pwd-input" class="login-input" placeholder="••••••••" autocomplete="off" autofocus>
+    <button class="login-btn" onclick="doLogin()">ENTRAR</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
 
-function fS(d){return d?new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}):"—";}
-function fD(d){return d?new Date(d).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short",year:"numeric"}):"—";}
-function fH(d){return d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"}):""}
-function fT(d){return d?new Date(d).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"";}
-function isTd(d){if(!d)return false;const a=new Date(d),t=new Date();return a.getFullYear()===t.getFullYear()&&a.getMonth()===t.getMonth()&&a.getDate()===t.getDate();}
-function sot(){const d=new Date();d.setHours(0,0,0,0);return d;}
-function dB(a,b){return(!a||!b)?0:Math.max(1,Math.ceil((new Date(b)-new Date(a))/864e5));}
-function $(v){return typeof v==="number"?`US$ ${v.toFixed(2)}`:"—";}
-function dk(d){if(!d)return"";const t=new Date(d);return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;}
-function dlbl(k){if(k===dk(new Date()))return"Hoje";if(k===dk(new Date(Date.now()+864e5)))return"Amanha";return"";}
-
-function parseExcel(data){
-  const fix=(d)=>{if(!d)return"";if(d instanceof Date)return d.toISOString();const s=String(d).trim();return s.match(/^\d{4}-\d{2}-\d{2}$/)?s+"T12:00:00":s;};
-  const wb=XLSX.read(data,{type:"array",cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]];
-  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-  let hi=-1;
-  for(let i=0;i<Math.min(rows.length,15);i++){const r=rows[i];if(r&&r.map(c=>String(c||"")).join("|").match(/Reservation#|RA#/)){hi=i;break;}}
-  if(hi<0)return[];
-  const hd=rows[hi].map((h,i)=>(h||`c${i}`).toString().trim());
-  const c=n=>hd.indexOf(n),ca=(...ns)=>{for(const n of ns){const i=hd.indexOf(n);if(i>=0)return i;}return-1;};
-  const isR=c("Reservation#")>=0&&c("Vehicle ID")>=0;
-  const trips=[];
-  for(let i=hi+1;i<rows.length;i++){
-    const r=rows[i];if(!r)continue;
-    const rn=r[isR?c("Reservation#"):c("RA#")];if(!rn)continue;
-    const rs=String(rn);if(rs.match(/^[A-Za-z\s()]+$/)&&!rs.match(/^\d+$/))continue;
-    const base={pickupMileage:"",returnMileage:"",pickupFuel:"",returnFuel:"",discount:0,oneWay:0};
-    if(isR){
-      const fn=(r[c("Full Name")]||"").toString().trim();
-      trips.push({...base,id:rs,resNumber:rs,customerName:fn.replace(/\s{2,}/g," ").replace(/\s+(turo|\.|\d+)$/i,"").trim(),phone:r[c("Phone")]||"",vehicle:r[c("Vehicle ID")]||"",vehicleType:r[c("Vehicle Type")]||"",pickupLocation:r[ca("Loc.Out","Pickup Location")]||"",pickupDate:fix(r[c("Pickup Date")]),returnDate:fix(r[c("Return Date")]),returnLocation:r[ca("Loc.In","Return Location")]||"",status:r[c("Status")]||"",days:r[c("#days")]||0,channel:r[c("Reservation Channel")]||"",reservedBy:r[c("Reserved By")]||"",total:r[c("Total")]||0,paid:r[c("Paid")]||0,balance:r[c("Balance")]||0,email:"",customerId:""});
-    }else{
-      trips.push({...base,id:rs,resNumber:r[ca("Res#","Reservation#")]||rs,customerId:r[c("Customer ID")]||"",customerName:`${r[c("First Name")]||""} ${r[c("Last Name")]||""}`.trim(),phone:r[c("Customer Phone")]||"",email:r[c("Customer Email")]||"",vehicle:r[c("Vehicle")]||"",vehicleType:r[c("Vehicle Type")]||"",pickupLocation:r[c("Pickup Location")]||"",pickupDate:fix(r[c("Pickup Date")]),returnDate:fix(r[c("Return Date")]),returnLocation:r[c("Return Location")]||"",status:r[c("Status")]||"",days:r[c("Days")]||0,discount:r[c("Discount")]||0,oneWay:r[c("One Way")]||0,total:r[c("Total")]||0,paid:r[c("Paid")]||0,balance:r[c("Balance")]||0,channel:"",reservedBy:""});
-    }
-  }
-  return trips;
-}
-
-const STC={Open:{l:"Ativa",c:"#22c55e"},Confirmed:{l:"Confirmada",c:"#3b82f6"},Honored:{l:"Honorada",c:"#8b5cf6"},Closed:{l:"Concluida",c:"#6b7280"},Cancelled:{l:"Cancelada",c:"#ef4444"}};
-function SB({status}){const s=STC[status]||{l:status,c:"#555"};return <span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,color:s.c,background:`${s.c}18`,padding:"2px 8px",borderRadius:999,border:`1px solid ${s.c}30`}}>{s.l}</span>;}
-function DR({l,v,hl}){return <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>{l}</span><span style={{fontSize:12,color:hl?"#F59E0B":"#CCC",fontWeight:hl?700:500,textAlign:"right",maxWidth:"65%"}}>{v}</span></div>;}
-function MS({l,v,sm}){return <div style={{background:"#0C0C0C",borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontSize:sm?11:16,fontWeight:700,color:"#E8E8E8",fontFamily:"'Barlow Condensed',sans-serif"}}>{v}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase"}}>{l}</div></div>;}
-function StC({l,v,c}){return <div style={{background:"#111",borderRadius:10,border:"1px solid #1a1a1a",padding:"10px 12px",textAlign:"center"}}><div style={{fontSize:18,fontWeight:700,color:c,fontFamily:"'Barlow Condensed',sans-serif"}}>{v}</div><div style={{fontSize:9,color:"#555",textTransform:"uppercase",letterSpacing:.5}}>{l}</div></div>;}
-function ER2({l,v,c,fn}){return <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:11,color:"#555"}}>{l}</span><div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:11,color:"#555"}}>US$</span><input type="number" step="0.01" value={v} onChange={e=>fn(e.target.value)} style={{...eI(c),width:100,textAlign:"right"}}/></div></div>;}
-function FG({level}){const idx=FUEL.indexOf(level);const pct=idx>0?idx*25:0;return <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:50,height:8,background:"#222",borderRadius:4,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:pct<=25?"#ef4444":pct<=50?"#F59E0B":"#22c55e",borderRadius:4}}/></div><span style={{fontSize:11,color:"#CCC"}}>{level||"—"}</span></div>;}
-
-function EC({ev,onSelect,admin}){
-  const{type,trip,time}=ev,isP=type==="pickup",cl=isP?PK:RT,lb=isP?"SAIDA":"RETORNO";
-  const loc=isP?trip.pickupLocation:trip.returnLocation,od=isP?trip.returnDate:trip.pickupDate;
-  const days=trip.days||dB(trip.pickupDate,trip.returnDate);
-  return (
-    <div onClick={onSelect} style={{...sc,overflow:"hidden",cursor:"pointer",transition:"all .15s",borderLeft:`3px solid ${cl}`}} onMouseEnter={e=>e.currentTarget.style.background="#131313"} onMouseLeave={e=>e.currentTarget.style.background="#111"}>
-      <div style={{display:"flex",gap:10,padding:"10px 12px"}}>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:48}}>
-          <div style={{fontSize:16,marginBottom:1}}>{isP?"🟢":"🟠"}</div>
-          <div style={{fontSize:8,fontWeight:700,color:cl,letterSpacing:.5}}>{lb}</div>
-          {time&&<div style={{fontSize:11,fontWeight:600,color:"#E8E8E8",marginTop:1}}>{time}</div>}
-        </div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3,flexWrap:"wrap"}}>
-            <SB status={trip.status}/><span style={{fontSize:9,color:"#444",fontFamily:"monospace"}}>#{trip.id}</span>
-            {admin&&trip.balance>0&&<span style={{fontSize:8,fontWeight:700,color:"#ef4444",background:"rgba(239,68,68,.1)",padding:"1px 6px",borderRadius:999}}>Saldo ${trip.balance.toFixed(0)}</span>}
-            {(trip.pickupLocation||"").includes("Turo")&&<span style={{fontSize:8,fontWeight:700,color:"#a78bfa",background:"rgba(139,92,246,.1)",padding:"1px 6px",borderRadius:999}}>Turo</span>}
-          </div>
-          <div style={{fontSize:12,fontWeight:600,color:"#E8E8E8",marginBottom:1}}>{trip.customerName}</div>
-          <div style={{fontSize:12,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed',sans-serif",marginBottom:2}}>{trip.vehicle}</div>
-          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#888",flexWrap:"wrap"}}>
-            <span style={{color:cl}}>{loc}</span><span style={{color:"#333"}}>·</span><span style={{color:"#555"}}>{days}d</span><span style={{color:"#333"}}>·</span><span style={{color:"#555"}}>{isP?"ret":"saiu"} {fS(od)}</span>
-          </div>
-        </div>
-        {admin&&<div style={{flexShrink:0,textAlign:"right",display:"flex",alignItems:"center"}}><div style={{fontSize:14,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed',sans-serif"}}>{$(trip.total)}</div></div>}
-      </div>
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <header>
+    <div class="logo">GS<span> TRIPS</span></div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="agenda" onclick="switchTab('agenda')"><span class="tab-icon">📅 </span>Agenda</button>
+      <button class="tab-btn" data-tab="financeiro" onclick="switchTab('financeiro')"><span class="tab-icon">💰 </span>Financeiro</button>
+      <button class="tab-btn" data-tab="historico" onclick="switchTab('historico')"><span class="tab-icon">📋 </span>Histórico</button>
+      <button class="tab-btn" data-tab="frota" onclick="switchTab('frota')"><span class="tab-icon">🚗 </span>Frota</button>
+    </nav>
+    <div class="header-right">
+      <div class="save-dot" id="save-dot" title="Status de salvamento"></div>
+      <span class="role-badge" id="role-badge"></span>
+      <button class="hdr-btn" onclick="syncNow()" title="Sincronizar dados">↻ Sync</button>
+      <button class="hdr-btn" onclick="doLogout()">Sair</button>
     </div>
-  );
+  </header>
+  <main>
+
+    <!-- ─── AGENDA ─── -->
+    <section class="tab-panel active" id="panel-agenda">
+      <div class="section-header">
+        <div class="section-title">Agenda</div>
+        <div class="btn-group" id="agenda-filters">
+          <button class="btn active" data-f="all" onclick="setFilter(this,'all')">Todos</button>
+          <button class="btn" data-f="departure" onclick="setFilter(this,'departure')">▲ Saídas</button>
+          <button class="btn" data-f="return" onclick="setFilter(this,'return')">▼ Retornos</button>
+          <button class="btn" data-f="today" onclick="setFilter(this,'today')">Hoje</button>
+          <button class="btn" data-f="week" onclick="setFilter(this,'week')">7 dias</button>
+        </div>
+      </div>
+
+      <div class="import-zone" id="import-zone"
+        onclick="document.getElementById('xl-input').click()"
+        ondragover="handleDragOver(event)"
+        ondragleave="handleDragLeave(event)"
+        ondrop="handleDrop(event)">
+        <div class="import-icon">📊</div>
+        <div class="import-text">
+          <strong>Importar Rent Centric</strong>
+          Arraste o arquivo Excel aqui ou clique para selecionar
+        </div>
+      </div>
+      <input type="file" id="xl-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleXL(this.files[0])">
+
+      <div id="agenda-out"></div>
+    </section>
+
+    <!-- ─── FINANCEIRO ─── -->
+    <section class="tab-panel" id="panel-financeiro">
+      <div class="section-header">
+        <div class="section-title">Financeiro</div>
+        <div class="year-nav">
+          <button class="year-nav-btn" onclick="changeYear(-1)">‹</button>
+          <div class="year-label" id="fin-year">2025</div>
+          <button class="year-nav-btn" onclick="changeYear(1)">›</button>
+        </div>
+      </div>
+      <div class="stats-row" id="fin-stats"></div>
+      <div class="month-strip" id="month-strip"></div>
+      <div class="chart-card">
+        <div class="chart-title">Receita por Mês</div>
+        <div class="chart-wrap"><canvas id="ch-revenue"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="chart-card" style="margin-bottom:0">
+          <div class="chart-title">Por Tipo de Veículo</div>
+          <div class="chart-wrap small"><canvas id="ch-vtype"></canvas></div>
+        </div>
+        <div class="chart-card" style="margin-bottom:0">
+          <div class="chart-title">Por Localização</div>
+          <div class="chart-wrap small"><canvas id="ch-loc"></canvas></div>
+        </div>
+      </div>
+      <div id="fin-detail"></div>
+    </section>
+
+    <!-- ─── HISTORICO ─── -->
+    <section class="tab-panel" id="panel-historico">
+      <div class="section-header">
+        <div class="section-title">Histórico</div>
+        <span id="hist-count" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="hist-q" placeholder="🔍  Nome, reserva, veículo, telefone..." oninput="renderHistorico()">
+        <select class="filter-sel" id="hist-st" onchange="renderHistorico()">
+          <option value="">Todos status</option>
+          <option>Confirmed</option><option>Pending</option>
+          <option>Closed</option><option>Cancelled</option>
+        </select>
+        <select class="filter-sel" id="hist-sort" onchange="renderHistorico()">
+          <option value="pickup-desc">Data ↓</option>
+          <option value="pickup-asc">Data ↑</option>
+          <option value="name">Nome A-Z</option>
+          <option value="total-desc">Valor ↓</option>
+          <option value="days-desc">Dias ↓</option>
+        </select>
+      </div>
+      <div class="table-card">
+        <div class="tbl-wrap">
+          <table id="hist-table">
+            <thead>
+              <tr>
+                <th>Reserva</th><th>Cliente</th><th>Veículo</th>
+                <th>Saída</th><th>Retorno</th><th style="text-align:center">Dias</th>
+                <th id="th-total">Total</th><th id="th-saldo">Saldo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="hist-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── FROTA ─── -->
+    <section class="tab-panel" id="panel-frota">
+      <div class="frota-header">
+        <div class="section-title">Frota</div>
+        <div class="fleet-nav">
+          <button class="year-nav-btn" onclick="changeFlotaM(-1)">‹</button>
+          <div class="year-label" style="font-size:16px;min-width:160px" id="frota-lbl"></div>
+          <button class="year-nav-btn" onclick="changeFlotaM(1)">›</button>
+        </div>
+        <div class="btn-group">
+          <button class="btn" onclick="toggleMgmt()" id="mgmt-btn">⚙ Gerenciar</button>
+        </div>
+      </div>
+
+      <div id="fleet-mgmt-panel" style="display:none"></div>
+
+      <div class="fleet-cal-scroll">
+        <table class="fleet-cal" id="frota-cal"></table>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(16,185,129,0.4)"></div>Saída</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.25)"></div>Em viagem</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(249,115,22,0.4)"></div>Retorno</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(245,158,11,0.7);outline:1px solid var(--amber)"></div>Hoje</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal" id="trip-modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title" id="m-title"></div>
+        <div class="modal-sub" id="m-sub"></div>
+      </div>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+  </div>
+</div>
+
+<!-- ═══ TOAST + LOADER ═══ -->
+<div id="toast"></div>
+<div id="loader" class="loader">
+  <div class="spinner"></div>
+  <div class="loader-txt">Carregando...</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════════
+const API     = 'https://gs-rental-backend-gpke.vercel.app/api/data';
+const CREDS   = { 'gsadmin': 'admin', 'gs2026': 'team' };
+const FUELS   = ['E', '1/4', '1/2', '3/4', 'F'];
+const MONTHS  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MSHORT  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const GAS_PPG = 3.65;
+const EV_KW   = ['tesla','optiq','ev','electric','elétrico'];
+
+// ════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════
+let S = {
+  role: null, token: null,
+  data: { reservations: [], fleet: [], lastUpdated: null },
+  tab: 'agenda', filter: 'all',
+  finYear: new Date().getFullYear(), finMonth: null,
+  flY: new Date().getFullYear(), flM: new Date().getMonth(),
+  charts: {}, modal: null, saveTimer: null, mgmtOpen: false,
+};
+
+const isAdmin = () => S.role === 'admin';
+
+// ════════════════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════════════════
+document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+
+function doLogin() {
+  const pwd = document.getElementById('pwd-input').value.trim();
+  const role = CREDS[pwd];
+  const errEl = document.getElementById('login-err');
+  if (!role) {
+    errEl.textContent = '🔒 Senha incorreta';
+    document.getElementById('pwd-input').style.borderColor = 'var(--red)';
+    setTimeout(() => { errEl.textContent=''; document.getElementById('pwd-input').style.borderColor=''; }, 2500);
+    return;
+  }
+  S.role = role; S.token = pwd;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('role-badge').textContent = role === 'admin' ? '👑 Admin' : '👤 Equipe';
+  // Hide money columns for team
+  if (role !== 'admin') {
+    document.getElementById('th-total').style.display = 'none';
+    document.getElementById('th-saldo').style.display = 'none';
+  }
+  initApp();
 }
 
-function App(){
-  const[locked,setLocked]=useState(true);
-  const[appPw,setAppPw]=useState("");
-  const[trips,setTrips]=useState([]);
-  const[filter,setFilter]=useState("today_future");
-  const[search,setSearch]=useState("");
-  const[dateFrom,setDateFrom]=useState("");
-  const[dateTo,setDateTo]=useState("");
-  const[sel,setSel]=useState(null);
-  const[tab,setTab]=useState("agenda");
-  const[toast,setToast]=useState(null);
-  const[fn,setFn]=useState(null);
-  const[etf,setEtf]=useState("all");
-  const[ed,setEd]=useState(null);
-  const[admin,setAdmin]=useState(false);
-  const[showAdminPw,setShowAdminPw]=useState(false);
-  const[adminPw,setAdminPw]=useState("");
-  const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;});
-  const[hiddenCars,setHiddenCars]=useState([]);
-  const[finYear,setFinYear]=useState(new Date().getFullYear());
-  const[finMonth,setFinMonth]=useState(0); // 0 = all
-  const[syncing,setSyncing]=useState(false);
-  const[syncId,setSyncId]=useState("");
-  const[showSync,setShowSync]=useState(false);
-  const[loadId,setLoadId]=useState("");
-  const fr=useRef(null);
-  const t2=(m,t="success")=>{setToast({m,t});setTimeout(()=>setToast(null),3500);};
+function doLogout() {
+  S = { ...S, role:null, token:null, data:{reservations:[],fleet:[],lastUpdated:null}, tab:'agenda', filter:'all', modal:null };
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  Object.values(S.charts).forEach(c => c?.destroy?.());
+  S.charts = {};
+}
 
-  const save=useCallback(async(t,f,hc)=>{
-    const data={trips:t||trips,fileName:f||fn,hiddenCars:hc||hiddenCars};
-    try{localStorage.setItem("gs-v4", JSON.stringify(data));}catch{try{localStorage.setItem("gs-v4",JSON.stringify(data));}catch{}}
-  },[trips,fn,hiddenCars]);
-
-  useEffect(()=>{
-    (async()=>{try{
-      let d=null;
-      try{const r=(() => { const v = localStorage.getItem("gs-v4"); return v ? { value: v } : null; })();if(r?.value)d=JSON.parse(r.value);}catch{}
-      if(!d)try{const v=localStorage.getItem("gs-v4");if(v)d=JSON.parse(v);}catch{}
-      if(d){if(d.trips)setTrips(d.trips);if(d.fileName)setFn(d.fileName);if(d.hiddenCars)setHiddenCars(d.hiddenCars);}
-      try{const sid=localStorage.getItem("gs-sync-id");if(sid)setSyncId(sid);}catch{}
-    }catch{}})();
-  },[]);
-
-  // Upload & merge
-  const hu=(e)=>{
-    const f=e.target.files?.[0];if(!f)return;
-    const rd=new FileReader();
-    rd.onload=(ev)=>{try{
-      const parsed=parseExcel(new Uint8Array(ev.target.result));
-      if(!parsed.length){t2("Nenhuma reserva","error");return;}
-      const existing=new Map(trips.map(t=>[t.id,t]));
-      const merged=[];const seen=new Set();
-      for(const p of parsed){seen.add(p.id);const old=existing.get(p.id);
-        if(old){merged.push({...p,pickupMileage:old.pickupMileage||"",returnMileage:old.returnMileage||"",pickupFuel:old.pickupFuel||"",returnFuel:old.returnFuel||""});}
-        else{merged.push(p);}}
-      for(const t of trips){if(!seen.has(t.id))merged.push(t);}
-      merged.sort((a,b)=>new Date(a.pickupDate)-new Date(b.pickupDate));
-      setTrips(merged);setFn(f.name);save(merged,f.name,hiddenCars);
-      t2(`${parsed.length} processadas · ${merged.length} total`);
-    }catch(e){t2("Erro: "+e.message,"error");}};
-    rd.readAsArrayBuffer(f);
-  };
-
-  const startEdit=(t)=>{setEd({pt:(fT(t.pickupDate)||"10:00").replace(/[^\d:]/g,""),rt:(fT(t.returnDate)||"10:00").replace(/[^\d:]/g,""),pm:t.pickupMileage||"",rm:t.returnMileage||"",pf:t.pickupFuel||"",rf:t.returnFuel||"",total:t.total||0,paid:t.paid||0,balance:t.balance||0,discount:t.discount||0});};
-  const saveEdit=()=>{
-    if(!sel||!ed)return;
-    const ud=(ds,nt)=>{if(!ds||!nt)return ds;const d=new Date(ds);const[h,m]=nt.split(":").map(Number);if(isNaN(h)||isNaN(m))return ds;d.setHours(h,m,0,0);return d.toISOString();};
-    const ut={...sel,pickupDate:ud(sel.pickupDate,ed.pt),returnDate:ud(sel.returnDate,ed.rt),pickupMileage:ed.pm,returnMileage:ed.rm,pickupFuel:ed.pf,returnFuel:ed.rf,total:Number(ed.total)||0,paid:Number(ed.paid)||0,balance:Number(ed.balance)||0,discount:Number(ed.discount)||0};
-    const up=trips.map(t=>t.id===sel.id?ut:t);setTrips(up);setSel(ut);save(up,fn,hiddenCars);setEd(null);t2("Salvo!");
-  };
-
-  // Cloud sync
-  const cloudSave=async()=>{
-    setSyncing(true);
-    try{
-      const payload={trips,fileName:fn,hiddenCars,updated:new Date().toISOString()};
-      if(syncId){
-        await fetch(`https://api.npoint.io/${syncId}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-        t2("Atualizado na nuvem!");
-      }else{
-        const r=await fetch("https://api.npoint.io/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-        if(!r.ok)throw new Error("Erro ao criar");
-        const url=r.headers.get("location")||"";
-        // npoint returns the full URL, extract ID
-        let id="";
-        try{const d=await r.json();id=d?.id||"";}catch{}
-        if(!id&&url)id=url.split("/").pop();
-        if(!id){
-          // Try getting from response URL
-          const text=await r.text();
-          const m=text.match(/"id"\s*:\s*"([^"]+)"/);
-          if(m)id=m[1];
-        }
-        if(id){setSyncId(id);try{localStorage.setItem("gs-sync-id",id);}catch{}t2("Salvo! ID: "+id);}
-        else t2("Salvo mas nao obteve ID","warn");
+// ════════════════════════════════════════════════════════
+//  API
+// ════════════════════════════════════════════════════════
+async function loadData() {
+  loader(true, 'Sincronizando...');
+  try {
+    const res = await fetch(API, { headers: { 'Authorization': `Bearer ${S.token}` } });
+    if (res.ok) {
+      const json = await res.json();
+      // Handle multiple response formats
+      let stored = json.data ?? json.value ?? json;
+      if (typeof stored === 'string') { try { stored = JSON.parse(stored); } catch(e) { stored = null; } }
+      if (stored && typeof stored === 'object' && stored.reservations) {
+        S.data = stored;
       }
-    }catch(e){t2("Erro: "+e.message,"error");}
-    setSyncing(false);
-  };
-
-  const cloudLoad=async(id)=>{
-    if(!id)return;setSyncing(true);
-    try{
-      const r=await fetch(`https://api.npoint.io/${id}`);
-      const d=await r.json();
-      if(d.trips){setTrips(d.trips);setFn(d.fileName||"Nuvem");if(d.hiddenCars)setHiddenCars(d.hiddenCars);
-        save(d.trips,d.fileName||"Nuvem",d.hiddenCars||[]);
-        setSyncId(id);try{localStorage.setItem("gs-sync-id",id);}catch{}
-        t2(`Carregado: ${d.trips.length} reservas`);}
-      else t2("Dados invalidos","error");
-    }catch(e){t2("Erro: "+e.message,"error");}
-    setSyncing(false);
-  };
-
-  const toggleHideCar=(name)=>{
-    const next=hiddenCars.includes(name)?hiddenCars.filter(c=>c!==name):[...hiddenCars,name];
-    setHiddenCars(next);save(trips,fn,next);
-  };
-
-  // EVENTS
-  const events=useMemo(()=>{
-    const e=[];for(const t of trips){if(t.status==="Cancelled")continue;
-    e.push({type:"pickup",dk:dk(t.pickupDate),time:fT(t.pickupDate),trip:t,sd:new Date(t.pickupDate)});
-    e.push({type:"return",dk:dk(t.returnDate),time:fT(t.returnDate),trip:t,sd:new Date(t.returnDate)});}
-    e.sort((a,b)=>a.sd-b.sd||(a.type==="pickup"?-1:1));return e;
-  },[trips]);
-
-  const today=sot(),tdk=dk(new Date()),tmdk=dk(new Date(Date.now()+864e5));
-  const hasDateRange=dateFrom||dateTo;
-
-  const fe=useMemo(()=>events.filter(ev=>{
-    if(dateFrom&&ev.sd<new Date(dateFrom+"T00:00:00"))return false;
-    if(dateTo&&ev.sd>new Date(dateTo+"T23:59:59"))return false;
-    if(!hasDateRange){
-      if(filter==="today_future"&&ev.sd<today)return false;
-      if(filter==="today"&&ev.dk!==tdk)return false;
-      if(filter==="tomorrow"&&ev.dk!==tmdk)return false;
-      if(filter==="week"){const w=new Date(Date.now()+7*864e5);if(ev.sd<today||ev.sd>w)return false;}}
-    if(etf==="pickup"&&ev.type!=="pickup")return false;
-    if(etf==="return"&&ev.type!=="return")return false;
-    const q=search.toLowerCase();
-    if(q&&![ev.trip.customerName,ev.trip.vehicle,ev.trip.vehicleType,ev.trip.pickupLocation,ev.trip.returnLocation,ev.trip.id,ev.trip.phone].some(s=>(s||"").toLowerCase().includes(q)))return false;
-    return true;
-  }),[events,filter,etf,search,today,tdk,tmdk,dateFrom,dateTo,hasDateRange]);
-
-  const gbd=useMemo(()=>{const g=[];let ck=null,cg=null;for(const ev of fe){if(ev.dk!==ck){ck=ev.dk;cg={dk:ck,evs:[]};g.push(cg);}cg.evs.push(ev);}return g;},[fe]);
-  const te=events.filter(e=>e.dk===tdk);
-  const cts={tf:events.filter(e=>e.sd>=today).length,td:te.length,tm:events.filter(e=>e.dk===tmdk).length,wk:events.filter(e=>e.sd>=today&&e.sd<=new Date(Date.now()+7*864e5)).length,all:events.length};
-
-  // FINANCEIRO ANUAL
-  const finData=useMemo(()=>{
-    const active=trips.filter(t=>t.status!=="Cancelled");
-    const yearly=active.filter(t=>{const y=new Date(t.pickupDate).getFullYear();return y===finYear;});
-    const monthly=finMonth>0?yearly.filter(t=>new Date(t.pickupDate).getMonth()+1===finMonth):yearly;
-    const byMonth=Array.from({length:12},(_,i)=>{
-      const m=yearly.filter(t=>new Date(t.pickupDate).getMonth()===i);
-      return{month:MONTHS[i],total:m.reduce((s,t)=>s+(t.total||0),0),paid:m.reduce((s,t)=>s+(t.paid||0),0),balance:m.reduce((s,t)=>s+(t.balance||0),0),count:m.length};
-    });
-    return{
-      all:{total:monthly.reduce((s,t)=>s+(t.total||0),0),paid:monthly.reduce((s,t)=>s+(t.paid||0),0),balance:monthly.reduce((s,t)=>s+(t.balance||0),0),count:monthly.length},
-      byMonth,yearly:{total:yearly.reduce((s,t)=>s+(t.total||0),0),paid:yearly.reduce((s,t)=>s+(t.paid||0),0)},
-      pendingTrips:monthly.filter(t=>t.balance>0).sort((a,b)=>(b.balance||0)-(a.balance||0)),
-      paidTrips:monthly.filter(t=>t.paid>0).sort((a,b)=>new Date(b.pickupDate)-new Date(a.pickupDate)),
-      years:[...new Set(active.map(t=>new Date(t.pickupDate).getFullYear()))].sort((a,b)=>b-a)
-    };
-  },[trips,finYear,finMonth]);
-
-  // FROTA
-  const vehicles=useMemo(()=>{
-    const map=new Map();
-    for(const t of trips){if(t.status==="Cancelled")continue;
-      const key=t.vehicle;if(!map.has(key))map.set(key,{name:key,type:t.vehicleType,bookings:[]});
-      map.get(key).bookings.push({id:t.id,customer:t.customerName,start:t.pickupDate,end:t.returnDate,status:t.status});}
-    return Array.from(map.values()).sort((a,b)=>a.name.localeCompare(b.name));
-  },[trips]);
-
-  const visibleVehicles=vehicles.filter(v=>!hiddenCars.includes(v.name));
-  const hiddenVehicles=vehicles.filter(v=>hiddenCars.includes(v.name));
-
-  const calDays=useMemo(()=>{
-    const[y,m]=calMonth.split("-").map(Number);
-    const dim=new Date(y,m,0).getDate();
-    return Array.from({length:dim},(_,i)=>{const d=new Date(y,m-1,i+1);return{date:d,key:dk(d),day:i+1,dow:d.toLocaleDateString("pt-BR",{weekday:"narrow"})};});
-  },[calMonth]);
-
-  const s=sel;
-
-  // ══════ PASSWORD GATE ══════
-  if(locked){
-    return (
-      <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'DM Sans',sans-serif",color:"#E8E8E8",display:"flex",alignItems:"center",justifyContent:"center"}}>
-        <div style={{...sc,padding:32,width:320,textAlign:"center"}}>
-          <div style={{width:50,height:50,borderRadius:12,background:"linear-gradient(135deg,#F59E0B,#D97706)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:20,color:"#0C0C0C",fontFamily:"'Barlow Condensed',sans-serif",margin:"0 auto 16px"}}>GS</div>
-          <div style={{fontSize:18,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:2,marginBottom:4}}>GS Car Rental</div>
-          <div style={{fontSize:11,color:"#555",marginBottom:20}}>Agenda de reservas</div>
-          <input type="password" value={appPw} onChange={e=>setAppPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(appPw===APP_PASS||appPw===ADMIN_PASS){setLocked(false);if(appPw===ADMIN_PASS)setAdmin(true);setAppPw("");}else{t2("Senha incorreta","error");setAppPw("");}}}} placeholder="Senha" style={{...si,textAlign:"center",marginBottom:12}}/>
-          <button onClick={()=>{if(appPw===APP_PASS||appPw===ADMIN_PASS){setLocked(false);if(appPw===ADMIN_PASS)setAdmin(true);setAppPw("");}else{t2("Senha incorreta","error");setAppPw("");}}} style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#F59E0B,#D97706)",color:"#0C0C0C",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:1}}>Entrar</button>
-          {/* Load from cloud */}
-          <div style={{marginTop:20,borderTop:"1px solid #222",paddingTop:16}}>
-            <div style={{fontSize:10,color:"#555",marginBottom:8}}>Carregar dados da nuvem</div>
-            <div style={{display:"flex",gap:6}}>
-              <input value={loadId} onChange={e=>setLoadId(e.target.value)} placeholder="ID da nuvem" style={{...si,fontSize:11,flex:1}} onKeyDown={e=>{if(e.key==="Enter"&&loadId){cloudLoad(loadId);setLocked(false);}}}/>
-              <button onClick={()=>{if(loadId){cloudLoad(loadId);setLocked(false);}}} style={{...sb,background:"rgba(59,130,246,.15)",color:"#3b82f6",border:"1px solid rgba(59,130,246,.3)",whiteSpace:"nowrap"}}>Carregar</button>
-            </div>
-          </div>
-        </div>
-        {toast&&<div style={{position:"fixed",top:16,right:16,zIndex:999,padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,background:"#7f1d1d",color:"#fca5a5"}}>{toast.m}</div>}
-      </div>
-    );
-  }
-
-  // ══════ MAIN APP ══════
-  return (
-    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'DM Sans',sans-serif",color:"#E8E8E8"}}>
-      {toast&&<div style={{position:"fixed",top:16,right:16,zIndex:999,padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,background:toast.t==="error"?"#7f1d1d":toast.t==="warn"?"#78350f":"#14532d",color:toast.t==="error"?"#fca5a5":toast.t==="warn"?"#fde68a":"#86efac"}}>{toast.m}</div>}
-
-      {showAdminPw&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setShowAdminPw(false)}>
-        <div style={{...sc,padding:24,width:300}} onClick={e=>e.stopPropagation()}>
-          <div style={{fontSize:16,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",marginBottom:12}}>Modo Admin</div>
-          <input type="password" value={adminPw} onChange={e=>setAdminPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(adminPw===ADMIN_PASS){setAdmin(true);setShowAdminPw(false);setAdminPw("");t2("Admin ativado");}else{t2("Incorreta","error");setAdminPw("");}}}} placeholder="Senha admin" style={{...si,marginBottom:12}} autoFocus/>
-          <button onClick={()=>{if(adminPw===ADMIN_PASS){setAdmin(true);setShowAdminPw(false);setAdminPw("");t2("Admin ativado");}else{t2("Incorreta","error");setAdminPw("");}}} style={{width:"100%",padding:"10px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#F59E0B,#D97706)",color:"#0C0C0C",fontSize:13,fontWeight:700,cursor:"pointer"}}>Entrar</button>
-        </div>
-      </div>}
-
-      {/* HEADER */}
-      <header style={{background:"#111",borderBottom:"1px solid #1E1E1E",position:"sticky",top:0,zIndex:100}}>
-        <div style={{maxWidth:1100,margin:"0 auto",padding:"0 12px",display:"flex",alignItems:"center",justifyContent:"space-between",height:48}}>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{width:28,height:28,borderRadius:6,background:"linear-gradient(135deg,#F59E0B,#D97706)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:11,color:"#0C0C0C",fontFamily:"'Barlow Condensed',sans-serif"}}>GS</div>
-            <span style={{fontSize:12,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",textTransform:"uppercase",letterSpacing:1.5}}>GS Rental</span>
-            {admin&&<span style={{fontSize:8,color:"#F59E0B",background:"rgba(245,158,11,.1)",padding:"1px 5px",borderRadius:3}}>ADMIN</span>}
-          </div>
-          <div style={{display:"flex",gap:2,flexWrap:"wrap",justifyContent:"flex-end"}}>
-            {[["agenda","Agenda"],["financeiro","$"],["historico","Hist"],["frota","Frota"]].map(([k,l])=>
-              <button key={k} onClick={()=>{setTab(k);setSel(null);setEd(null);}} style={{...sb,fontSize:10,padding:"4px 8px",background:tab===k?"rgba(245,158,11,.12)":"transparent",color:tab===k?"#F59E0B":"#666",border:tab===k?"1px solid rgba(245,158,11,.3)":"1px solid transparent"}}>{l}{k==="agenda"&&te.length>0&&<span style={{background:"#F59E0B",color:"#0C0C0C",borderRadius:999,fontSize:8,fontWeight:700,padding:"0 4px",marginLeft:2}}>{te.length}</span>}</button>
-            )}
-            <button onClick={()=>fr.current?.click()} style={{...sb,fontSize:10,padding:"4px 6px",color:"#a78bfa"}}>📤</button>
-            <button onClick={()=>setShowSync(!showSync)} style={{...sb,fontSize:10,padding:"4px 6px",color:showSync?"#3b82f6":"#555"}}>☁️</button>
-            <button onClick={()=>admin?setAdmin(false):setShowAdminPw(true)} style={{...sb,fontSize:10,padding:"4px 6px",color:admin?"#F59E0B":"#555"}}>{admin?"🔓":"🔒"}</button>
-            <button onClick={()=>setLocked(true)} style={{...sb,fontSize:10,padding:"4px 6px",color:"#555"}}>🚪</button>
-            <input ref={fr} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={hu}/>
-          </div>
-        </div>
-      </header>
-
-      {/* SYNC BAR */}
-      {showSync&&<div style={{background:"#0C0C0C",borderBottom:"1px solid #1a1a1a",padding:"10px 12px"}}>
-        <div style={{maxWidth:1100,margin:"0 auto",display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-          <span style={{fontSize:10,color:"#555",whiteSpace:"nowrap"}}>☁️ Nuvem:</span>
-          {syncId&&<span style={{fontSize:10,color:"#3b82f6",fontFamily:"monospace",background:"rgba(59,130,246,.1)",padding:"2px 6px",borderRadius:4}}>{syncId}</span>}
-          <button onClick={cloudSave} disabled={syncing||!trips.length} style={{...sb,fontSize:10,padding:"4px 10px",background:"rgba(34,197,94,.12)",color:"#22c55e",border:"1px solid rgba(34,197,94,.3)"}}>{syncing?"...":"Salvar"}</button>
-          <input value={loadId} onChange={e=>setLoadId(e.target.value)} placeholder="ID para carregar" style={{...si,fontSize:10,padding:"4px 8px",width:140}}/>
-          <button onClick={()=>cloudLoad(loadId)} disabled={syncing||!loadId} style={{...sb,fontSize:10,padding:"4px 10px",background:"rgba(59,130,246,.12)",color:"#3b82f6",border:"1px solid rgba(59,130,246,.3)"}}>{syncing?"...":"Carregar"}</button>
-        </div>
-      </div>}
-
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"12px 12px 60px"}}>
-
-        {/* ════ AGENDA ════ */}
-        {tab==="agenda"&&!s&&<>
-          <h1 style={{margin:"0 0 2px",fontSize:22,fontWeight:800,fontFamily:"'Barlow Condensed',sans-serif"}}>Agenda</h1>
-          <p style={{fontSize:10,color:"#555",marginBottom:10,textTransform:"capitalize"}}>{new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"})}{fn&&<span> · {fn}</span>}</p>
-
-          <div style={{display:"grid",gridTemplateColumns:admin?"repeat(4,1fr)":"repeat(3,1fr)",gap:6,marginBottom:10}}>
-            <StC l="Saidas hoje" v={events.filter(e=>e.dk===tdk&&e.type==="pickup").length} c={PK}/>
-            <StC l="Retornos hoje" v={events.filter(e=>e.dk===tdk&&e.type==="return").length} c={RT}/>
-            <StC l="Confirmadas" v={trips.filter(t=>t.status==="Confirmed").length} c="#3b82f6"/>
-            {admin&&<StC l="Receita" v={`$${Math.round(finData.yearly.total).toLocaleString()}`} c="#a78bfa"/>}
-          </div>
-
-          <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center"}}>
-            <span style={{fontSize:9,color:"#555"}}>De:</span>
-            <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{...si,padding:"4px 6px",fontSize:10,flex:1}}/>
-            <span style={{fontSize:9,color:"#555"}}>Ate:</span>
-            <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{...si,padding:"4px 6px",fontSize:10,flex:1}}/>
-            {hasDateRange&&<button onClick={()=>{setDateFrom("");setDateTo("");}} style={{...sb,color:"#ef4444",padding:"4px 6px",fontSize:10,border:"1px solid rgba(239,68,68,.2)"}}>✕</button>}
-          </div>
-
-          {!hasDateRange&&<div style={{display:"flex",gap:3,marginBottom:6,overflowX:"auto"}}>
-            {[["today_future","Hoje+",cts.tf],["today","Hoje",cts.td],["tomorrow","Amanha",cts.tm],["week","7d",cts.wk],["all","Todas",cts.all]].map(([k,l,n])=>
-              <button key={k} onClick={()=>setFilter(k)} style={{padding:"3px 8px",borderRadius:999,fontSize:10,fontWeight:600,cursor:"pointer",border:filter===k?"1px solid rgba(245,158,11,.4)":"1px solid #1a1a1a",background:filter===k?"rgba(245,158,11,.1)":"transparent",color:filter===k?"#F59E0B":"#555",whiteSpace:"nowrap"}}>{l}({n})</button>
-            )}
-          </div>}
-          <div style={{display:"flex",gap:3,marginBottom:8}}>
-            {[["all","Todos"],["pickup","🟢Saidas"],["return","🟠Retornos"]].map(([k,l])=>{const c=k==="pickup"?PK:k==="return"?RT:"#888";
-              return <button key={k} onClick={()=>setEtf(k)} style={{padding:"3px 8px",borderRadius:999,fontSize:10,fontWeight:600,cursor:"pointer",border:etf===k?`1px solid ${c}60`:"1px solid #1a1a1a",background:etf===k?`${c}15`:"transparent",color:etf===k?c:"#555"}}>{l}</button>;})}
-          </div>
-          <input style={{...si,marginBottom:10,background:"#111",borderRadius:10,fontSize:11}} placeholder="Buscar cliente, veiculo, local..." value={search} onChange={e=>setSearch(e.target.value)}/>
-
-          {trips.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:"#444"}}><div style={{fontSize:32,marginBottom:8,opacity:.4}}>📊</div><div style={{fontSize:13}}>Importe o relatorio Excel</div>
-            <button onClick={()=>fr.current?.click()} style={{...sb,background:"rgba(139,92,246,.15)",color:"#a78bfa",border:"1px solid rgba(139,92,246,.3)",padding:"8px 20px",marginTop:10}}>Upload</button></div>}
-
-          {gbd.map(g=>{const dl=dlbl(g.dk),ic=g.dk===tdk,pk=g.evs.filter(e=>e.type==="pickup").length,rt=g.evs.filter(e=>e.type==="return").length;
-            return <div key={g.dk} style={{marginBottom:18}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,padding:"5px 0",borderBottom:ic?"2px solid #F59E0B":"1px solid #222"}}>
-                <div style={{fontSize:14,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",color:ic?"#F59E0B":"#E8E8E8",textTransform:"capitalize"}}>{dl&&<span>{dl} — </span>}{fH(g.dk)}</div>
-                <div style={{display:"flex",gap:4,marginLeft:"auto"}}>
-                  {pk>0&&<span style={{fontSize:9,color:PK,background:`${PK}15`,padding:"1px 6px",borderRadius:999}}>🟢{pk}</span>}
-                  {rt>0&&<span style={{fontSize:9,color:RT,background:`${RT}15`,padding:"1px 6px",borderRadius:999}}>🟠{rt}</span>}
-                </div>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:5}}>{g.evs.map((ev,i)=> <EC key={`${ev.trip.id}-${ev.type}-${i}`} ev={ev} admin={admin} onSelect={()=>{setSel(ev.trip);setEd(null);}}/>)}</div>
-            </div>;
-          })}
-        </>}
-
-        {/* ════ DETAIL ════ */}
-        {tab==="agenda"&&s&&<>
-          <button onClick={()=>{setSel(null);setEd(null);}} style={{background:"none",border:"none",color:"#F59E0B",fontSize:11,fontWeight:600,cursor:"pointer",padding:0,marginBottom:10}}>← Voltar</button>
-          <div style={{...sc,padding:16,marginBottom:8}}>
-            <div style={{display:"flex",justifyContent:"space-between"}}>
-              <div><div style={{display:"flex",gap:6,marginBottom:3}}><span style={{fontSize:10,fontWeight:700,color:"#F59E0B"}}>#{s.id}</span><SB status={s.status}/></div>
-                <div style={{fontSize:17,fontWeight:700,color:"#F5F5F5",fontFamily:"'Barlow Condensed',sans-serif"}}>{s.vehicle}</div>
-                <div style={{fontSize:10,color:"#888"}}>{s.vehicleType}</div></div>
-              {admin&&<div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:800,color:"#F59E0B",fontFamily:"'Barlow Condensed',sans-serif"}}>{$(s.total)}</div>{s.balance>0&&<div style={{fontSize:10,color:"#ef4444"}}>Saldo: {$(s.balance)}</div>}</div>}
-            </div>
-          </div>
-          <div style={{...sc,padding:12,marginBottom:8}}><div style={ss}>👤 Cliente</div><DR l="Nome" v={s.customerName}/>{s.phone&&<DR l="Tel" v={s.phone}/>}{s.email&&<DR l="Email" v={s.email}/>}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
-            <div style={{...sc,padding:12,borderColor:`${PK}30`}}>
-              <div style={{...ss,color:PK}}>🟢 Saida</div><DR l="Local" v={s.pickupLocation}/><DR l="Data" v={fD(s.pickupDate)}/>
-              {ed?<>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:10,color:"#555"}}>Hora</span><input type="time" value={ed.pt} onChange={e=>setEd({...ed,pt:e.target.value})} style={eI(PK)}/></div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:10,color:"#555"}}>Milhas</span><input type="number" placeholder="0" value={ed.pm} onChange={e=>setEd({...ed,pm:e.target.value})} style={eI(PK)}/></div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:10,color:"#555"}}>Comb</span><select value={ed.pf} onChange={e=>setEd({...ed,pf:e.target.value})} style={{...eI(PK),width:65}}>{FUEL.map(f=> <option key={f} value={f}>{f||"—"}</option>)}</select></div>
-              </>:<><DR l="Hora" v={fT(s.pickupDate)}/><DR l="Milhas" v={s.pickupMileage||"—"}/><DR l="Comb" v={s.pickupFuel? <FG level={s.pickupFuel}/>:"—"}/></>}
-            </div>
-            <div style={{...sc,padding:12,borderColor:`${RT}30`}}>
-              <div style={{...ss,color:RT}}>🟠 Retorno</div><DR l="Local" v={s.returnLocation}/><DR l="Data" v={fD(s.returnDate)}/>
-              {ed?<>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:10,color:"#555"}}>Hora</span><input type="time" value={ed.rt} onChange={e=>setEd({...ed,rt:e.target.value})} style={eI(RT)}/></div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:10,color:"#555"}}>Milhas</span><input type="number" placeholder="0" value={ed.rm} onChange={e=>setEd({...ed,rm:e.target.value})} style={eI(RT)}/></div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #1A1A1A"}}><span style={{fontSize:10,color:"#555"}}>Comb</span><select value={ed.rf} onChange={e=>setEd({...ed,rf:e.target.value})} style={{...eI(RT),width:65}}>{FUEL.map(f=> <option key={f} value={f}>{f||"—"}</option>)}</select></div>
-              </>:<><DR l="Hora" v={fT(s.returnDate)}/><DR l="Milhas" v={s.returnMileage||"—"}/><DR l="Comb" v={s.returnFuel? <FG level={s.returnFuel}/>:"—"}/></>}
-            </div>
-          </div>
-          {admin&&<div style={{...sc,padding:12,marginBottom:8,borderColor:"rgba(245,158,11,.15)"}}><div style={ss}>💰 Financeiro</div>
-            {ed?<><ER2 l="Total" v={ed.total} c="#F59E0B" fn={v=>setEd({...ed,total:v})}/><ER2 l="Pago" v={ed.paid} c="#22c55e" fn={v=>setEd({...ed,paid:v})}/><ER2 l="Saldo" v={ed.balance} c="#ef4444" fn={v=>setEd({...ed,balance:v})}/></>
-            :<><DR l="Total" v={$(s.total)} hl/><DR l="Pago" v={$(s.paid)}/><DR l="Saldo" v={$(s.balance)} hl={s.balance>0}/></>}
-          </div>}
-          <div style={{marginBottom:8}}>{!ed? <button onClick={()=>startEdit(s)} style={{width:"100%",padding:"9px",borderRadius:10,border:"1px solid rgba(245,158,11,.3)",background:"rgba(245,158,11,.06)",color:"#F59E0B",fontSize:11,fontWeight:600,cursor:"pointer"}}>✏️ Editar</button>
-          :<div style={{display:"flex",gap:6}}><button onClick={saveEdit} style={{flex:1,padding:"9px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#F59E0B,#D97706)",color:"#0C0C0C",fontSize:11,fontWeight:700,cursor:"pointer",textTransform:"uppercase",letterSpacing:1}}>Salvar</button><button onClick={()=>setEd(null)} style={{padding:"9px 14px",borderRadius:10,border:"1px solid #333",background:"transparent",color:"#888",fontSize:11,cursor:"pointer"}}>Cancelar</button></div>}</div>
-        </>}
-
-        {/* ════ FINANCEIRO ════ */}
-        {tab==="financeiro"&&<>
-          <h1 style={{margin:"0 0 10px",fontSize:22,fontWeight:800,fontFamily:"'Barlow Condensed',sans-serif"}}>Financeiro</h1>
-          {!admin? <div style={{textAlign:"center",padding:"40px 20px",color:"#555"}}><div style={{fontSize:32,marginBottom:8}}>🔒</div><div style={{fontSize:13}}>Acesso admin necessario</div><button onClick={()=>setShowAdminPw(true)} style={{...sb,background:"rgba(245,158,11,.1)",color:"#F59E0B",border:"1px solid rgba(245,158,11,.3)",marginTop:10,padding:"8px 18px"}}>Entrar</button></div>
-          :<>
-            {/* Year/Month picker */}
-            <div style={{display:"flex",gap:6,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
-              <select value={finYear} onChange={e=>setFinYear(Number(e.target.value))} style={{...si,width:"auto",padding:"5px 10px",fontSize:11}}>
-                {finData.years.length>0?finData.years.map(y=> <option key={y} value={y}>{y}</option>): <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>}
-              </select>
-              <select value={finMonth} onChange={e=>setFinMonth(Number(e.target.value))} style={{...si,width:"auto",padding:"5px 10px",fontSize:11}}>
-                <option value={0}>Ano inteiro</option>
-                {MONTHS.map((m,i)=> <option key={i} value={i+1}>{m}</option>)}
-              </select>
-              <span style={{fontSize:10,color:"#555"}}>{finData.all.count} reservas</span>
-            </div>
-
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:14}}>
-              <StC l="Faturado" v={`$${Math.round(finData.all.total).toLocaleString()}`} c="#F59E0B"/>
-              <StC l="Recebido" v={`$${Math.round(finData.all.paid).toLocaleString()}`} c="#22c55e"/>
-              <StC l="A receber" v={`$${Math.round(finData.all.balance).toLocaleString()}`} c="#ef4444"/>
-            </div>
-
-            {/* Progress */}
-            <div style={{...sc,padding:14,marginBottom:14}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#888",marginBottom:4}}>
-                <span>Recebido: {finData.all.total>0?Math.round(finData.all.paid/finData.all.total*100):0}%</span>
-                <span>{$(finData.all.paid)} de {$(finData.all.total)}</span>
-              </div>
-              <div style={{height:8,background:"#1a1a1a",borderRadius:4,overflow:"hidden"}}>
-                <div style={{height:"100%",background:"linear-gradient(90deg,#22c55e,#16a34a)",borderRadius:4,width:`${finData.all.total>0?finData.all.paid/finData.all.total*100:0}%`,transition:"width .5s"}}/>
-              </div>
-            </div>
-
-            {/* Monthly chart */}
-            {finMonth===0&&<div style={{...sc,padding:14,marginBottom:14}}>
-              <div style={ss}>📊 Faturamento mensal {finYear}</div>
-              <div style={{display:"flex",alignItems:"flex-end",gap:4,height:120}}>
-                {finData.byMonth.map((m,i)=>{
-                  const maxVal=Math.max(...finData.byMonth.map(x=>x.total),1);
-                  const h=m.total>0?(m.total/maxVal)*100:2;
-                  const isCur=i===new Date().getMonth()&&finYear===new Date().getFullYear();
-                  return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                    <div style={{fontSize:8,color:m.total>0?"#888":"#333"}}>{m.total>0?`$${Math.round(m.total/1000)}k`:""}</div>
-                    <div style={{width:"100%",height:`${h}%`,background:isCur?"#F59E0B":m.total>0?"rgba(59,130,246,.5)":"#1a1a1a",borderRadius:3,minHeight:2,transition:"height .3s"}}/>
-                    <div style={{fontSize:8,color:isCur?"#F59E0B":"#555"}}>{m.month}</div>
-                  </div>;
-                })}
-              </div>
-            </div>}
-
-            <div style={ss}>💸 A receber ({finData.pendingTrips.length})</div>
-            <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:16}}>
-              {finData.pendingTrips.slice(0,30).map(t=> <div key={t.id} onClick={()=>{setSel(t);setTab("agenda");}} style={{...sc,padding:"8px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#131313"} onMouseLeave={e=>e.currentTarget.style.background="#111"}>
-                <div><div style={{fontSize:11,fontWeight:600,color:"#E8E8E8"}}>{t.customerName}</div><div style={{fontSize:9,color:"#555"}}>#{t.id} · {t.vehicle} · {fS(t.pickupDate)}</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:13,fontWeight:700,color:"#ef4444",fontFamily:"'Barlow Condensed',sans-serif"}}>{$(t.balance)}</div></div>
-              </div>)}
-              {finData.pendingTrips.length===0&&<div style={{textAlign:"center",padding:16,color:"#444",fontSize:11}}>Nada pendente</div>}
-            </div>
-
-            <div style={ss}>✅ Recebidos ({finData.paidTrips.length})</div>
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {finData.paidTrips.slice(0,30).map(t=> <div key={t.id} onClick={()=>{setSel(t);setTab("agenda");}} style={{...sc,padding:"8px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#131313"} onMouseLeave={e=>e.currentTarget.style.background="#111"}>
-                <div><div style={{fontSize:11,fontWeight:600,color:"#E8E8E8"}}>{t.customerName}</div><div style={{fontSize:9,color:"#555"}}>#{t.id} · {fS(t.pickupDate)}</div></div>
-                <div style={{fontSize:13,fontWeight:700,color:"#22c55e",fontFamily:"'Barlow Condensed',sans-serif"}}>{$(t.paid)}</div>
-              </div>)}
-            </div>
-          </>}
-        </>}
-
-        {/* ════ HISTORICO ════ */}
-        {tab==="historico"&&<>
-          <h1 style={{margin:"0 0 10px",fontSize:22,fontWeight:800,fontFamily:"'Barlow Condensed',sans-serif"}}>Historico ({trips.filter(t=>new Date(t.returnDate)<today||t.status==="Closed"||t.status==="Honoured").length})</h1>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}>
-            {trips.filter(t=>new Date(t.returnDate)<today||t.status==="Closed"||t.status==="Honored").sort((a,b)=>new Date(b.returnDate)-new Date(a.returnDate)).map(t=> <div key={t.id} onClick={()=>{setSel(t);setTab("agenda");}} style={{...sc,padding:"8px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#131313"} onMouseLeave={e=>e.currentTarget.style.background="#111"}>
-              <div><div style={{display:"flex",gap:4,marginBottom:2}}><SB status={t.status}/><span style={{fontSize:9,color:"#444"}}>#{t.id}</span></div>
-                <div style={{fontSize:11,fontWeight:600,color:"#E8E8E8"}}>{t.customerName}</div>
-                <div style={{fontSize:10,color:"#888"}}>{t.vehicle}</div>
-                <div style={{fontSize:9,color:"#555"}}>{fS(t.pickupDate)} → {fS(t.returnDate)} · {t.days||dB(t.pickupDate,t.returnDate)}d</div></div>
-              {admin&&<div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:13,fontWeight:700,color:"#F59E0B",fontFamily:"'Barlow Condensed',sans-serif"}}>{$(t.total)}</div></div>}
-            </div>)}
-          </div>
-        </>}
-
-        {/* ════ FROTA ════ */}
-        {tab==="frota"&&<>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:6}}>
-            <h1 style={{margin:0,fontSize:22,fontWeight:800,fontFamily:"'Barlow Condensed',sans-serif"}}>Frota ({visibleVehicles.length})</h1>
-            <div style={{display:"flex",alignItems:"center",gap:4}}>
-              <button onClick={()=>{const[y,m]=calMonth.split("-").map(Number);const d=new Date(y,m-2,1);setCalMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);}} style={{...sb,padding:"3px 8px",color:"#888",border:"1px solid #222"}}>←</button>
-              <span style={{fontSize:13,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",color:"#F5F5F5",textTransform:"capitalize",minWidth:110,textAlign:"center"}}>{new Date(calMonth+"-15").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}</span>
-              <button onClick={()=>{const[y,m]=calMonth.split("-").map(Number);const d=new Date(y,m,1);setCalMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);}} style={{...sb,padding:"3px 8px",color:"#888",border:"1px solid #222"}}>→</button>
-            </div>
-          </div>
-
-          <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #1a1a1a",marginBottom:12}}>
-            <div style={{minWidth:Math.max(600,calDays.length*26+160)}}>
-              <div style={{display:"flex",background:"#111",borderBottom:"1px solid #222",position:"sticky",top:48,zIndex:10}}>
-                <div style={{minWidth:150,padding:"6px 8px",fontSize:9,fontWeight:600,color:"#888",borderRight:"1px solid #1a1a1a"}}>Veiculo</div>
-                {calDays.map(d=> <div key={d.key} style={{minWidth:26,flex:1,textAlign:"center",padding:"3px 0",background:d.key===tdk?"rgba(245,158,11,.08)":"transparent"}}>
-                  <div style={{fontSize:7,color:d.key===tdk?"#F59E0B":"#555"}}>{d.dow}</div>
-                  <div style={{fontSize:10,fontWeight:d.key===tdk?700:400,color:d.key===tdk?"#F59E0B":"#999"}}>{d.day}</div>
-                </div>)}
-              </div>
-              {visibleVehicles.map(v=> <div key={v.name} style={{display:"flex",borderBottom:"1px solid #0C0C0C"}}>
-                <div style={{minWidth:150,padding:"4px 8px",borderRight:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:4}}>
-                  <div style={{flex:1,minWidth:0}}><div style={{fontSize:10,fontWeight:600,color:"#E8E8E8",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.name}</div><div style={{fontSize:8,color:"#555"}}>{v.type}</div></div>
-                  <button onClick={()=>toggleHideCar(v.name)} title="Desativar" style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"#555",padding:0}}>✕</button>
-                </div>
-                <div style={{display:"flex",flex:1,position:"relative",minHeight:28}}>
-                  {calDays.map(d=> <div key={d.key} style={{minWidth:26,flex:1,borderRight:"1px solid #080808",background:d.key===tdk?"rgba(245,158,11,.03)":"transparent"}}/>)}
-                  {v.bookings.map(b=>{
-                    const bS=new Date(b.start),bE=new Date(b.end),mS=calDays[0]?.date,mE=calDays[calDays.length-1]?.date;
-                    if(!mS||bE<mS||bS>mE)return null;
-                    const si2=Math.max(0,Math.floor((bS-mS)/864e5)),ei2=Math.min(calDays.length-1,Math.floor((bE-mS)/864e5));
-                    return <div key={b.id} title={`${b.customer} #${b.id}`} style={{position:"absolute",top:3,height:22,left:`${(si2/calDays.length)*100}%`,width:`${((ei2-si2+1)/calDays.length)*100}%`,background:"linear-gradient(90deg,rgba(59,130,246,.6),rgba(59,130,246,.3))",borderRadius:3,border:"1px solid rgba(59,130,246,.4)",display:"flex",alignItems:"center",paddingLeft:3,overflow:"hidden",cursor:"pointer",zIndex:2}} onClick={()=>{const trip=trips.find(t=>t.id===b.id);if(trip){setSel(trip);setTab("agenda");}}}>
-                      <span style={{fontSize:7,color:"#fff",fontWeight:600,whiteSpace:"nowrap"}}>{b.customer}</span>
-                    </div>;
-                  })}
-                </div>
-              </div>)}
-            </div>
-          </div>
-
-          {/* Hidden cars */}
-          {hiddenCars.length>0&&<div style={{...sc,padding:12}}>
-            <div style={{fontSize:10,fontWeight:600,color:"#666",marginBottom:6}}>Veiculos desativados ({hiddenCars.length})</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-              {hiddenCars.map(c=> <div key={c} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:999,background:"rgba(239,68,68,.06)",border:"1px solid rgba(239,68,68,.15)",fontSize:10,color:"#888"}}>
-                <span style={{maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c}</span>
-                <button onClick={()=>toggleHideCar(c)} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"#22c55e",padding:0}}>↩</button>
-              </div>)}
-            </div>
-          </div>}
-        </>}
-      </div>
-    </div>
-  );
+    }
+  } catch(e) { console.warn('Load:', e); toast('Sem conexão — operando offline', 'err'); }
+  loader(false);
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script></body></html>
+async function saveData() {
+  if (!isAdmin()) return;
+  saveDot('saving');
+  try {
+    S.data.lastUpdated = new Date().toISOString();
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer gsadmin', 'Content-Type': 'application/json' },
+      body: JSON.stringify(S.data)
+    });
+    if (res.ok) saveDot('saved'); else saveDot('');
+  } catch(e) { console.warn('Save:', e); saveDot(''); }
+}
+
+function scheduleSave() {
+  if (!isAdmin()) return;
+  saveDot('saving');
+  clearTimeout(S.saveTimer);
+  S.saveTimer = setTimeout(saveData, 1800);
+}
+
+async function syncNow() {
+  await loadData();
+  syncFleetFromRes();
+  renderCurrentTab();
+  toast('Dados sincronizados ✓', 'ok');
+}
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('fin-year').textContent = S.finYear;
+  updateFrotaLabel();
+  await loadData();
+  syncFleetFromRes();
+  renderCurrentTab();
+}
+
+function syncFleetFromRes() {
+  const known = new Set(S.data.fleet.map(f => f.id));
+  S.data.reservations.forEach(r => {
+    if (r.vehicleId && !known.has(r.vehicleId)) {
+      S.data.fleet.push({ id: r.vehicleId, type: r.vehicleType || r.vehicleId, active: true });
+      known.add(r.vehicleId);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════════
+function switchTab(tab) {
+  S.tab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tab}`));
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  if (S.tab === 'agenda') renderAgenda();
+  else if (S.tab === 'financeiro') renderFinanceiro();
+  else if (S.tab === 'historico') renderHistorico();
+  else if (S.tab === 'frota') renderFrota();
+}
+
+// ════════════════════════════════════════════════════════
+//  EXCEL IMPORT
+// ════════════════════════════════════════════════════════
+function handleDragOver(e) { e.preventDefault(); document.getElementById('import-zone').classList.add('drag-over'); }
+function handleDragLeave() { document.getElementById('import-zone').classList.remove('drag-over'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('import-zone').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0]; if (f) handleXL(f);
+}
+
+function handleXL(file) {
+  if (!file) return;
+  if (!isAdmin()) { toast('Apenas Admin pode importar', 'err'); return; }
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'binary', cellDates:true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+      processRows(rows);
+    } catch(err) { console.error(err); toast('Erro ao ler arquivo', 'err'); }
+  };
+  r.readAsBinaryString(file);
+}
+
+// Flexible column name mapping
+const COL = {
+  'reservation#':  'id', 'reservation #': 'id', 'reservation': 'id', 'res#': 'id', 'res #': 'id',
+  'vehicle id':    'vehicleId', 'vehicleid': 'vehicleId', 'vehicle': 'vehicleId',
+  'vehicle type':  'vehicleType', 'vehicletype': 'vehicleType', 'type': 'vehicleType', 'car type': 'vehicleType',
+  'full name':     'fullName', 'fullname': 'fullName', 'name': 'fullName', 'customer': 'fullName', 'customer name': 'fullName',
+  'phone':         'phone', 'phone number': 'phone', 'cel': 'phone', 'celular': 'phone', 'contact': 'phone',
+  'status':        'status',
+  'loc.out':       'locOut', 'locout': 'locOut', 'location out': 'locOut', 'pickup location': 'locOut',
+  'loc.in':        'locIn',  'locin':  'locIn',  'location in':  'locIn',  'return location': 'locIn',
+  'pickup date':   'pickupDate', 'pickupdate': 'pickupDate', 'pick-up date': 'pickupDate', 'checkin': 'pickupDate',
+  'return date':   'returnDate', 'returndate': 'returnDate', 'checkout': 'returnDate', 'due date': 'returnDate',
+  '#days':         'days', 'days': 'days', '# days': 'days', 'num days': 'days', 'duration': 'days',
+  'total':         'total', 'total amount': 'total', 'grand total': 'total',
+  'paid':          'paid', 'amount paid': 'paid', 'payment': 'paid',
+  'balance':       'balance', 'balance due': 'balance', 'remaining': 'balance',
+};
+
+function mapKey(k) {
+  const lk = k.trim().toLowerCase();
+  return COL[lk] || null;
+}
+
+function processRows(rows) {
+  if (!rows.length) { toast('Arquivo vazio', 'err'); return; }
+  let added = 0, updated = 0;
+  rows.forEach(row => {
+    const res = {};
+    Object.entries(row).forEach(([k, v]) => {
+      const mapped = mapKey(k);
+      if (mapped) res[mapped] = v;
+    });
+    if (!res.id) return;
+    res.id = String(res.id).trim();
+    ['pickupDate','returnDate'].forEach(f => { if (res[f]) res[f] = normDate(res[f]); });
+    ['total','paid','balance','days'].forEach(f => {
+      if (res[f] !== undefined) res[f] = parseFloat(String(res[f]).replace(/[^0-9.-]/g,'')) || 0;
+    });
+    const idx = S.data.reservations.findIndex(r => r.id === res.id);
+    if (idx >= 0) {
+      const prev = S.data.reservations[idx];
+      S.data.reservations[idx] = {
+        ...res,
+        milesOut: prev.milesOut, milesIn: prev.milesIn,
+        fuelOut: prev.fuelOut, fuelIn: prev.fuelIn,
+        photosOut: prev.photosOut || [], photosIn: prev.photosIn || [],
+        notes: prev.notes || ''
+      };
+      updated++;
+    } else {
+      S.data.reservations.push({ ...res, photosOut:[], photosIn:[], notes:'' });
+      added++;
+    }
+  });
+  syncFleetFromRes();
+  scheduleSave();
+  renderCurrentTab();
+  toast(`✅ ${added} novos · ${updated} atualizados`, 'ok');
+}
+
+function normDate(v) {
+  if (!v) return '';
+  if (v instanceof Date) return v.toISOString().split('T')[0];
+  const s = String(v).trim();
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m1) {
+    const y = m1[3].length === 2 ? '20'+m1[3] : m1[3];
+    return `${y}-${m1[1].padStart(2,'0')}-${m1[2].padStart(2,'0')}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split('T')[0];
+  if (/^\d{5,}$/.test(s)) {
+    try { const d = XLSX.SSF.parse_date_code(+s); if(d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; } catch(e){}
+  }
+  return s;
+}
+
+// ════════════════════════════════════════════════════════
+//  AGENDA
+// ════════════════════════════════════════════════════════
+function setFilter(btn, f) {
+  S.filter = f;
+  document.querySelectorAll('#agenda-filters .btn').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  renderAgenda();
+}
+
+function renderAgenda() {
+  const today = ds(new Date());
+  const weekEnd = ds(new Date(Date.now() + 7*86400000));
+  const past7  = ds(new Date(Date.now() - 7*86400000));
+  const fut60  = ds(new Date(Date.now() + 60*86400000));
+
+  let events = [];
+  S.data.reservations.forEach(r => {
+    if (r.pickupDate) events.push({ date:r.pickupDate, type:'departure', res:r });
+    if (r.returnDate) events.push({ date:r.returnDate, type:'return', res:r });
+  });
+
+  if (S.filter === 'departure') events = events.filter(e => e.type==='departure');
+  else if (S.filter === 'return') events = events.filter(e => e.type==='return');
+  else if (S.filter === 'today') events = events.filter(e => e.date===today);
+  else if (S.filter === 'week') events = events.filter(e => e.date>=today && e.date<=weekEnd);
+  else events = events.filter(e => e.date>=past7 && e.date<=fut60);
+
+  if (!events.length) {
+    document.getElementById('agenda-out').innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nenhum evento no período</div></div>`;
+    return;
+  }
+
+  events.sort((a,b) => a.date.localeCompare(b.date));
+  const byDate = {};
+  events.forEach(e => (byDate[e.date] = byDate[e.date] || []).push(e));
+
+  let html = '';
+  Object.entries(byDate).forEach(([date, evts]) => {
+    const isTd = date===today;
+    const isPast = date<today;
+    const d = new Date(date+'T12:00:00');
+    const dow = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];
+    const lbl = isTd
+      ? `⭐ HOJE · ${dow}, ${d.getDate()} ${MSHORT[d.getMonth()]}`
+      : `${dow}, ${d.getDate()} ${MSHORT[d.getMonth()]} ${d.getFullYear()}`;
+
+    html += `<div class="day-group"><div class="day-label ${isTd?'today-label':''}">${lbl}</div><div class="day-cards">`;
+    evts.forEach(e => {
+      const r = e.res;
+      const overdue = e.type==='return' && date<today && r.status!=='Closed' && r.status!=='Cancelled';
+      const cls = overdue ? 'overdue' : e.type;
+      const pillLabel = overdue ? '⚠ ATRASADO' : (e.type==='departure' ? '▲ SAÍDA' : '▼ RETORNO');
+      const pillCls = overdue ? 'overdue' : e.type;
+      const loc = e.type==='departure' ? r.locOut : r.locIn;
+      html += `<div class="res-card ${cls}" onclick="openModal('${esc(r.id)}')">
+        <div class="res-card-top">
+          <span class="res-pill ${pillCls}">${pillLabel}</span>
+          <span class="res-num">#${r.id}</span>
+        </div>
+        <div class="res-name">${r.fullName||'—'}</div>
+        <div class="res-car">${r.vehicleType||r.vehicleId||'—'}</div>
+        <div class="res-meta">
+          ${loc?`<span class="res-loc">${loc}</span>`:''}
+          <span class="res-chip">${r.days||0}d</span>
+          ${r.milesOut!=null?`<span class="res-chip">🛣 ${r.milesOut}mi</span>`:''}
+          ${r.fuelOut!=null?`<span class="res-chip">⛽ ${FUELS[r.fuelOut]||'?'}</span>`:''}
+          ${isAdmin()&&r.total?`<span class="res-val">$${fmt$(r.total)}</span>`:''}
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  document.getElementById('agenda-out').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════
+//  FINANCEIRO
+// ════════════════════════════════════════════════════════
+function changeYear(d) {
+  S.finYear += d; S.finMonth = null;
+  document.getElementById('fin-year').textContent = S.finYear;
+  renderFinanceiro();
+}
+
+function renderFinanceiro() {
+  const y = S.finYear;
+  const yRes = S.data.reservations.filter(r => (r.pickupDate||'').startsWith(String(y)));
+  const total = yRes.reduce((s,r) => s+(r.total||0),0);
+  const paid  = yRes.reduce((s,r) => s+(r.paid||0),0);
+  const bal   = yRes.reduce((s,r) => s+(r.balance||0),0);
+
+  // Stats
+  const si = document.getElementById('fin-stats');
+  si.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Reservas ${y}</div>
+      <div class="stat-val amber">${yRes.length}</div>
+      <div class="stat-sub">${(yRes.length/12).toFixed(1)}/mês média</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Receita Bruta</div>
+      ${isAdmin() ? `<div class="stat-val green">$${fmt$(total)}</div>` : `<div class="stat-mask">••••</div>`}
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Recebido</div>
+      ${isAdmin() ? `<div class="stat-val">$${fmt$(paid)}</div>` : `<div class="stat-mask">••••</div>`}
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Saldo Pendente</div>
+      ${isAdmin() ? `<div class="stat-val orange">$${fmt$(bal)}</div>` : `<div class="stat-mask">••••</div>`}
+    </div>
+  `;
+
+  // Month strip
+  document.getElementById('month-strip').innerHTML = MSHORT.map((m,i) =>
+    `<button class="month-chip${S.finMonth===i?' active':''}" onclick="selMonth(${i})">${m}</button>`
+  ).join('');
+
+  // Data by month
+  const byM  = Array(12).fill(0);
+  const cntM = Array(12).fill(0);
+  yRes.forEach(r => {
+    const mi = parseInt((r.pickupDate||'').split('-')[1])-1;
+    if (mi>=0 && mi<12) { byM[mi]+=(r.total||0); cntM[mi]++; }
+  });
+
+  buildRevenueChart(byM, cntM);
+  buildVtypeChart(yRes);
+  buildLocChart(yRes);
+  renderFinDetail(yRes);
+}
+
+function selMonth(m) {
+  S.finMonth = S.finMonth===m ? null : m;
+  renderFinanceiro();
+}
+
+function buildRevenueChart(byM, cntM) {
+  const ctx = document.getElementById('ch-revenue').getContext('2d');
+  if (S.charts.rev) S.charts.rev.destroy();
+  const am = 'rgba(245,158,11,';
+  S.charts.rev = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: MSHORT,
+      datasets:[{
+        label: isAdmin()?'Receita ($)':'Reservas',
+        data: isAdmin()?byM:cntM,
+        backgroundColor: MSHORT.map((_,i)=>i===S.finMonth?am+'0.95)':am+'0.45)'),
+        borderColor: MSHORT.map((_,i)=>i===S.finMonth?am+'1)':am+'0.6)'),
+        borderWidth:1, borderRadius:4,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>isAdmin()?`$${fmt$(c.raw)}`:`${c.raw} res.`}}},
+      scales:{
+        x:{grid:{color:'rgba(42,42,53,0.6)'},ticks:{color:'#6B7280',font:{family:'DM Sans'}}},
+        y:{grid:{color:'rgba(42,42,53,0.6)'},ticks:{color:'#6B7280',callback:v=>isAdmin()?`$${v}`:v,font:{family:'DM Sans'}}}
+      },
+      onClick:(_,els)=>{if(els.length)selMonth(els[0].index);}
+    }
+  });
+}
+
+function buildVtypeChart(res) {
+  const ctx = document.getElementById('ch-vtype').getContext('2d');
+  if (S.charts.vtype) S.charts.vtype.destroy();
+  const m={};
+  res.forEach(r=>{const t=r.vehicleType||r.vehicleId||'Outro';m[t]=(m[t]||0)+1;});
+  S.charts.vtype = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:Object.keys(m),datasets:[{data:Object.values(m),backgroundColor:['rgba(245,158,11,0.8)','rgba(59,130,246,0.8)','rgba(16,185,129,0.8)','rgba(249,115,22,0.8)','rgba(139,92,246,0.8)'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#9CA3AF',font:{size:10,family:'DM Sans'},boxWidth:12}}}}
+  });
+}
+
+function buildLocChart(res) {
+  const ctx = document.getElementById('ch-loc').getContext('2d');
+  if (S.charts.loc) S.charts.loc.destroy();
+  const m={};
+  res.forEach(r=>{const l=r.locOut||'N/A';m[l]=(m[l]||0)+1;});
+  S.charts.loc = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:Object.keys(m),datasets:[{data:Object.values(m),backgroundColor:['rgba(16,185,129,0.8)','rgba(59,130,246,0.8)','rgba(249,115,22,0.8)','rgba(139,92,246,0.8)','rgba(245,158,11,0.8)'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#9CA3AF',font:{size:10,family:'DM Sans'},boxWidth:12}}}}
+  });
+}
+
+function renderFinDetail(yRes) {
+  const el = document.getElementById('fin-detail');
+  if (S.finMonth===null) { el.innerHTML=''; return; }
+  const mRes = yRes.filter(r=>parseInt((r.pickupDate||'').split('-')[1])-1===S.finMonth);
+  if (!mRes.length) { el.innerHTML=`<div class="empty" style="padding:24px"><div class="empty-text">Sem reservas em ${MONTHS[S.finMonth]}</div></div>`; return; }
+  const t=mRes.reduce((s,r)=>s+(r.total||0),0);
+  const p=mRes.reduce((s,r)=>s+(r.paid||0),0);
+  const b=mRes.reduce((s,r)=>s+(r.balance||0),0);
+  let html=`<div class="chart-card">
+    <div class="chart-title">${MONTHS[S.finMonth]} — ${mRes.length} reservas${isAdmin()?` · $${fmt$(t)} bruto · $${fmt$(p)} recebido · $${fmt$(b)} pendente`:''}</div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Reserva</th><th>Cliente</th><th>Veículo</th><th>Saída</th><th>Dias</th>
+      ${isAdmin()?'<th>Total</th><th>Pago</th><th>Saldo</th>':''}
+      <th>Status</th>
+    </tr></thead><tbody>`;
+  mRes.sort((a,b)=>(a.pickupDate||'').localeCompare(b.pickupDate||'')).forEach(r=>{
+    html+=`<tr onclick="openModal('${esc(r.id)}')">
+      <td style="font-weight:600;color:var(--amber)">#${r.id}</td>
+      <td>${r.fullName||'—'}</td>
+      <td style="color:var(--muted2)">${r.vehicleType||r.vehicleId||'—'}</td>
+      <td>${fmtD(r.pickupDate)}</td>
+      <td style="text-align:center">${r.days||0}</td>
+      ${isAdmin()?`<td style="color:var(--green)">$${fmt$(r.total)}</td><td>$${fmt$(r.paid)}</td><td style="color:var(--orange)">$${fmt$(r.balance)}</td>`:''}
+      <td><span class="status-badge ${sCls(r.status)}">${r.status||'—'}</span></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div></div>`;
+  el.innerHTML=html;
+}
+
+// ════════════════════════════════════════════════════════
+//  HISTORICO
+// ════════════════════════════════════════════════════════
+function renderHistorico() {
+  const q     = document.getElementById('hist-q').value.toLowerCase();
+  const st    = document.getElementById('hist-st').value;
+  const sort  = document.getElementById('hist-sort').value;
+
+  let res = [...S.data.reservations];
+  if (q) res = res.filter(r =>
+    (r.fullName||'').toLowerCase().includes(q) ||
+    (r.id||'').toLowerCase().includes(q) ||
+    (r.vehicleId||'').toLowerCase().includes(q) ||
+    (r.vehicleType||'').toLowerCase().includes(q) ||
+    (r.phone||'').includes(q)
+  );
+  if (st) res = res.filter(r=>(r.status||'')===st);
+
+  if (sort==='pickup-asc') res.sort((a,b)=>(a.pickupDate||'').localeCompare(b.pickupDate||''));
+  else if (sort==='pickup-desc') res.sort((a,b)=>(b.pickupDate||'').localeCompare(a.pickupDate||''));
+  else if (sort==='name') res.sort((a,b)=>(a.fullName||'').localeCompare(b.fullName||''));
+  else if (sort==='total-desc') res.sort((a,b)=>(b.total||0)-(a.total||0));
+  else if (sort==='days-desc') res.sort((a,b)=>(b.days||0)-(a.days||0));
+
+  document.getElementById('hist-count').textContent = `${res.length} de ${S.data.reservations.length}`;
+
+  const tb = document.getElementById('hist-tbody');
+  if (!res.length) {
+    tb.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Nenhuma reserva encontrada</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = res.map(r=>`
+    <tr onclick="openModal('${esc(r.id)}')">
+      <td><span style="font-weight:700;color:var(--amber)">#${r.id}</span></td>
+      <td>
+        <div style="font-weight:500">${r.fullName||'—'}</div>
+        ${r.phone?`<div style="font-size:11px;color:var(--muted)">${r.phone}</div>`:''}
+      </td>
+      <td>
+        <div>${r.vehicleType||'—'}</div>
+        <div style="font-size:11px;color:var(--muted)">${r.vehicleId||''}</div>
+      </td>
+      <td>${fmtD(r.pickupDate)}<br><span style="font-size:10px;color:var(--amber)">${r.locOut||''}</span></td>
+      <td>${fmtD(r.returnDate)}<br><span style="font-size:10px;color:var(--muted2)">${r.locIn||''}</span></td>
+      <td style="text-align:center">${r.days||0}</td>
+      <td style="color:var(--green);${isAdmin()?'':'display:none'}">${isAdmin()?'$'+fmt$(r.total):''}</td>
+      <td style="color:var(--orange);${isAdmin()?'':'display:none'}">${isAdmin()?'$'+fmt$(r.balance):''}</td>
+      <td><span class="status-badge ${sCls(r.status)}">${r.status||'—'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════════
+//  FROTA CALENDAR
+// ════════════════════════════════════════════════════════
+function updateFrotaLabel() {
+  document.getElementById('frota-lbl').textContent = `${MONTHS[S.flM]} ${S.flY}`;
+}
+
+function changeFlotaM(d) {
+  S.flM += d;
+  if (S.flM<0){S.flM=11;S.flY--;}
+  if (S.flM>11){S.flM=0;S.flY++;}
+  updateFrotaLabel();
+  renderFrota();
+}
+
+function renderFrota() {
+  renderFlotaCal();
+  if (S.mgmtOpen) renderFleetMgmt();
+}
+
+function renderFlotaCal() {
+  const y=S.flY, m=S.flM;
+  const dim = new Date(y,m+1,0).getDate();
+  const today = ds(new Date());
+  const todayD = new Date().getDate(), todayM = new Date().getMonth(), todayY = new Date().getFullYear();
+
+  // Build header
+  let hdr = '<thead><tr><th style="text-align:left;padding:6px 10px;min-width:72px">Veículo</th>';
+  for (let d=1;d<=dim;d++){
+    const dt = new Date(y,m,d);
+    const isT = d===todayD&&m===todayM&&y===todayY;
+    const dw = ['D','S','T','Q','Q','S','S'][dt.getDay()];
+    hdr += `<th class="${isT?'col-today':''}"><div>${d}</div><div style="font-size:8px;opacity:0.5">${dw}</div></th>`;
+  }
+  hdr += '</tr></thead>';
+
+  // Build lookup: vehicleId -> [{start, end, id}]
+  const lu = {};
+  S.data.reservations.forEach(r=>{
+    if(!r.vehicleId||!r.pickupDate) return;
+    (lu[r.vehicleId]=lu[r.vehicleId]||[]).push({start:r.pickupDate,end:r.returnDate||r.pickupDate,id:r.id});
+  });
+
+  // Rows
+  let body = '<tbody>';
+  S.data.fleet.forEach(v=>{
+    const inactive = v.active===false;
+    body += `<tr><td class="car-label-cell${inactive?' inactive':''}" title="${v.type}">${v.id}</td>`;
+    const rsvs = lu[v.id]||[];
+    for (let d=1;d<=dim;d++){
+      const cd = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isT = cd===today;
+      const dt = new Date(y,m,d);
+      const isWe = dt.getDay()===0||dt.getDay()===6;
+      let cls='empty', rid=null;
+      if(!inactive){
+        for(const r of rsvs){
+          if(cd>=r.start&&cd<=r.end){
+            cls=cd===r.start?'departure':cd===r.end?'return':'active-trip';
+            rid=r.id; break;
+          }
+        }
+      }
+      if(cls==='empty'&&isWe) cls='weekend-bg';
+      const lbl = cls==='departure'?'S':cls==='return'?'R':cls==='active-trip'?'·':'';
+      body += `<td><div class="day-cell ${cls}${isT?' today-cell':''}"
+        ${rid?`onclick="openModal('${rid}')" title="#${rid}"`:''}
+      >${lbl}</div></td>`;
+    }
+    body += '</tr>';
+  });
+  body += '</tbody>';
+
+  document.getElementById('frota-cal').innerHTML = hdr+body;
+}
+
+function toggleMgmt() {
+  S.mgmtOpen = !S.mgmtOpen;
+  const p = document.getElementById('fleet-mgmt-panel');
+  p.style.display = S.mgmtOpen ? 'block' : 'none';
+  document.getElementById('mgmt-btn').classList.toggle('active', S.mgmtOpen);
+  if (S.mgmtOpen) renderFleetMgmt();
+}
+
+function renderFleetMgmt() {
+  const el = document.getElementById('fleet-mgmt-panel');
+  let html = `<div class="fleet-mgmt"><div class="fleet-mgmt-title">
+    <span>Gerenciar Frota</span>
+    ${isAdmin()?`<button class="btn primary" onclick="addVehicle()">+ Veículo</button>`:''}
+  </div>`;
+  if (!S.data.fleet.length) {
+    html += '<div style="color:var(--muted);font-size:13px">Importe reservas para auto-detectar veículos.</div>';
+  } else {
+    S.data.fleet.forEach((v,i) => {
+      html += `<div class="fleet-item${v.active===false?' inactive-veh':''}">
+        <div class="fleet-item-info">
+          <div class="fleet-item-id">${v.id}</div>
+          <div class="fleet-item-type">${v.type}</div>
+        </div>
+        ${isAdmin()?`<button class="toggle-active${v.active!==false?' on':' off'}" onclick="toggleVeh(${i})">
+          ${v.active!==false?'Ativo':'Inativo'}
+        </button>`:'<span style="font-size:10px;color:var(--muted)">'+(v.active!==false?'✓':'✗')+'</span>'}
+      </div>`;
+    });
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function toggleVeh(i) {
+  if (!isAdmin()) return;
+  S.data.fleet[i].active = S.data.fleet[i].active===false ? true : false;
+  scheduleSave();
+  renderFrota();
+}
+
+function addVehicle() {
+  const id   = prompt('ID do veículo (ex: TSL-003):');
+  if (!id) return;
+  const type = prompt('Tipo/modelo (ex: Tesla Model Y):');
+  if (!type) return;
+  if (S.data.fleet.find(v=>v.id===id.trim())) { toast('Veículo já existe', 'err'); return; }
+  S.data.fleet.push({ id:id.trim(), type:type.trim(), active:true });
+  scheduleSave();
+  renderFrota();
+  toast('Veículo adicionado ✓', 'ok');
+}
+
+// ════════════════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════════════════
+function openModal(id) {
+  const r = S.data.reservations.find(x=>x.id===id);
+  if (!r) return;
+  S.modal = id;
+  document.getElementById('m-title').textContent = `Reserva #${r.id}`;
+  document.getElementById('m-sub').textContent   = `${r.fullName||'—'} · ${r.vehicleType||r.vehicleId||'—'}`;
+  const isEV = EV_KW.some(k=>(r.vehicleType||'').toLowerCase().includes(k));
+  document.getElementById('m-body').innerHTML = buildModal(r, isEV);
+  document.getElementById('modal-overlay').classList.add('open');
+  // Wire fuel buttons
+  ['Out','In'].forEach(dir=>{
+    FUELS.forEach((_,i)=>{
+      const b = document.getElementById(`f${dir}${i}`);
+      if (b) { b.classList.toggle('sel', r[`fuel${dir}`]===i); b.onclick=()=>setFuel(dir,i); }
+    });
+  });
+  updFuelEst(r, isEV);
+  updMilesDelta(r);
+}
+
+function buildModal(r, isEV) {
+  const can = isAdmin();
+  return `
+  <div class="m-section">
+    <div class="m-section-title">Informações da Reserva</div>
+    <div class="info-grid">
+      <div class="info-box"><div class="info-lbl">Cliente</div><div class="info-val">${r.fullName||'—'}</div></div>
+      <div class="info-box"><div class="info-lbl">Telefone</div><div class="info-val">${r.phone||'—'}</div></div>
+      <div class="info-box"><div class="info-lbl">Veículo</div><div class="info-val">${r.vehicleType||'—'}</div></div>
+      <div class="info-box"><div class="info-lbl">ID do Veículo</div><div class="info-val">${r.vehicleId||'—'}</div></div>
+      <div class="info-box"><div class="info-lbl">Saída</div><div class="info-val">${fmtD(r.pickupDate)} <span style="color:var(--amber);font-size:12px">${r.locOut?'('+r.locOut+')':''}</span></div></div>
+      <div class="info-box"><div class="info-lbl">Retorno</div><div class="info-val">${fmtD(r.returnDate)} <span style="color:var(--muted2);font-size:12px">${r.locIn?'('+r.locIn+')':''}</span></div></div>
+      <div class="info-box"><div class="info-lbl">Dias</div><div class="info-val">${r.days||0}</div></div>
+      <div class="info-box"><div class="info-lbl">Status</div><div class="info-val"><span class="status-badge ${sCls(r.status)}">${r.status||'—'}</span></div></div>
+      ${can?`
+      <div class="info-box"><div class="info-lbl">Total</div><div class="info-val" style="color:var(--green)">$${fmt$(r.total)}</div></div>
+      <div class="info-box"><div class="info-lbl">Pago / Saldo</div><div class="info-val">$${fmt$(r.paid)} <span style="color:var(--orange)">/ $${fmt$(r.balance)}</span></div></div>
+      `:''}
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">Milhas / Odômetro</div>
+    <div class="fld-row">
+      <div class="fld-group">
+        <div class="fld-label">Saída (mi)</div>
+        <input type="number" class="fld-input" id="mi-out" value="${r.milesOut||''}" placeholder="—"
+          ${!can?'disabled':''} oninput="updField('milesOut',+this.value||null);updMilesDeltaById()">
+      </div>
+      <div class="fld-group">
+        <div class="fld-label">Retorno (mi)</div>
+        <input type="number" class="fld-input" id="mi-in" value="${r.milesIn||''}" placeholder="—"
+          ${!can?'disabled':''} oninput="updField('milesIn',+this.value||null);updMilesDeltaById()">
+      </div>
+    </div>
+    <div class="miles-delta" id="miles-delta"></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">${isEV?'⚡ Carga Elétrica':'⛽ Combustível'}</div>
+    <div class="fld-row">
+      <div class="fld-group">
+        <div class="fld-label">Nível Saída</div>
+        <div class="fuel-row">${FUELS.map((_,i)=>`<button class="fuel-opt" id="fOut${i}" ${!can?'disabled':''}>${FUELS[i]}</button>`).join('')}</div>
+      </div>
+      <div class="fld-group">
+        <div class="fld-label">Nível Retorno</div>
+        <div class="fuel-row">${FUELS.map((_,i)=>`<button class="fuel-opt" id="fIn${i}" ${!can?'disabled':''}>${FUELS[i]}</button>`).join('')}</div>
+      </div>
+    </div>
+    <div id="fuel-est"></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">📸 Fotos — Entrega ao Cliente</div>
+    <div class="photos-wrap" id="ph-Out">${renderPhotos(r.photosOut||[],r.id,'Out',can)}</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">📸 Fotos — Retorno do Cliente</div>
+    <div class="photos-wrap" id="ph-In">${renderPhotos(r.photosIn||[],r.id,'In',can)}</div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">Notas</div>
+    <textarea class="fld-input" ${!can?'disabled':''} rows="3"
+      oninput="updField('notes',this.value)">${r.notes||''}</textarea>
+  </div>
+
+  <input type="file" id="pu-Out" accept="image/*" multiple style="display:none" onchange="addPhotos('Out',this.files)">
+  <input type="file" id="pu-In"  accept="image/*" multiple style="display:none" onchange="addPhotos('In',this.files)">
+  `;
+}
+
+function renderPhotos(photos, resId, dir, canEdit) {
+  const items = (photos||[]).map((src,i)=>`
+    <div class="photo-wrap-item">
+      <img class="photo-thumb" src="${src}" onclick="zoomPhoto(${i},'${dir}')" title="Ampliar">
+      ${canEdit?`<button class="photo-del" onclick="delPhoto(${i},'${dir}')">✕</button>`:''}
+    </div>
+  `).join('');
+  const add = canEdit ? `<div class="photo-add-btn" onclick="document.getElementById('pu-${dir}').click()" title="Adicionar foto">+</div>` : '';
+  return items + add;
+}
+
+function setFuel(dir, lvl) {
+  const r = curRes(); if (!r||!isAdmin()) return;
+  r[`fuel${dir}`] = lvl;
+  FUELS.forEach((_,i)=>{ const b=document.getElementById(`f${dir}${i}`); if(b) b.classList.toggle('sel',i===lvl); });
+  const isEV = EV_KW.some(k=>(r.vehicleType||'').toLowerCase().includes(k));
+  updFuelEst(r, isEV);
+  scheduleSave();
+}
+
+function updFuelEst(r, isEV) {
+  const el = document.getElementById('fuel-est'); if(!el) return;
+  if (!isAdmin()) { el.innerHTML=''; return; }
+  const fO=r.fuelOut, fI=r.fuelIn;
+  if (fO===undefined||fI===undefined) { el.innerHTML=''; return; }
+  if (isEV) {
+    const diff = fI-fO;
+    el.innerHTML=`<div class="fuel-est ev">⚡ ${FUELS[fO]} → ${FUELS[fI]} ${diff<0?'— Recarregar necessário':'— OK'}</div>`;
+  } else {
+    const frac=[0,0.25,0.5,0.75,1.0];
+    const used = frac[fO]-frac[fI];
+    if (used<=0){el.innerHTML=`<div class="fuel-est" style="color:var(--green)">⛽ Nível mantido ou superior ✓</div>`;return;}
+    const gal = (used*16).toFixed(1);
+    const cost = (used*16*GAS_PPG).toFixed(2);
+    el.innerHTML=`<div class="fuel-est">⛽ ${FUELS[fO]} → ${FUELS[fI]} · ${gal} gal estimado · <strong>~$${cost}</strong> (${GAS_PPG}/gal)</div>`;
+  }
+}
+
+function updField(field, val) {
+  const r = curRes(); if (!r||!isAdmin()) return;
+  r[field] = val;
+  scheduleSave();
+}
+
+function updMilesDelta(r) {
+  const el=document.getElementById('miles-delta'); if(!el) return;
+  if (r.milesOut&&r.milesIn&&r.milesIn>r.milesOut) {
+    el.textContent=`↔ ${(r.milesIn-r.milesOut).toFixed(0)} milhas percorridas`;
+  } else { el.textContent=''; }
+}
+
+function updMilesDeltaById() {
+  const r=curRes(); if(r) updMilesDelta(r);
+}
+
+async function addPhotos(dir, files) {
+  const r=curRes(); if(!r||!isAdmin()) return;
+  const key=`photos${dir}`;
+  if(!r[key]) r[key]=[];
+  loader(true,'Comprimindo...');
+  for(const f of files) { r[key].push(await compress(f)); }
+  loader(false);
+  document.getElementById(`ph-${dir}`).innerHTML = renderPhotos(r[key],r.id,dir,true);
+  scheduleSave();
+  toast('Foto salva ✓','ok');
+}
+
+function delPhoto(i, dir) {
+  const r=curRes(); if(!r||!isAdmin()) return;
+  if(!confirm('Remover esta foto?')) return;
+  r[`photos${dir}`].splice(i,1);
+  document.getElementById(`ph-${dir}`).innerHTML = renderPhotos(r[`photos${dir}`],r.id,dir,true);
+  scheduleSave();
+}
+
+function zoomPhoto(i, dir) {
+  const r=curRes(); if(!r) return;
+  const src=(r[`photos${dir}`]||[])[i]; if(!src) return;
+  const w=window.open();
+  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${src}" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>`);
+}
+
+function compress(file, maxW=700, q=0.65) {
+  return new Promise(res=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const ratio=Math.min(maxW/img.width,maxW/img.height,1);
+      const c=document.createElement('canvas');
+      c.width=img.width*ratio; c.height=img.height*ratio;
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg',q));
+    };
+    img.src=url;
+  });
+}
+
+function curRes() { return S.data.reservations.find(r=>r.id===S.modal); }
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); S.modal=null; }
+function overlayClick(e) { if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+
+// ════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════
+function ds(d)  { return d.toISOString().split('T')[0]; }
+function fmtD(s){ if(!s) return '—'; const [y,m,d]=s.split('-'); return d&&m&&y?`${d}/${m}/${y}`:s; }
+function fmt$(v){ return (+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function esc(s) { return String(s).replace(/'/g,"\\'"); }
+function sCls(s){ return ({Confirmed:'s-confirmed',Pending:'s-pending',Cancelled:'s-cancelled',Closed:'s-closed'})[s]||'s-pending'; }
+
+function saveDot(st) {
+  const d=document.getElementById('save-dot');
+  d.className='save-dot'+(st?' '+st:'');
+  if(st==='saved') setTimeout(()=>{d.className='save-dot';},3500);
+}
+
+let _toast;
+function toast(msg, type='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`show${type?' '+type:''}`;
+  clearTimeout(_toast); _toast=setTimeout(()=>el.className='',2800);
+}
+
+function loader(on, txt='Carregando...') {
+  const el=document.getElementById('loader');
+  el.className='loader'+(on?' on':'');
+  el.querySelector('.loader-txt').textContent=txt;
+}
+
+// ════════════════════════════════════════════════════════
+//  KEYBOARD
+// ════════════════════════════════════════════════════════
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+</script>
+</body>
+</html>
