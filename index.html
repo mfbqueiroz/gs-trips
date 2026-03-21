@@ -763,59 +763,144 @@ function handleXL(file) {
   r.onload = e => {
     try {
       const wb = XLSX.read(e.target.result, { type:'binary', cellDates:true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
-      processRows(rows);
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      // Get raw rows as arrays to handle files with metadata rows
+      const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+      const sn = sheetName.toLowerCase();
+      if (sn.includes('rentaldetail') || sn.includes('rental detail')) {
+        processRentalDetails(raw);
+      } else {
+        processReservations(raw);
+      }
     } catch(err) { console.error(err); toast('Erro ao ler arquivo', 'err'); }
   };
   r.readAsBinaryString(file);
 }
 
-// Flexible column name mapping
-const COL = {
-  'reservation#':  'id', 'reservation #': 'id', 'reservation': 'id', 'res#': 'id', 'res #': 'id',
-  'vehicle id':    'vehicleId', 'vehicleid': 'vehicleId', 'vehicle': 'vehicleId',
-  'vehicle type':  'vehicleType', 'vehicletype': 'vehicleType', 'type': 'vehicleType', 'car type': 'vehicleType',
-  'full name':     'fullName', 'fullname': 'fullName', 'name': 'fullName', 'customer': 'fullName', 'customer name': 'fullName',
-  'phone':         'phone', 'phone number': 'phone', 'cel': 'phone', 'celular': 'phone', 'contact': 'phone',
-  'status':        'status',
-  'loc.out':       'locOut', 'locout': 'locOut', 'location out': 'locOut', 'pickup location': 'locOut',
-  'loc.in':        'locIn',  'locin':  'locIn',  'location in':  'locIn',  'return location': 'locIn',
-  'pickup date':   'pickupDate', 'pickupdate': 'pickupDate', 'pick-up date': 'pickupDate', 'checkin': 'pickupDate',
-  'return date':   'returnDate', 'returndate': 'returnDate', 'checkout': 'returnDate', 'due date': 'returnDate',
-  '#days':         'days', 'days': 'days', '# days': 'days', 'num days': 'days', 'duration': 'days',
-  'total':         'total', 'total amount': 'total', 'grand total': 'total',
-  'paid':          'paid', 'amount paid': 'paid', 'payment': 'paid',
-  'balance':       'balance', 'balance due': 'balance', 'remaining': 'balance',
-};
-
-function mapKey(k) {
-  const lk = k.trim().toLowerCase();
-  return COL[lk] || null;
+// Map status from Rent Centric to app status
+function mapStatus(s) {
+  if (!s) return 'Confirmed';
+  const v = String(s).toLowerCase().trim();
+  if (v === 'honored' || v === 'closed' || v === 'completed') return 'Closed';
+  if (v === 'cancelled' || v === 'canceled') return 'Cancelled';
+  if (v === 'pending' || v === 'quote') return 'Pending';
+  return 'Confirmed';
 }
 
-function processRows(rows) {
-  if (!rows.length) { toast('Arquivo vazio', 'err'); return; }
+// Handle "Reservations" export format (header at row 7, data from row 9)
+function processReservations(raw) {
+  // Find header row (row with 'Reservation#' in first cell)
+  let hdrIdx = raw.findIndex(r => String(r[0]||'').toLowerCase().includes('reservation'));
+  if (hdrIdx < 0) { toast('Formato não reconhecido', 'err'); return; }
+  const hdr = raw[hdrIdx];
+  // Build column index map
+  const ci = {};
+  hdr.forEach((h,i) => { if(h) ci[String(h).toLowerCase().trim()] = i; });
+
+  const g = (row, ...keys) => {
+    for (const k of keys) {
+      const i = ci[k];
+      if (i !== undefined && row[i] !== '' && row[i] !== null && row[i] !== undefined) return row[i];
+    }
+    return '';
+  };
+
   let added = 0, updated = 0;
-  rows.forEach(row => {
-    const res = {};
-    Object.entries(row).forEach(([k, v]) => {
-      const mapped = mapKey(k);
-      if (mapped) res[mapped] = v;
-    });
-    if (!res.id) return;
-    res.id = String(res.id).trim();
-    ['pickupDate','returnDate'].forEach(f => { if (res[f]) res[f] = normDate(res[f]); });
-    ['total','paid','balance','days'].forEach(f => {
-      if (res[f] !== undefined) res[f] = parseFloat(String(res[f]).replace(/[^0-9.-]/g,'')) || 0;
-    });
+  for (let i = hdrIdx + 1; i < raw.length; i++) {
+    const row = raw[i];
+    const rawId = g(row, 'reservation#', 'reservation #', 'res#');
+    if (!rawId || isNaN(Number(String(rawId).replace(/\D/g,'')))) continue; // skip group/empty rows
+    const id = String(rawId).trim();
+    const res = {
+      id,
+      vehicleId:   String(g(row, 'vehicle id', 'vehicleid') || '').trim(),
+      vehicleType: String(g(row, 'vehicle type', 'vehicletype') || '').trim(),
+      fullName:    String(g(row, 'full name', 'fullname', 'name') || '').trim().replace(/\s+/g,' '),
+      phone:       String(g(row, 'phone', 'customer phone') || '').trim(),
+      status:      mapStatus(g(row, 'status')),
+      locOut:      String(g(row, 'loc.out', 'locout', 'location out', 'pickup location') || '').trim(),
+      locIn:       String(g(row, 'loc.in', 'locin', 'return location', 'location in') || '').trim(),
+      pickupDate:  normDate(g(row, 'pickup date', 'pickupdate')),
+      returnDate:  normDate(g(row, 'return date', 'returndate')),
+      days:        parseFloat(String(g(row, '#days', 'days', '# days') || '0').replace(/[^0-9.-]/g,'')) || 0,
+      total:       parseFloat(String(g(row, 'total') || '0').replace(/[^0-9.-]/g,'')) || 0,
+      paid:        parseFloat(String(g(row, 'paid') || '0').replace(/[^0-9.-]/g,'')) || 0,
+      balance:     parseFloat(String(g(row, 'balance') || '0').replace(/[^0-9.-]/g,'')) || 0,
+    };
+    const idx = S.data.reservations.findIndex(r => r.id === res.id);
+    if (idx >= 0) {
+      const prev = S.data.reservations[idx];
+      S.data.reservations[idx] = { ...res, milesOut: prev.milesOut, milesIn: prev.milesIn, fuelOut: prev.fuelOut, fuelIn: prev.fuelIn, photosOut: prev.photosOut||[], photosIn: prev.photosIn||[], notes: prev.notes||'' };
+      updated++;
+    } else {
+      S.data.reservations.push({ ...res, photosOut:[], photosIn:[], notes:'' });
+      added++;
+    }
+  }
+  finalizeImport(added, updated);
+}
+
+// Handle "RentalDetailsReport" export format (header at row 4, data from row 5)
+function processRentalDetails(raw) {
+  let hdrIdx = raw.findIndex(r => String(r[0]||'').toLowerCase().includes('ra#'));
+  if (hdrIdx < 0) hdrIdx = raw.findIndex(r => String(r[0]||'').toLowerCase() === 'ra#');
+  if (hdrIdx < 0) { toast('Formato não reconhecido', 'err'); return; }
+  const hdr = raw[hdrIdx];
+  const ci = {};
+  hdr.forEach((h,i) => { if(h) ci[String(h).toLowerCase().trim()] = i; });
+
+  const g = (row, ...keys) => {
+    for (const k of keys) {
+      const i = ci[k];
+      if (i !== undefined && row[i] !== '' && row[i] !== null && row[i] !== undefined) return row[i];
+    }
+    return '';
+  };
+
+  let added = 0, updated = 0;
+  for (let i = hdrIdx + 1; i < raw.length; i++) {
+    const row = raw[i];
+    // Use Res# as the reservation ID; fall back to RA# if Res# missing
+    const resNum = g(row, 'res#', 'res #', 'reservation#');
+    const raNum  = g(row, 'ra#');
+    const rawId  = resNum || raNum;
+    if (!rawId || isNaN(Number(String(rawId).replace(/\D/g,'')))) continue;
+    const id = String(rawId).trim();
+    const firstName = String(g(row, 'first name', 'firstname') || '').trim();
+    const lastName  = String(g(row, 'last name', 'lastname') || '').trim();
+    const fullName  = [firstName, lastName].filter(Boolean).join(' ').replace(/\s+/g,' ');
+    const res = {
+      id,
+      vehicleId:   String(g(row, 'vehicle', 'vehicle id') || '').trim(),
+      vehicleType: String(g(row, 'vehicle type', 'vehicletype') || '').trim(),
+      fullName,
+      phone:       String(g(row, 'customer phone', 'phone') || '').trim(),
+      status:      mapStatus(g(row, 'status')),
+      locOut:      String(g(row, 'pickup location', 'loc.out') || '').trim(),
+      locIn:       String(g(row, 'return location', 'loc.in') || '').trim(),
+      pickupDate:  normDate(g(row, 'pickup date')),
+      returnDate:  normDate(g(row, 'return date')),
+      days:        parseFloat(String(g(row, 'days', '#days') || '0').replace(/[^0-9.-]/g,'')) || 0,
+      total:       parseFloat(String(g(row, 'invoice total', 'total') || '0').replace(/[^0-9.-]/g,'')) || 0,
+      paid:        parseFloat(String(g(row, 'paid') || '0').replace(/[^0-9.-]/g,'')) || 0,
+      balance:     parseFloat(String(g(row, 'balance') || '0').replace(/[^0-9.-]/g,'')) || 0,
+    };
+    // milesOut from Mileage column if available
+    const miles = g(row, 'mileage');
+    if (miles) res.milesOut = parseFloat(String(miles).replace(/[^0-9.]/g,'')) || null;
+    const fuel = g(row, 'fuel');
+    if (fuel !== '') res.fuelOut = parseFuelLevel(String(fuel));
+
     const idx = S.data.reservations.findIndex(r => r.id === res.id);
     if (idx >= 0) {
       const prev = S.data.reservations[idx];
       S.data.reservations[idx] = {
         ...res,
-        milesOut: prev.milesOut, milesIn: prev.milesIn,
-        fuelOut: prev.fuelOut, fuelIn: prev.fuelIn,
+        milesOut: res.milesOut !== undefined ? res.milesOut : prev.milesOut,
+        milesIn: prev.milesIn,
+        fuelOut: res.fuelOut !== undefined ? res.fuelOut : prev.fuelOut,
+        fuelIn: prev.fuelIn,
         photosOut: prev.photosOut || [], photosIn: prev.photosIn || [],
         notes: prev.notes || ''
       };
@@ -824,7 +909,33 @@ function processRows(rows) {
       S.data.reservations.push({ ...res, photosOut:[], photosIn:[], notes:'' });
       added++;
     }
-  });
+  }
+  finalizeImport(added, updated);
+}
+
+function parseFuelLevel(s) {
+  const v = s.toLowerCase().replace(/\s/g,'');
+  if (v === 'f' || v === 'full' || v === '1') return 4;
+  if (v === '3/4' || v === '0.75') return 3;
+  if (v === '1/2' || v === 'half' || v === '0.5') return 2;
+  if (v === '1/4' || v === '0.25') return 1;
+  return 0;
+}
+
+// Legacy processRows (called from old format / generic CSVs)
+function processRows(rows) {
+  if (!rows.length) { toast('Arquivo vazio', 'err'); return; }
+  // Convert object rows to raw array format and re-dispatch
+  const hdrs = Object.keys(rows[0]);
+  const raw = [hdrs, ...rows.map(r => hdrs.map(h => r[h]))];
+  processReservations(raw);
+}
+
+function upsertReservation(res, _cb, _a, _u) {
+  // noop placeholder — actual logic inline above
+}
+
+function finalizeImport(added, updated) {
   syncFleetFromRes();
   scheduleSave();
   renderCurrentTab();
