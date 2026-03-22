@@ -937,7 +937,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.7';
+const APP_VERSION = 'v2.8';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3606,32 +3606,55 @@ async function teslaGet(path) {
   }
   if (res.status === 401) { tClear(); renderTesla(); return null; }
   if (res.status === 412) {
-    // App not registered in region — auto-register then retry once
-    console.log('Tesla 412: auto-registering app...');
-    const regRes = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': 'Bearer gsadmin',
-        'X-Tesla-Token': T.accessToken,
-        'X-Tesla-Path':  '/api/1/partner_accounts',
-      },
-      body: JSON.stringify({ domain: 'mfbqueiroz.github.io' }),
-    });
-    const regData = await regRes.json().catch(()=>({}));
-    console.log('Register result:', regRes.status, regData);
-    // Retry original request
-    const retry = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer gsadmin',
-        'X-Tesla-Token': T.accessToken,
-        'X-Tesla-Path':  path,
-      }
-    });
-    if (retry.ok) return retry.json();
-    const retryBody = await retry.text().catch(()=>'');
-    throw new Error('Tesla proxy ' + retry.status + ' (after register): ' + retryBody.slice(0,120));
+    // App not registered — need client_credentials token to register domain
+    console.log('Tesla 412: registering domain with client_credentials token...');
+    try {
+      // Step 1: get a client_credentials token
+      const ccRes = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer gsadmin' },
+        body: JSON.stringify({
+          grant_type:    'client_credentials',
+          client_id:     TESLA_CLIENT_ID,
+          client_secret: TESLA_CLIENT_SECRET,
+          scope:         'vehicle_device_data vehicle_charging_cmds openid',
+          audience:      'https://fleet-api.prd.na.vn.cloud.tesla.com',
+        }),
+      });
+      const ccData = await ccRes.json().catch(()=>({}));
+      console.log('CC token result:', ccRes.status, ccData.access_token ? 'got token' : ccData);
+      if (!ccData.access_token) throw new Error('No CC token: ' + JSON.stringify(ccData));
+
+      // Step 2: register domain using CC token
+      const regRes = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': 'Bearer gsadmin',
+          'X-Tesla-Token': ccData.access_token,
+          'X-Tesla-Path':  '/api/1/partner_accounts',
+        },
+        body: JSON.stringify({ domain: 'mfbqueiroz.github.io' }),
+      });
+      const regData = await regRes.json().catch(()=>({}));
+      console.log('Register result:', regRes.status, regData);
+      toast('App registrado! Recarregando...', 'ok');
+
+      // Step 3: retry original request with user token
+      const retry = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer gsadmin',
+          'X-Tesla-Token': T.accessToken,
+          'X-Tesla-Path':  path,
+        }
+      });
+      if (retry.ok) return retry.json();
+      const retryBody = await retry.text().catch(()=>'');
+      throw new Error('After register: ' + retry.status + ' ' + retryBody.slice(0,120));
+    } catch(regErr) {
+      throw new Error('Register failed: ' + regErr.message);
+    }
   }
   if (!res.ok) {
     const body = await res.text().catch(()=>'');
