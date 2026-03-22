@@ -88,6 +88,7 @@ a{color:inherit;text-decoration:none}
 
 /* ── APP LAYOUT ── */
 #app{display:none;flex-direction:column;height:100vh;overflow:hidden}
+#app-body{display:flex;flex:1;overflow:hidden}
 header{
   background:var(--surface);border-bottom:1px solid var(--border);
   padding:0 16px;display:flex;align-items:center;gap:10px;height:50px;flex-shrink:0;
@@ -95,25 +96,28 @@ header{
 }
 .logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:var(--amber);letter-spacing:0.06em;white-space:nowrap;user-select:none}
 .logo span{color:var(--muted);font-weight:400}
-/* Bottom tab bar */
+/* Sidebar nav */
 .tabs{
-  display:flex;position:fixed;bottom:0;left:0;right:0;z-index:300;
-  background:var(--surface);border-top:1px solid var(--border);
-  overflow-x:auto;scrollbar-width:none;padding:0 4px;
+  display:flex;flex-direction:column;
+  width:72px;flex-shrink:0;
+  background:var(--surface);border-right:1px solid var(--border);
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:none;
+  padding:8px 0;
 }
 .tabs::-webkit-scrollbar{display:none}
 .tab-btn{
-  flex:1;min-width:60px;max-width:110px;
+  width:100%;
   background:none;border:none;color:var(--muted);
-  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;
   letter-spacing:0.04em;text-transform:uppercase;
-  padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  transition:all 0.15s;white-space:nowrap;border-top:2px solid transparent;
+  padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:all 0.15s;white-space:nowrap;border-left:2px solid transparent;
+  cursor:pointer;
 }
-.tab-btn:hover{color:var(--text)}
-.tab-btn.active{color:var(--amber);border-top-color:var(--amber)}
-.tab-icon{font-size:18px;line-height:1}
-.tab-label{font-size:10px}
+.tab-btn:hover{color:var(--text);background:var(--card)}
+.tab-btn.active{color:var(--amber);border-left-color:var(--amber);background:var(--amber-bg)}
+.tab-icon{font-size:20px;line-height:1}
+.tab-label{font-size:9px;line-height:1.2;text-align:center}
 .header-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
 .save-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background 0.3s;flex-shrink:0}
 .save-dot.saving{background:var(--amber);animation:pulse 1s infinite}
@@ -132,7 +136,7 @@ header{
   font-family:'Barlow Condensed',sans-serif;letter-spacing:0.08em;text-transform:uppercase;
 }
 
-main{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:70px}
+main{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:20px}
 
 /* ── PANELS ── */
 .tab-panel{display:none;padding:20px 20px 40px}
@@ -427,12 +431,16 @@ textarea.fld-input{resize:vertical;min-height:70px}
 .legend-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
 
 @media(max-width:640px){
-  header{padding:0 12px;gap:8px}
+  header{padding:0 10px;gap:6px}
   .logo span{display:none}
   .info-grid{grid-template-columns:1fr}
   .fld-row{grid-template-columns:1fr}
   .stats-row{grid-template-columns:1fr 1fr}
-  .tab-panel{padding:16px 12px 80px}
+  .tab-panel{padding:14px 10px 20px}
+  .tabs{width:56px}
+  .tab-btn{padding:8px 2px 6px}
+  .tab-icon{font-size:18px}
+  .tab-label{font-size:8px}
 }
 /* ── VEÍCULOS ── */
 .veh-table{width:100%;border-collapse:collapse;font-size:13px}
@@ -561,17 +569,6 @@ textarea.fld-input{resize:vertical;min-height:70px}
 <div id="app">
   <header>
     <div class="logo">GS<span> TRIPS</span><span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px" id="ver-badge"></span></div>
-    <nav class="tabs" id="main-tabs">
-      <button class="tab-btn active" data-tab="agenda" data-roles="admin,team" onclick="switchTab('agenda')"><span class="tab-icon">📅</span><span class="tab-label">Agenda</span></button>
-      <button class="tab-btn" data-tab="frota" data-roles="admin,team" onclick="switchTab('frota')"><span class="tab-icon">📊</span><span class="tab-label">Overview</span></button>
-      <button class="tab-btn" data-tab="cotacao" data-roles="admin,team" onclick="switchTab('cotacao')"><span class="tab-icon">💲</span><span class="tab-label">Cotação</span></button>
-      <button class="tab-btn" data-tab="veiculos" data-roles="admin,team" onclick="switchTab('veiculos')"><span class="tab-icon">🔧</span><span class="tab-label">Veículos</span></button>
-      <button class="tab-btn" data-tab="financeiro" data-roles="admin" onclick="switchTab('financeiro')"><span class="tab-icon">💰</span><span class="tab-label">Financeiro</span></button>
-      <button class="tab-btn" data-tab="historico" data-roles="admin" onclick="switchTab('historico')"><span class="tab-icon">📋</span><span class="tab-label">Histórico</span></button>
-      <button class="tab-btn" data-tab="financiamento" data-roles="admin" onclick="switchTab('financiamento')"><span class="tab-icon">🏦</span><span class="tab-label">Financ.</span></button>
-      <button class="tab-btn" data-tab="investidores" data-roles="admin" onclick="switchTab('investidores')"><span class="tab-icon">📈</span><span class="tab-label">Invest.</span></button>
-      <button class="tab-btn" data-tab="tesla" data-roles="admin" onclick="switchTab('tesla')"><span class="tab-icon">⚡</span><span class="tab-label">Tesla</span></button>
-    </nav>
     <div class="header-right">
       <div class="save-dot" id="save-dot" title="Status de salvamento"></div>
       <span class="role-badge" id="role-badge"></span>
@@ -584,6 +581,18 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <button class="hdr-btn" onclick="doLogout()">Sair</button>
     </div>
   </header>
+  <div id="app-body">
+    <nav class="tabs" id="main-tabs">
+      <button class="tab-btn active" data-tab="agenda" data-roles="admin,team" onclick="switchTab('agenda')"><span class="tab-icon">📅</span><span class="tab-label">Agenda</span></button>
+      <button class="tab-btn" data-tab="frota" data-roles="admin,team" onclick="switchTab('frota')"><span class="tab-icon">📊</span><span class="tab-label">Overview</span></button>
+      <button class="tab-btn" data-tab="cotacao" data-roles="admin,team" onclick="switchTab('cotacao')"><span class="tab-icon">💲</span><span class="tab-label">Cotação</span></button>
+      <button class="tab-btn" data-tab="veiculos" data-roles="admin,team" onclick="switchTab('veiculos')"><span class="tab-icon">🔧</span><span class="tab-label">Veículos</span></button>
+      <button class="tab-btn" data-tab="financeiro" data-roles="admin" onclick="switchTab('financeiro')"><span class="tab-icon">💰</span><span class="tab-label">Financeiro</span></button>
+      <button class="tab-btn" data-tab="historico" data-roles="admin" onclick="switchTab('historico')"><span class="tab-icon">📋</span><span class="tab-label">Histórico</span></button>
+      <button class="tab-btn" data-tab="financiamento" data-roles="admin" onclick="switchTab('financiamento')"><span class="tab-icon">🏦</span><span class="tab-label">Financ.</span><span id="fin-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;line-height:14px;text-align:center;margin-top:1px"></span></button>
+      <button class="tab-btn" data-tab="investidores" data-roles="admin" onclick="switchTab('investidores')"><span class="tab-icon">📈</span><span class="tab-label">Invest.</span></button>
+      <button class="tab-btn" data-tab="tesla" data-roles="admin" onclick="switchTab('tesla')"><span class="tab-icon">⚡</span><span class="tab-label">Cargas</span></button>
+    </nav>
   <main>
 
     <!-- ─── AGENDA ─── -->
@@ -831,6 +840,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
         <div class="section-title">Financiamentos</div>
         <button class="btn primary" onclick="openAddFinModal()" id="add-fin-btn">+ Novo Financiamento</button>
       </div>
+      <div id="fin-alerts" style="margin-bottom:16px"></div>
       <div id="fin-list-out"></div>
     </section>
 
@@ -857,54 +867,99 @@ textarea.fld-input{resize:vertical;min-height:70px}
     <!-- ─── TESLA ─── -->
     <section class="tab-panel" id="panel-tesla">
       <div class="section-header">
-        <div class="section-title">⚡ Tesla Fleet</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" id="tesla-header-btns">
-          <button class="btn" onclick="teslaRefresh()" id="tesla-refresh-btn" style="display:none">↻ Atualizar</button>
-          <button class="btn" onclick="teslaDisconnect()" id="tesla-disconnect-btn" style="display:none">Desconectar</button>
+        <div class="section-title">⚡ Carregamentos EV</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn primary" id="btn-add-charge" onclick="openChargeModal()" style="display:none">+ Registrar Carga</button>
         </div>
       </div>
 
-      <!-- Period filter — only when connected -->
-      <div id="tesla-period-bar" style="display:none;margin-bottom:16px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <!-- Stats row -->
+      <div class="stats-row" id="charge-stats" style="margin-bottom:16px"></div>
+
+      <!-- Period filter -->
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
           <div class="fld-group">
             <div class="fld-label">De</div>
-            <input type="date" class="fld-input" id="tesla-from" style="padding:6px 10px;width:150px" oninput="teslaFilterCharges()">
+            <input type="date" class="fld-input" id="charge-from" style="padding:6px 10px;width:150px" oninput="renderCharges()">
           </div>
           <div class="fld-group">
             <div class="fld-label">Até</div>
-            <input type="date" class="fld-input" id="tesla-to" style="padding:6px 10px;width:150px" oninput="teslaFilterCharges()">
+            <input type="date" class="fld-input" id="charge-to" style="padding:6px 10px;width:150px" oninput="renderCharges()">
           </div>
           <div class="fld-group">
-            <div class="fld-label">$/kWh</div>
-            <input type="number" step="0.01" class="fld-input" id="tesla-rate" value="0.12" style="padding:6px 10px;width:80px" oninput="teslaFilterCharges()">
+            <div class="fld-label">Carro</div>
+            <select class="filter-sel" id="charge-car-filter" onchange="renderCharges()" style="padding:6px 10px;min-width:140px">
+              <option value="">Todos os carros</option>
+            </select>
           </div>
           <div style="display:flex;gap:6px">
-            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(0)">Hoje</button>
-            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(7)">7d</button>
-            <button class="btn active" style="padding:6px 12px" onclick="teslaPeriodPreset(30)">30d</button>
-            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(90)">90d</button>
-            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(365)">1 ano</button>
+            <button class="btn" onclick="chargePeriodPreset(0)">Hoje</button>
+            <button class="btn" onclick="chargePeriodPreset(7)">7d</button>
+            <button class="btn active" onclick="chargePeriodPreset(30)">30d</button>
+            <button class="btn" onclick="chargePeriodPreset(90)">90d</button>
           </div>
         </div>
-        <div id="tesla-period-totals" style="margin-top:10px"></div>
       </div>
 
-      <!-- Not connected -->
-      <div id="tesla-auth-banner" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;max-width:540px">
-        <div style="font-size:32px;margin-bottom:8px">⚡</div>
-        <div style="font-weight:700;font-size:18px;color:var(--amber);margin-bottom:8px">Conectar Tesla Fleet</div>
-        <div style="font-size:13px;color:var(--muted2);margin-bottom:20px;line-height:1.6">
-          Veja bateria em tempo real, histórico de carregamentos por carro e período,<br>
-          e quanto cada cliente gastou em carregamento durante a locação.
+      <!-- Charges list -->
+      <div id="charge-out"></div>
+
+      <!-- Add/Edit modal -->
+      <div id="charge-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center;padding:20px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:480px;overflow:hidden">
+          <div style="background:var(--card2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px" id="charge-modal-title">Registrar Carregamento</div>
+            <button style="color:var(--muted);font-size:20px;background:none;border:none;cursor:pointer" onclick="closeChargeModal()">✕</button>
+          </div>
+          <div style="padding:20px;display:grid;gap:14px">
+            <div class="fld-group">
+              <div class="fld-label">Carro *</div>
+              <select class="fld-input" id="cm-car"></select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="fld-group">
+                <div class="fld-label">Data *</div>
+                <input type="date" class="fld-input" id="cm-date">
+              </div>
+              <div class="fld-group">
+                <div class="fld-label">Hora</div>
+                <input type="time" class="fld-input" id="cm-time">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="fld-group">
+                <div class="fld-label">Custo total ($) *</div>
+                <input type="number" step="0.01" class="fld-input" id="cm-cost" placeholder="0.00">
+              </div>
+              <div class="fld-group">
+                <div class="fld-label">kWh (opcional)</div>
+                <input type="number" step="0.1" class="fld-input" id="cm-kwh" placeholder="0.0">
+              </div>
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Local / Posto</div>
+              <input type="text" class="fld-input" id="cm-location" placeholder="Ex: Tesla Supercharger Orlando">
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Reserva vinculada</div>
+              <div id="cm-reservation-info" style="font-size:12px;color:var(--muted2);padding:8px 10px;background:var(--card2);border-radius:6px;min-height:36px"></div>
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Notas</div>
+              <input type="text" class="fld-input" id="cm-notes" placeholder="Observações...">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+              <button class="btn" onclick="closeChargeModal()">Cancelar</button>
+              <button class="btn primary" onclick="saveCharge()">💾 Salvar</button>
+            </div>
+          </div>
         </div>
-        <button class="btn primary" style="padding:12px 24px;font-size:14px" onclick="teslaConnect()">⚡ Login com Tesla</button>
       </div>
-
-      <div id="tesla-out"></div>
     </section>
 
   </main>
+  </div>
 </div>
 
 <!-- ═══ MODAL ═══ -->
@@ -937,7 +992,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.8';
+const APP_VERSION = 'v3.1';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1040,7 +1095,7 @@ function doLogin() {
     btn.style.display = allowed.includes(role) ? '' : 'none';
   });
   // Show admin-only UI elements
-  const adminOnly = ['import-zone','btn-export','btn-import-json','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb'];
+  const adminOnly = ['import-zone','btn-export','btn-import-json','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = role === 'admin' ? '' : 'none';
@@ -1146,6 +1201,7 @@ async function saveData() {
       categories:  S.data.categories   || [],
       financing:   S.data.financing    || [],
       investors:   S.data.investors    || [],
+      charges:     S.data.charges      || [],
       lastUpdated: S.data.lastUpdated  || new Date().toISOString(),
       resChunks:   chunks.length,
       resTotal:    resClean.length,
@@ -1183,6 +1239,20 @@ async function syncNow() {
   await loadData();
   syncFleetFromRes();
   renderCurrentTab();
+  // Pre-calculate financing badge on load
+  setTimeout(function() {
+    const fins = S.data.financing || [];
+    const today2 = ds(new Date());
+    const in7_2  = ds(new Date(Date.now() + 7*86400000));
+    let urgent = 0;
+    fins.forEach(fin => {
+      (fin.payments||[]).forEach(p => {
+        if (!p.paid && (p.date <= in7_2)) urgent++;
+      });
+    });
+    const badge = document.getElementById('fin-badge');
+    if (badge) { badge.textContent = urgent; badge.style.display = urgent>0?'':'none'; }
+  }, 500);
   const after = S.data.reservations.length;
   if (after === 0 && before > 0)
     toast('⚠️ Sync retornou vazio — dados mantidos', 'err');
@@ -1245,7 +1315,7 @@ function renderCurrentTab() {
   else if (S.tab === 'cotacao') renderCotacao();
   else if (S.tab === 'financiamento') renderFinanciamento();
   else if (S.tab === 'investidores') renderInvestidores();
-  else if (S.tab === 'tesla') renderTesla();
+  else if (S.tab === 'tesla') renderCharges();
 }
 
 // ════════════════════════════════════════════════════════
@@ -1509,6 +1579,14 @@ function renderAgenda() {
   const byDate = {};
   events.forEach(e => (byDate[e.date] = byDate[e.date] || []).push(e));
 
+  // Update tab badge
+  const badge = document.getElementById('fin-badge');
+  if (badge) {
+    const urgentCount = alerts.filter(a => a.isOverdue || a.isDueToday || a.isDue7).length;
+    badge.textContent = urgentCount;
+    badge.style.display = urgentCount > 0 ? '' : 'none';
+  }
+
   let html = '';
   Object.entries(byDate).forEach(([date, evts]) => {
     const isTd = date===today;
@@ -1533,7 +1611,7 @@ function renderAgenda() {
         <div class="res-card-top">
           <span class="res-pill ${pillCls}">${pillLabel}</span>
           <span style="display:flex;align-items:center;gap:6px">
-            ${evTime?`<span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:var(--amber)">🕐 ${evTime}</span>`:''}
+            ${evTime?'<span style="font-weight:700;font-size:14px;color:var(--amber)">🕐 '+evTime+'</span>':''}
             <span class="res-num">#${r.id}</span>
           </span>
         </div>
@@ -2945,6 +3023,85 @@ function renderFinanciamento() {
   }
 
   const today = ds(new Date());
+  const todayD = new Date();
+  const in7  = ds(new Date(Date.now() + 7*86400000));
+  const in30 = ds(new Date(Date.now() + 30*86400000));
+
+  // ── Collect all upcoming/overdue payments ──
+  const alerts = [];
+  fins.forEach((fin, fi) => {
+    (fin.payments||[]).forEach((p, pi) => {
+      if (p.paid) return;
+      const isOverdue = p.date < today;
+      const isDueToday = p.date === today;
+      const isDue7  = p.date > today && p.date <= in7;
+      const isDue30 = p.date > today && p.date <= in30;
+      if (isOverdue || isDueToday || isDue7 || isDue30) {
+        alerts.push({ fin, fi, p, pi, isOverdue, isDueToday, isDue7, isDue30 });
+      }
+    });
+  });
+
+  // ── Alerts banner ──
+  const alertEl = document.getElementById('fin-alerts');
+  if (alertEl && alerts.length) {
+    const overdue = alerts.filter(a => a.isOverdue);
+    const today_  = alerts.filter(a => a.isDueToday);
+    const week_   = alerts.filter(a => a.isDue7);
+    const month_  = alerts.filter(a => a.isDue30 && !a.isDue7);
+
+    let aHtml = '';
+    if (overdue.length) {
+      aHtml += '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:14px 16px;margin-bottom:10px">';
+      aHtml += '<div style="font-weight:700;color:var(--red);margin-bottom:8px">🚨 ' + overdue.length + ' parcela' + (overdue.length>1?'s':'') + ' em atraso</div>';
+      overdue.forEach(a => {
+        aHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(239,68,68,.15)">';
+        aHtml += '<span style="font-size:13px"><b>' + a.fin.vehicleId + '</b> — ' + (a.fin.bank||'') + ' · Parcela #' + a.p.num + '</span>';
+        aHtml += '<span style="font-weight:700;color:var(--red)">$' + fmt$(a.p.amount) + ' · ' + fmtD(a.p.date) + '</span>';
+        aHtml += '</div>';
+      });
+      aHtml += '</div>';
+    }
+    if (today_.length) {
+      aHtml += '<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:14px 16px;margin-bottom:10px">';
+      aHtml += '<div style="font-weight:700;color:var(--amber);margin-bottom:8px">📅 Vence HOJE</div>';
+      today_.forEach(a => {
+        aHtml += '<div style="display:flex;justify-content:space-between;padding:4px 0">';
+        aHtml += '<span style="font-size:13px"><b>' + a.fin.vehicleId + '</b> — ' + (a.fin.bank||'') + ' · Parcela #' + a.p.num + '</span>';
+        aHtml += '<span style="font-weight:700;color:var(--amber)">$' + fmt$(a.p.amount) + '</span>';
+        aHtml += '</div>';
+      });
+      aHtml += '</div>';
+    }
+    if (week_.length) {
+      aHtml += '<div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:14px 16px;margin-bottom:10px">';
+      aHtml += '<div style="font-weight:700;color:var(--blue);margin-bottom:8px">📆 Vence em 7 dias (' + week_.length + ' parcela' + (week_.length>1?'s':'') + ')</div>';
+      week_.forEach(a => {
+        const daysLeft = Math.ceil((new Date(a.p.date) - todayD) / 86400000);
+        aHtml += '<div style="display:flex;justify-content:space-between;padding:4px 0">';
+        aHtml += '<span style="font-size:13px"><b>' + a.fin.vehicleId + '</b> · #' + a.p.num + ' · ' + fmtD(a.p.date) + '</span>';
+        aHtml += '<span style="font-weight:700;color:var(--blue)">em ' + daysLeft + 'd · $' + fmt$(a.p.amount) + '</span>';
+        aHtml += '</div>';
+      });
+      aHtml += '</div>';
+    }
+    if (month_.length) {
+      const monthTotal = month_.reduce((s,a)=>s+(a.p.amount||0),0);
+      aHtml += '<div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px">';
+      aHtml += '<div style="font-weight:700;color:var(--muted2);margin-bottom:8px">📋 Próximos 30 dias — ' + month_.length + ' parcela' + (month_.length>1?'s':'') + ' · Total $' + fmt$(monthTotal) + '</div>';
+      month_.forEach(a => {
+        aHtml += '<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px;color:var(--muted2)">';
+        aHtml += '<span><b style="color:var(--text)">' + a.fin.vehicleId + '</b> · Parcela #' + a.p.num + ' · ' + fmtD(a.p.date) + '</span>';
+        aHtml += '<span>$' + fmt$(a.p.amount) + '</span>';
+        aHtml += '</div>';
+      });
+      aHtml += '</div>';
+    }
+    alertEl.innerHTML = aHtml;
+  } else if (alertEl) {
+    alertEl.innerHTML = '<div style="color:var(--green);font-size:13px;padding:10px 0">✅ Nenhum vencimento nos próximos 30 dias</div>';
+  }
+
   let html = '';
   fins.forEach((fin, fi) => {
     const payments = fin.payments || [];
@@ -3424,6 +3581,265 @@ function importJSON(file) {
 // ════════════════════════════════════════════════════════
 //  TESLA FLEET API
 // ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  EV CHARGING MANAGEMENT
+// ════════════════════════════════════════════════════════
+
+function initCharges() {
+  if (!S.data.charges) S.data.charges = [];
+}
+
+function renderCharges() {
+  initCharges();
+  const fromEl = document.getElementById('charge-from');
+  const toEl   = document.getElementById('charge-to');
+  const carEl  = document.getElementById('charge-car-filter');
+  const out    = document.getElementById('charge-out');
+  const stats  = document.getElementById('charge-stats');
+  if (!out) return;
+
+  // Populate car filter
+  const evCars = getEVCars();
+  if (carEl) {
+    const cur = carEl.value;
+    carEl.innerHTML = '<option value="">Todos os carros</option>' +
+      evCars.map(v => '<option value="' + v.id + '"' + (cur===v.id?' selected':'') + '>' + v.id + ' — ' + (v.name||v.type||v.id) + '</option>').join('');
+  }
+
+  // Set default period
+  if (fromEl && !fromEl.value) {
+    const d = new Date(); d.setDate(d.getDate()-30);
+    fromEl.value = d.toISOString().slice(0,10);
+    toEl.value   = new Date().toISOString().slice(0,10);
+  }
+
+  const from   = fromEl ? fromEl.value : '';
+  const to     = toEl   ? toEl.value   : '';
+  const carFil = carEl  ? carEl.value  : '';
+
+  let charges = (S.data.charges || []).filter(function(ch) {
+    if (from && ch.date < from) return false;
+    if (to   && ch.date > to)   return false;
+    if (carFil && ch.carId !== carFil) return false;
+    return true;
+  }).sort(function(a,b) {
+    return (b.date + (b.time||'')).localeCompare(a.date + (a.time||''));
+  });
+
+  // Stats
+  const totalCost = charges.reduce(function(s,ch){ return s+(ch.cost||0); }, 0);
+  const totalKwh  = charges.reduce(function(s,ch){ return s+(ch.kwh||0);  }, 0);
+  const billed    = charges.filter(function(ch){ return ch.reservationId; }).reduce(function(s,ch){ return s+(ch.cost||0); }, 0);
+
+  if (stats) {
+    stats.innerHTML =
+      '<div class="stat-card"><div class="stat-label">Carregamentos</div><div class="stat-val amber">' + charges.length + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Custo Total</div><div class="stat-val green">$' + totalCost.toFixed(2) + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">kWh Total</div><div class="stat-val">' + totalKwh.toFixed(1) + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">A cobrar clientes</div><div class="stat-val orange">$' + billed.toFixed(2) + '</div></div>';
+  }
+
+  if (!charges.length) {
+    out.innerHTML = '<div class="empty"><div class="empty-icon">⚡</div><div class="empty-text">Nenhum carregamento no período<br><br>' +
+      (isAdmin() ? '<button class="btn primary" onclick="openChargeModal()">+ Registrar primeiro carregamento</button>' : '') +
+      '</div></div>';
+    return;
+  }
+
+  // Group by car
+  const byCar = {};
+  charges.forEach(function(ch) { (byCar[ch.carId] = byCar[ch.carId]||[]).push(ch); });
+
+  let html = '';
+  Object.keys(byCar).forEach(function(carId) {
+    const carCharges = byCar[carId];
+    const carTotal = carCharges.reduce(function(s,ch){ return s+(ch.cost||0); }, 0);
+    const car = (S.data.vehicles||[]).find(function(v){ return v.id===carId; }) ||
+                (S.data.fleet||[]).find(function(v){ return v.id===carId; });
+    const carName = car ? (car.name||car.type||carId) : carId;
+
+    html += '<div style="margin-bottom:20px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '<div style="font-weight:800;font-size:16px;color:var(--amber)">' +
+        '⚡ ' + carId + ' <span style="color:var(--muted2);font-weight:400;font-size:14px">— ' + carName + '</span>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--green);font-weight:700">$' + carTotal.toFixed(2) + ' total</div>' +
+    '</div>';
+
+    html += '<div class="table-card"><div class="tbl-wrap"><table><thead><tr>' +
+      '<th>Data / Hora</th><th>Local</th><th>Custo</th><th>kWh</th><th>Reserva / Cliente</th>' +
+      (isAdmin() ? '<th></th>' : '') +
+    '</tr></thead><tbody>';
+
+    carCharges.forEach(function(ch) {
+      const res = ch.reservationId ? (S.data.reservations||[]).find(function(r){ return r.id===ch.reservationId; }) : null;
+      const resInfo = res
+        ? '<span style="color:var(--green);font-size:11px">#' + res.id + ' ' + (res.fullName||'') + '</span>'
+        : '<span style="color:var(--muted2);font-size:11px">—</span>';
+
+      html += '<tr>' +
+        '<td style="white-space:nowrap">' + fmtD(ch.date) + (ch.time?' <span style="color:var(--muted2)">'+ch.time+'</span>':'') + '</td>' +
+        '<td style="color:var(--muted2);font-size:12px">' + (ch.location||'—') + '</td>' +
+        '<td style="color:var(--green);font-weight:700">$' + (ch.cost||0).toFixed(2) + '</td>' +
+        '<td style="color:var(--muted2)">' + (ch.kwh ? ch.kwh.toFixed(1)+' kWh' : '—') + '</td>' +
+        '<td>' + resInfo + '</td>' +
+        (isAdmin() ? '<td style="text-align:right">' +
+          '<button class="btn" style="padding:3px 8px;font-size:10px" data-cid="' + ch.id + '" onclick="openChargeModal(this.dataset.cid)">✏</button> ' +
+          '<button class="btn" style="padding:3px 8px;font-size:10px;color:var(--red);border-color:var(--red)" data-cid="' + ch.id + '" onclick="deleteCharge(this.dataset.cid)">✕</button>' +
+          '</td>' : '') +
+      '</tr>';
+      if (ch.notes) {
+        html += '<tr><td colspan="' + (isAdmin()?6:5) + '" style="color:var(--muted2);font-size:11px;padding-top:2px">' + ch.notes + '</td></tr>';
+      }
+    });
+
+    html += '</tbody></table></div></div></div>';
+  });
+
+  out.innerHTML = html;
+}
+
+function getEVCars() {
+  const evKeywords = ['tesla','optiq','ev','electric','elétrico'];
+  const all = (S.data.vehicles||[]).concat(S.data.fleet||[]);
+  const seen = new Set();
+  return all.filter(function(v) {
+    if (seen.has(v.id)) return false;
+    seen.add(v.id);
+    const t = ((v.name||'')+(v.type||'')+(v.category||'')).toLowerCase();
+    return evKeywords.some(function(k){ return t.includes(k); });
+  });
+}
+
+function chargePeriodPreset(days) {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  const fi = document.getElementById('charge-from');
+  const ti = document.getElementById('charge-to');
+  if (fi) fi.value = from.toISOString().slice(0,10);
+  if (ti) ti.value = to.toISOString().slice(0,10);
+  renderCharges();
+}
+
+function openChargeModal(id) {
+  initCharges();
+  const overlay = document.getElementById('charge-modal-overlay');
+  if (!overlay) return;
+
+  // Populate car selector
+  const carSel = document.getElementById('cm-car');
+  const evCars = getEVCars();
+  // Include all fleet/vehicles as fallback
+  const allCars = evCars.length ? evCars : (S.data.vehicles||[]).concat(S.data.fleet||[]);
+  carSel.innerHTML = '<option value="">— Selecione o carro —</option>' +
+    allCars.map(function(v) {
+      return '<option value="' + v.id + '">' + v.id + (v.name||v.type ? ' — '+(v.name||v.type||'') : '') + '</option>';
+    }).join('');
+
+  if (id) {
+    // Edit existing
+    const ch = S.data.charges.find(function(c){ return c.id===id; });
+    if (!ch) return;
+    document.getElementById('charge-modal-title').textContent = 'Editar Carregamento';
+    document.getElementById('cm-car').value      = ch.carId    || '';
+    document.getElementById('cm-date').value     = ch.date     || '';
+    document.getElementById('cm-time').value     = ch.time     || '';
+    document.getElementById('cm-cost').value     = ch.cost     || '';
+    document.getElementById('cm-kwh').value      = ch.kwh      || '';
+    document.getElementById('cm-location').value = ch.location || '';
+    document.getElementById('cm-notes').value    = ch.notes    || '';
+    overlay.dataset.editId = id;
+    updateChargeReservationInfo();
+  } else {
+    // New
+    document.getElementById('charge-modal-title').textContent = 'Registrar Carregamento';
+    document.getElementById('cm-car').value      = '';
+    document.getElementById('cm-date').value     = new Date().toISOString().slice(0,10);
+    document.getElementById('cm-time').value     = new Date().toTimeString().slice(0,5);
+    document.getElementById('cm-cost').value     = '';
+    document.getElementById('cm-kwh').value      = '';
+    document.getElementById('cm-location').value = '';
+    document.getElementById('cm-notes').value    = '';
+    delete overlay.dataset.editId;
+    updateChargeReservationInfo();
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function closeChargeModal() {
+  const overlay = document.getElementById('charge-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function updateChargeReservationInfo() {
+  const carId = document.getElementById('cm-car').value;
+  const date  = document.getElementById('cm-date').value;
+  const el    = document.getElementById('cm-reservation-info');
+  if (!el) return;
+  if (!carId || !date) { el.textContent = 'Selecione o carro e a data para vincular automaticamente'; return; }
+
+  // Find active reservation for this car on this date
+  const res = (S.data.reservations||[]).find(function(r) {
+    return r.vehicleId === carId && r.pickupDate <= date && r.returnDate >= date;
+  });
+  if (res) {
+    el.innerHTML = '<span style="color:var(--green)">✓ Vinculado automaticamente:</span> #' + res.id + ' — ' + (res.fullName||'') +
+      ' <span style="color:var(--muted2)">(' + fmtD(res.pickupDate) + ' → ' + fmtD(res.returnDate) + ')</span>';
+    el.dataset.resId = res.id;
+  } else {
+    el.textContent = 'Nenhuma reserva ativa nesta data para este carro';
+    delete el.dataset.resId;
+  }
+}
+
+function saveCharge() {
+  const carId    = document.getElementById('cm-car').value;
+  const date     = document.getElementById('cm-date').value;
+  const time     = document.getElementById('cm-time').value;
+  const cost     = parseFloat(document.getElementById('cm-cost').value) || 0;
+  const kwh      = parseFloat(document.getElementById('cm-kwh').value)  || 0;
+  const location = document.getElementById('cm-location').value.trim();
+  const notes    = document.getElementById('cm-notes').value.trim();
+  const resEl    = document.getElementById('cm-reservation-info');
+  const resId    = resEl ? resEl.dataset.resId : null;
+
+  if (!carId) { toast('Selecione o carro', 'err'); return; }
+  if (!date)  { toast('Informe a data', 'err'); return; }
+  if (!cost)  { toast('Informe o custo', 'err'); return; }
+
+  const overlay = document.getElementById('charge-modal-overlay');
+  const editId  = overlay.dataset.editId;
+
+  initCharges();
+  if (editId) {
+    const idx = S.data.charges.findIndex(function(c){ return c.id===editId; });
+    if (idx>=0) S.data.charges[idx] = { id:editId, carId, date, time, cost, kwh, location, notes, reservationId: resId||null };
+  } else {
+    S.data.charges.push({ id:'ch_'+Date.now(), carId, date, time, cost, kwh, location, notes, reservationId: resId||null });
+  }
+
+  scheduleSave();
+  closeChargeModal();
+  renderCharges();
+  toast('Carregamento salvo ✓', 'ok');
+}
+
+function deleteCharge(id) {
+  if (!confirm('Remover este carregamento?')) return;
+  initCharges();
+  S.data.charges = S.data.charges.filter(function(c){ return c.id!==id; });
+  scheduleSave();
+  renderCharges();
+  toast('Removido', '');
+}
+
+// Wire car/date change in modal
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'cm-car' || e.target.id === 'cm-date') updateChargeReservationInfo();
+});
+
 const TESLA_CLIENT_ID     = '0e6e1c69-36fa-46a3-b7eb-fc0df02fe7fb';
 const TESLA_CLIENT_SECRET = 'ta-secret.U^XuBXsuNKVf1fc+';
 const TESLA_REDIRECT_URI  = 'https://mfbqueiroz.github.io/gs-trips/';
