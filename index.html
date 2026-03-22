@@ -1062,7 +1062,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v3.9';
+const APP_VERSION = 'v4.1';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1144,7 +1144,7 @@ let S = {
   charts: {}, modal: null, saveTimer: null, mgmtOpen: false,
 };
 
-const isAdmin = () => S.role === 'admin';
+const isAdmin = () => S.role === 'admin' || S.role === 'demo';
 const isDemo  = () => S.role === 'demo';
 
 // ════════════════════════════════════════════════════════
@@ -1184,13 +1184,15 @@ function doLogin() {
   // Show/hide tabs based on role
   document.querySelectorAll('.tab-btn[data-roles]').forEach(btn => {
     const allowed = btn.dataset.roles.split(',');
-    btn.style.display = allowed.includes(role) ? '' : 'none';
+    // demo sees same tabs as admin
+    const effectiveRole = role === 'demo' ? 'admin' : role;
+    btn.style.display = allowed.includes(effectiveRole) ? '' : 'none';
   });
   // Show admin-only UI elements
   const adminOnly = ['import-zone','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = role === 'admin' ? '' : 'none';
+    if (el) el.style.display = (role === 'admin' || role === 'demo') ? '' : 'none';
   });
   initApp();
 }
@@ -1774,7 +1776,8 @@ function renderAgenda() {
             <span class="res-num">#${r.id}</span>
           </span>
         </div>
-        ${(r.accessories||[]).length?`<div style="font-size:11px;color:var(--amber);margin-bottom:4px">🎒 ${accStr}${(r.accessories||[]).length>3?' +'+((r.accessories||[]).length-3):''}</div>`:''}
+        ${(r.accessories||[]).length?`<div style="font-size:11px;color:var(--amber);margin-bottom:4px;font-weight:600">🎒 ${accStr}${(r.accessories||[]).length>3?' +'+((r.accessories||[]).length-3):''}</div>`:''}
+        ${r.extras?`<div style="font-size:11px;color:var(--orange);margin-bottom:4px;font-weight:600">📋 ${r.extras}${r.extrasVal?' · $'+fmt$(r.extrasVal):''}</div>`:''}
         <div class="res-name">${r.fullName||'—'}</div>
         <div class="res-car">${r.vehicleType||r.vehicleId||'—'}</div>
         <div class="res-meta">
@@ -1783,7 +1786,7 @@ function renderAgenda() {
           ${r.milesOut!=null?`<span class="res-chip">🛣 ${r.milesOut}mi</span>`:''}
           ${r.fuelOut!=null?`<span class="res-chip">⛽ ${FUELS[r.fuelOut]||'?'}</span>`:''}
           ${(()=>{ if(r.fuelOut!=null&&r.fuelIn!=null&&r.fuelIn<r.fuelOut){ const used=(([0,.25,.5,.75,1])[r.fuelOut]-([0,.25,.5,.75,1])[r.fuelIn]); const cost=used*16*GAS_PPG; return cost>0?`<span class="res-chip" style="color:var(--orange)">⛽ -$${cost.toFixed(0)}</span>`:''; } return ''; })()}
-          ${r.extras?`<span class="res-chip" style="color:var(--amber)">+ ${r.extras}</span>`:''}
+
           ${isAdmin()&&r.total?`<span class="res-val">$${fmt$(r.total)}</span>`:''}
         </div>
       </div>`;
@@ -2442,6 +2445,10 @@ function buildModal(r, isEV, editMode) {
         <div class="info-val"><input type="text" class="fld-input" style="padding:2px 6px;height:auto;font-size:12px"
           value="${r.city||''}" placeholder="Ex: São Paulo / Brasil" ${!canEdit?'readonly':''}
           oninput="updField('city',this.value)"></div></div>
+      <div class="info-box"><div class="info-lbl">Idade</div>
+        <div class="info-val"><input type="number" min="18" max="99" class="fld-input" style="padding:2px 6px;height:auto;font-size:12px;width:80px"
+          value="${r.age||''}" placeholder="—" ${!canEdit?'readonly':''}
+          oninput="updField('age',+this.value||null)"></div></div>
       <div class="info-box"><div class="info-lbl">Veículo</div><div class="info-val">${r.vehicleType||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">ID do Veículo</div><div class="info-val">${r.vehicleId||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">Saída</div><div class="info-val">${fmtD(r.pickupDate)}</div></div>
