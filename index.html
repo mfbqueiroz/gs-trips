@@ -900,7 +900,10 @@ textarea.fld-input{resize:vertical;min-height:70px}
           Conecte sua conta Tesla para ver carregamentos por período,<br>
           bateria em tempo real e vincular custos às reservas.
         </div>
-        <button class="btn primary" onclick="teslaConnect()" style="padding:12px 24px">⚡ Login com Tesla</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" onclick="teslaConnect()" style="padding:10px 22px">⚡ Login com Tesla</button>
+          <button class="btn" style="font-size:11px;padding:6px 12px;color:var(--muted2)" title="Limpar token salvo" onclick="tClear();localStorage.removeItem('tesla_oauth_state');sessionStorage.removeItem('tesla_pending_code');sessionStorage.removeItem('tesla_pending_state');toast('Cache limpo','ok');renderCharges();">🗑 Limpar cache</button>
+        </div>
       </div>
 
       <!-- Connected: period filter + vehicle cards -->
@@ -1059,7 +1062,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v3.7';
+const APP_VERSION = 'v3.8';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -4014,6 +4017,14 @@ let T = {
   vehicles:     [],
   loading:      false,
 };
+// Auto-clear if token expired and no refresh token
+if (T.accessToken && T.expiresAt && Date.now() > T.expiresAt && !T.refreshToken) {
+  console.log('Tesla: token expirado — limpando cache');
+  localStorage.removeItem('tesla_access_token');
+  localStorage.removeItem('tesla_refresh_token');
+  localStorage.removeItem('tesla_expires_at');
+  T.accessToken = T.refreshToken = null; T.expiresAt = 0;
+}
 
 function tSave() {
   if (T.accessToken)  localStorage.setItem('tesla_access_token',  T.accessToken);
@@ -4030,8 +4041,14 @@ function tClear() {
 
 // ── Client Credentials flow (grant_type=client_credentials) ──
 function teslaConnect() {
-  // Clear any old token first
+  // Clear ALL Tesla state — token, state, pending
   tClear();
+  sessionStorage.removeItem('tesla_pending_code');
+  sessionStorage.removeItem('tesla_pending_state');
+  localStorage.removeItem('tesla_oauth_state');
+  localStorage.removeItem('tesla_access_token');
+  localStorage.removeItem('tesla_refresh_token');
+  localStorage.removeItem('tesla_expires_at');
   // authorization_code OAuth flow
   const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   localStorage.setItem('tesla_oauth_state', state);
@@ -4335,9 +4352,30 @@ async function renderTesla() {
       } catch(e) { console.warn('Detail error:', v.display_name, e.message); }
       try {
         const h = await teslaGet('/api/1/vehicles/' + v.id_s + '/charge_history');
-        chargeHistory = (h && h.response) ? h.response : [];
+        console.log('charge_history raw:', JSON.stringify(h).slice(0,300));
+        if (h && h.response && Array.isArray(h.response)) {
+          chargeHistory = h.response;
+        } else if (h && h.data && Array.isArray(h.data)) {
+          chargeHistory = h.data;
+        } else if (h && Array.isArray(h)) {
+          chargeHistory = h;
+        }
         console.log(v.display_name + ': ' + chargeHistory.length + ' charges loaded');
-      } catch(e) { console.warn('Charge history error:', v.display_name, e.message); }
+        // If no history, try charging_history endpoint (older API)
+        if (!chargeHistory.length) {
+          const h2 = await teslaGet('/api/1/vehicles/' + v.id_s + '/charging_history');
+          console.log('charging_history raw:', JSON.stringify(h2).slice(0,300));
+          if (h2 && h2.response && Array.isArray(h2.response)) chargeHistory = h2.response;
+        }
+      } catch(e) {
+        console.warn('Charge history error:', v.display_name, e.message);
+        // Try alternate endpoint
+        try {
+          const h2 = await teslaGet('/api/1/vehicles/' + v.id_s + '/charging_history');
+          console.log('charging_history fallback:', JSON.stringify(h2).slice(0,300));
+          if (h2 && h2.response) chargeHistory = h2.response;
+        } catch(e2) { console.warn('charging_history also failed:', e2.message); }
+      }
       T.vehicleData.push({ v, detail, chargeHistory });
     }
 
@@ -4827,6 +4865,27 @@ async function testFirestore() {
       ? '✅ Firestore funcionando! Tente salvar novamente.'
       : '❌ Problema detectado. Verifique as regras.');
   alert('Diagnóstico Firestore:\n\n' + msg);
+}
+
+async function teslaDebugVehicle(vehicleId) {
+  loader(true, 'Verificando carregamentos...');
+  const endpoints = [
+    '/api/1/vehicles/' + vehicleId + '/charge_history',
+    '/api/1/vehicles/' + vehicleId + '/charging_history',
+    '/api/1/vehicles/' + vehicleId + '/vehicle_data?endpoints=charge_state',
+  ];
+  const results = [];
+  for (const ep of endpoints) {
+    try {
+      const d = await teslaGet(ep);
+      const preview = JSON.stringify(d).slice(0,400);
+      results.push(ep.split('/').pop() + ': ' + preview);
+    } catch(e) {
+      results.push(ep.split('/').pop() + ': ERRO — ' + e.message);
+    }
+  }
+  loader(false);
+  alert('Tesla Debug — Veiculo ' + vehicleId + '\n\n' + results.join('\n---\n'));
 }
 
 async function teslaDebug() {
