@@ -1603,14 +1603,6 @@ function renderAgenda() {
   const byDate = {};
   events.forEach(e => (byDate[e.date] = byDate[e.date] || []).push(e));
 
-  // Update tab badge
-  const badge = document.getElementById('fin-badge');
-  if (badge) {
-    const urgentCount = alerts.filter(a => a.isOverdue || a.isDueToday || a.isDue7).length;
-    badge.textContent = urgentCount;
-    badge.style.display = urgentCount > 0 ? '' : 'none';
-  }
-
   let html = '';
   Object.entries(byDate).forEach(([date, evts]) => {
     const isTd = date===today;
