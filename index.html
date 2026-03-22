@@ -87,8 +87,8 @@ a{color:inherit;text-decoration:none}
 .login-error{color:var(--red);font-size:12px;margin-top:10px;min-height:16px;transition:opacity 0.2s}
 
 /* ── APP LAYOUT ── */
-#app{display:none;flex-direction:column;height:100vh;overflow:hidden}
-#app-body{display:flex;flex:1;overflow:hidden}
+#app{display:none;flex-direction:column;height:100vh;overflow:hidden;min-height:0}
+#app-body{display:flex;flex:1;overflow:hidden;min-height:0}
 header{
   background:var(--surface);border-bottom:1px solid var(--border);
   padding:0 16px;display:flex;align-items:center;gap:10px;height:50px;flex-shrink:0;
@@ -136,11 +136,11 @@ header{
   font-family:'Barlow Condensed',sans-serif;letter-spacing:0.08em;text-transform:uppercase;
 }
 
-main{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:20px}
+main{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:20px;min-height:0;min-width:0}
 
 /* ── PANELS ── */
 .tab-panel{display:none;padding:20px 20px 40px}
-.tab-panel.active{display:block}
+.tab-panel.active{display:block;min-height:100%}
 
 /* ── COMMON ── */
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
@@ -1056,7 +1056,7 @@ const EV_KW   = ['tesla','optiq','ev','electric','elétrico'];
 // ════════════════════════════════════════════════════════
 let S = {
   role: null, token: null,
-  data: { reservations: [], fleet: [], vehicles: [], categories: [], financing: [], investors: [], lastUpdated: null },
+  data: { reservations: [], fleet: [], vehicles: [], categories: [], financing: [], investors: [], charges: [], lastUpdated: null },
   tab: 'agenda', filter: 'future',
   finYear: new Date().getFullYear(), finMonth: null,
   flY: new Date().getFullYear(), flM: new Date().getMonth(),
@@ -1104,7 +1104,7 @@ function doLogin() {
 }
 
 function doLogout() {
-  S = { ...S, role:null, token:null, data:{reservations:[],fleet:[],vehicles:[],categories:[],financing:[],investors:[],lastUpdated:null}, tab:'agenda', filter:'future', modal:null };
+  S = { ...S, role:null, token:null, data:{reservations:[],fleet:[],vehicles:[],categories:[],financing:[],investors:[],charges:[],lastUpdated:null}, tab:'agenda', filter:'future', modal:null };
   document.getElementById('pwd-input').value = '';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -1153,10 +1153,13 @@ async function loadData() {
       categories:   meta.categories   || [],
       financing:    meta.financing    || [],
       investors:    meta.investors    || [],
+      charges:      meta.charges      || [],
       lastUpdated:  meta.lastUpdated  || null,
     };
     console.log('Firestore load OK — ' + allRes.length + ' reservas, ' + nChunks + ' docs');
     toast('✓ ' + allRes.length + ' reservas carregadas', 'ok');
+    syncFleetFromRes();
+    renderCurrentTab();
   } catch(e) {
     console.error('Load error:', e);
     toast('Erro ao carregar — dados locais mantidos', 'err');
