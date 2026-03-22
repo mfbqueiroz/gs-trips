@@ -1062,7 +1062,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v4.2';
+const APP_VERSION = 'v4.3';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -4395,13 +4395,19 @@ async function renderTesla() {
         try {
           const h = await teslaGet('/api/1/vehicles/' + vid + '/charge_history' + histParams);
           console.log('charge_history [' + vid + ']:', JSON.stringify(h).slice(0,600));
-          const arr = (h && h.response) ? h.response : (h && h.data) ? h.data : (Array.isArray(h) ? h : []);
+          // Extract array from any response shape
+          function extractArr(obj) {
+            if (!obj) return [];
+            if (Array.isArray(obj)) return obj;
+            if (obj.response && Array.isArray(obj.response)) return obj.response;
+            if (obj.data && Array.isArray(obj.data)) return obj.data;
+            if (obj.charging_sessions) return obj.charging_sessions;
+            // Find first array value in object
+            return Object.values(obj).find(v => Array.isArray(v)) || [];
+          }
+          const arr = extractArr(h);
+          console.log('charge_history arr length:', arr.length, 'keys:', h ? Object.keys(h) : 'null');
           if (arr.length) { chargeHistory = arr; break; }
-          // Try without params as fallback
-          const h2 = await teslaGet('/api/1/vehicles/' + vid + '/charge_history');
-          console.log('charge_history no-params [' + vid + ']:', JSON.stringify(h2).slice(0,400));
-          const arr2 = (h2 && h2.response) ? h2.response : (h2 && h2.data) ? h2.data : (Array.isArray(h2) ? h2 : []);
-          if (arr2.length) chargeHistory = arr2;
         } catch(e) { console.warn('charge_history [' + vid + '] error:', e.message); }
       }
       console.log(v.display_name + ': ' + chargeHistory.length + ' carregamentos');
@@ -4424,6 +4430,15 @@ async function renderTesla() {
 }
 
 function buildChargeRows(charges, rate, fromDate, toDate) {
+  // Normalize charges to array — API may return object with nested arrays
+  if (!charges) charges = [];
+  if (!Array.isArray(charges)) {
+    // Try common response shapes
+    if (charges.data && Array.isArray(charges.data)) charges = charges.data;
+    else if (charges.response && Array.isArray(charges.response)) charges = charges.response;
+    else if (charges.charging_sessions && Array.isArray(charges.charging_sessions)) charges = charges.charging_sessions;
+    else charges = Object.values(charges).find(v => Array.isArray(v)) || [];
+  }
   const from = fromDate ? new Date(fromDate+'T00:00:00') : null;
   const to   = toDate   ? new Date(toDate+'T23:59:59')   : null;
   const filtered = charges.filter(h => {
