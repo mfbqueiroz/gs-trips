@@ -858,37 +858,49 @@ textarea.fld-input{resize:vertical;min-height:70px}
     <section class="tab-panel" id="panel-tesla">
       <div class="section-header">
         <div class="section-title">⚡ Tesla Fleet</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button class="btn primary" id="tesla-connect-btn" onclick="teslaConnect()" style="display:none">🔗 Conectar Tesla</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" id="tesla-header-btns">
           <button class="btn" onclick="teslaRefresh()" id="tesla-refresh-btn" style="display:none">↻ Atualizar</button>
           <button class="btn" onclick="teslaDisconnect()" id="tesla-disconnect-btn" style="display:none">Desconectar</button>
         </div>
       </div>
+
+      <!-- Period filter — only when connected -->
       <div id="tesla-period-bar" style="display:none;margin-bottom:16px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px">
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
           <div class="fld-group">
             <div class="fld-label">De</div>
-            <input type="date" class="fld-input" id="tesla-from" style="padding:6px 10px;width:160px" oninput="teslaFilterCharges()">
+            <input type="date" class="fld-input" id="tesla-from" style="padding:6px 10px;width:150px" oninput="teslaFilterCharges()">
           </div>
           <div class="fld-group">
             <div class="fld-label">Até</div>
-            <input type="date" class="fld-input" id="tesla-to" style="padding:6px 10px;width:160px" oninput="teslaFilterCharges()">
+            <input type="date" class="fld-input" id="tesla-to" style="padding:6px 10px;width:150px" oninput="teslaFilterCharges()">
           </div>
           <div class="fld-group">
             <div class="fld-label">$/kWh</div>
-            <input type="number" step="0.01" class="fld-input" id="tesla-rate" value="0.12" style="padding:6px 10px;width:90px" oninput="teslaFilterCharges()">
+            <input type="number" step="0.01" class="fld-input" id="tesla-rate" value="0.12" style="padding:6px 10px;width:80px" oninput="teslaFilterCharges()">
           </div>
-          <button class="btn active" style="padding:7px 14px" onclick="teslaPeriodPreset(30)">30d</button>
-          <button class="btn" style="padding:7px 14px" onclick="teslaPeriodPreset(7)">7d</button>
-          <button class="btn" style="padding:7px 14px" onclick="teslaPeriodPreset(0)">Hoje</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(0)">Hoje</button>
+            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(7)">7d</button>
+            <button class="btn active" style="padding:6px 12px" onclick="teslaPeriodPreset(30)">30d</button>
+            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(90)">90d</button>
+            <button class="btn" style="padding:6px 12px" onclick="teslaPeriodPreset(365)">1 ano</button>
+          </div>
         </div>
-        <div id="tesla-period-totals" style="margin-top:12px"></div>
+        <div id="tesla-period-totals" style="margin-top:10px"></div>
       </div>
-      <div id="tesla-auth-banner" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;margin-bottom:16px">
-        <div style="font-weight:700;color:var(--amber);margin-bottom:6px">⚡ Tesla Fleet API</div>
-        <div style="font-size:13px;color:var(--muted2);margin-bottom:12px">Conecte via client_credentials para ver bateria e histórico dos seus Tesla.</div>
-        <button class="btn primary" onclick="teslaConnect(); document.getElementById('tesla-auth-banner').style.display='none';">⚡ Conectar Tesla</button>
+
+      <!-- Not connected -->
+      <div id="tesla-auth-banner" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;max-width:540px">
+        <div style="font-size:32px;margin-bottom:8px">⚡</div>
+        <div style="font-weight:700;font-size:18px;color:var(--amber);margin-bottom:8px">Conectar Tesla Fleet</div>
+        <div style="font-size:13px;color:var(--muted2);margin-bottom:20px;line-height:1.6">
+          Veja bateria em tempo real, histórico de carregamentos por carro e período,<br>
+          e quanto cada cliente gastou em carregamento durante a locação.
+        </div>
+        <button class="btn primary" style="padding:12px 24px;font-size:14px" onclick="teslaConnect()">⚡ Conectar Tesla</button>
       </div>
+
       <div id="tesla-out"></div>
     </section>
 
@@ -3557,92 +3569,80 @@ async function teslaRefresh() {
 
 // ── Render ───────────────────────────────────────────────
 async function renderTesla() {
-  const out = document.getElementById('tesla-out');
+  const out    = document.getElementById('tesla-out');
   const banner = document.getElementById('tesla-auth-banner');
-  const connectBtn = document.getElementById('tesla-connect-btn');
   const refreshBtn = document.getElementById('tesla-refresh-btn');
   const disconnBtn = document.getElementById('tesla-disconnect-btn');
+  const periodBar  = document.getElementById('tesla-period-bar');
 
   if (!T.accessToken) {
-    banner && (banner.style.display = '');
-    connectBtn && (connectBtn.style.display = 'none');
-    refreshBtn && (refreshBtn.style.display = 'none');
-    disconnBtn && (disconnBtn.style.display = 'none');
+    if (banner)     banner.style.display = '';
+    if (refreshBtn) refreshBtn.style.display = 'none';
+    if (disconnBtn) disconnBtn.style.display = 'none';
+    if (periodBar)  periodBar.style.display  = 'none';
     if (out) out.innerHTML = '';
     return;
   }
 
-  banner && (banner.style.display = 'none');
-  connectBtn && (connectBtn.style.display = 'none');
-  refreshBtn && (refreshBtn.style.display = '');
-  disconnBtn && (disconnBtn.style.display = '');
-  const periodBar = document.getElementById('tesla-period-bar');
+  // Connected state
+  if (banner)     banner.style.display = 'none';
+  if (refreshBtn) refreshBtn.style.display = '';
+  if (disconnBtn) disconnBtn.style.display = '';
   if (periodBar) {
     periodBar.style.display = '';
-    // Default: last 30 days
-    if (!document.getElementById('tesla-from').value) {
-      const d = new Date(); d.setDate(d.getDate()-30);
-      document.getElementById('tesla-from').value = d.toISOString().slice(0,10);
-      document.getElementById('tesla-to').value   = new Date().toISOString().slice(0,10);
+    const fi = document.getElementById('tesla-from');
+    const ti = document.getElementById('tesla-to');
+    if (fi && !fi.value) {
+      const from = new Date(); from.setDate(from.getDate()-30);
+      fi.value = from.toISOString().slice(0,10);
+      ti.value = new Date().toISOString().slice(0,10);
     }
   }
 
   if (!out) return;
-  out.innerHTML = '<div style="color:var(--muted2);padding:20px 0">Carregando veículos...</div>';
+  out.innerHTML = '<div style="color:var(--muted2);padding:24px 0;text-align:center">Carregando veiculos Tesla...</div>';
 
   try {
-    // Get vehicles list
     const vehiclesData = await teslaGet('/api/1/vehicles');
     if (!vehiclesData) return;
     const vehicles = vehiclesData.response || [];
 
     if (!vehicles.length) {
-      out.innerHTML = '<div style="color:var(--muted2);padding:20px 0">Nenhum Tesla encontrado na conta.</div>';
+      out.innerHTML = '<div style="color:var(--muted2);padding:24px 0">Nenhum Tesla encontrado na conta.</div>';
       return;
     }
 
-    T.vehicleData = []; // store for period filtering
+    T.vehicleData = [];
 
-    let html = '<div class="tesla-grid">';
-
-    for (const v of vehicles) {
+    for (let vi = 0; vi < vehicles.length; vi++) {
+      const v = vehicles[vi];
+      out.innerHTML = '<div style="color:var(--muted2);padding:8px 0">Carregando ' + (vi+1) + '/' + vehicles.length + ': ' + (v.display_name||v.vin||'Tesla') + '...</div>';
       let detail = null;
       let chargeHistory = [];
       try {
-        const detailData = await teslaGet('/api/1/vehicles/' + v.id_s + '/vehicle_data?endpoints=charge_state%7Cdrive_state%7Cvehicle_state');
-        detail = detailData?.response;
-      } catch(e) {
-        console.warn('Vehicle data unavailable:', v.display_name);
-      }
+        const d = await teslaGet('/api/1/vehicles/' + v.id_s + '/vehicle_data?endpoints=charge_state%7Cdrive_state%7Cvehicle_state');
+        detail = d ? d.response : null;
+      } catch(e) { console.warn('Detail error:', v.display_name, e.message); }
       try {
-        const histData = await teslaGet('/api/1/vehicles/' + v.id_s + '/charge_history');
-        chargeHistory = histData?.response || [];
-      } catch(e) {}
-
+        const h = await teslaGet('/api/1/vehicles/' + v.id_s + '/charge_history');
+        chargeHistory = (h && h.response) ? h.response : [];
+        console.log(v.display_name + ': ' + chargeHistory.length + ' charges loaded');
+      } catch(e) { console.warn('Charge history error:', v.display_name, e.message); }
       T.vehicleData.push({ v, detail, chargeHistory });
-      html += buildTeslaCard(v, detail, chargeHistory, null, null);
     }
 
-    html += '</div>';
-    out.innerHTML = html;
-    teslaFilterCharges(); // apply period filter
+    teslaFilterCharges();
 
   } catch(e) {
     console.error('Tesla render error:', e);
     const msg = e.message || String(e);
-    // If fetch failed entirely, likely bad token — clear and show connect
-    if (msg.includes('fetch') || msg.includes('401') || msg.includes('403')) {
-      tClear();
-      renderTesla();
-      return;
+    if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized')) {
+      tClear(); renderTesla(); return;
     }
-    out.innerHTML = `<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:16px;color:var(--red)">
-      <div style="font-weight:700;margin-bottom:6px">Erro Tesla API</div>
-      <div style="font-size:13px">${msg}</div>
-      <div style="margin-top:12px;font-size:12px;color:var(--muted2)">
-        Verifique se o token é válido. Clique em Desconectar e reconecte.
-      </div>
-    </div>`;
+    out.innerHTML = '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:16px;color:var(--red)">' +
+      '<b>Erro Tesla API:</b> ' + msg +
+      '<div style="margin-top:10px"><button class="btn" onclick="teslaDisconnect()">Desconectar</button></div>' +
+    '</div>';
   }
 }
 
@@ -3680,86 +3680,103 @@ function buildChargeRows(charges, rate, fromDate, toDate) {
 }
 
 function buildTeslaCard(v, detail, chargeHistory, fromDate, toDate) {
-  const charge  = detail?.charge_state;
-  const vehicle = detail?.vehicle_state;
+  const charge  = detail ? detail.charge_state : null;
+  const vehicle = detail ? detail.vehicle_state : null;
   const isOnline   = v.state === 'online';
-  const isCharging = charge?.charging_state === 'Charging';
+  const isCharging = charge && charge.charging_state === 'Charging';
   const isSleeping = v.state === 'asleep' || v.state === 'offline';
 
-  const stateLabel = isCharging ? '⚡ Carregando' : isOnline ? '✓ Online' : '💤 Dormindo';
+  const stateLabel = isCharging ? 'Carregando' : isOnline ? 'Online' : 'Dormindo';
   const stateClass = isCharging ? 'tesla-status-charging' : isOnline ? 'tesla-status-online' : 'tesla-status-sleeping';
 
-  const battPct   = charge?.battery_level ?? null;
+  const battPct   = charge ? charge.battery_level : null;
   const battColor = battPct == null ? '#6B7280' : battPct > 60 ? '#10B981' : battPct > 20 ? '#F59E0B' : '#EF4444';
-  const estRange  = charge?.est_battery_range ? Math.round(charge.est_battery_range * 1.609) + ' km' : '—';
-  const chargeLimit = charge?.charge_limit_soc ? charge.charge_limit_soc + '%' : '—';
-  const odometer  = vehicle?.odometer ? Math.round(vehicle.odometer * 1.609).toLocaleString() + ' km' : '—';
+  const estRange  = (charge && charge.est_battery_range) ? Math.round(charge.est_battery_range * 1.609) + ' km' : '--';
+  const chargeLimit = (charge && charge.charge_limit_soc) ? charge.charge_limit_soc + '%' : '--';
+  const odometer  = (vehicle && vehicle.odometer) ? Math.round(vehicle.odometer * 1.609).toLocaleString() + ' km' : '--';
+  const model     = v.vehicle_config ? v.vehicle_config.car_type : (v.display_name || 'Tesla');
 
-  const rate = parseFloat(document.getElementById('tesla-rate')?.value) || 0.12;
+  const rateEl = document.getElementById('tesla-rate');
+  const rate = parseFloat(rateEl ? rateEl.value : '0.12') || 0.12;
 
-  // Match with GS fleet vehicle
-  const fleetVeh = (S.data.vehicles||[]).find(fv =>
-    fv.vin === v.vin || (fv.id && v.display_name?.toLowerCase().includes(fv.id?.toLowerCase()))
-  ) || (S.data.fleet||[]).find(fv =>
-    fv.id && v.display_name?.toLowerCase().includes(fv.id?.toLowerCase())
-  );
+  // Match with GS fleet
+  const allVehs = (S.data.vehicles || []).concat(S.data.fleet || []);
+  const fleetVeh = allVehs.find(function(fv) {
+    return (fv.vin && fv.vin === v.vin) ||
+           (fv.id && v.display_name && v.display_name.toLowerCase().indexOf(fv.id.toLowerCase()) >= 0) ||
+           (fv.licensePlate && v.display_name && v.display_name.toLowerCase().indexOf(fv.licensePlate.toLowerCase()) >= 0);
+  });
 
-  // Active reservation
   const td = new Date().toISOString().slice(0,10);
-  const activeRes = fleetVeh ? (S.data.reservations||[]).find(r =>
-    r.vehicleId === fleetVeh.id && r.pickupDate <= td && r.returnDate >= td
-  ) : null;
+  const activeRes = fleetVeh ? (S.data.reservations || []).find(function(r) {
+    return r.vehicleId === fleetVeh.id && r.pickupDate <= td && r.returnDate >= td;
+  }) : null;
 
-  // Charges for selected period
-  const { rows: histRows, totalKwh, totalCost, count } = buildChargeRows(chargeHistory, rate, fromDate, toDate);
+  const result = buildChargeRows(chargeHistory, rate, fromDate, toDate);
+  const battBar  = battPct != null ? battPct : 0;
 
-  return `<div class="tesla-car-card" id="tesla-card-${v.id_s}">
-    <div class="tesla-car-name">${v.display_name || 'Tesla'}</div>
-    <div class="tesla-car-vin">${v.vin || ''} ${fleetVeh ? '· #' + fleetVeh.id : ''}</div>
-    <span class="tesla-status-badge ${stateClass}">${stateLabel}</span>
+  let html = '<div class="tesla-car-card" id="tesla-card-' + v.id_s + '" style="width:100%;max-width:100%">';
 
-    ${activeRes ? `<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px">
-      <span style="color:var(--green);font-weight:700">Em uso:</span> ${activeRes.fullName}<br>
-      <span style="color:var(--muted2)">${fmtD(activeRes.pickupDate)} → ${fmtD(activeRes.returnDate)}</span>
-    </div>` : ''}
+  // Header row
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
+  html += '<div>';
+  html += '<div class="tesla-car-name">' + (v.display_name || 'Tesla') + '</div>';
+  html += '<div class="tesla-car-vin" style="font-size:12px">' + (v.vin || '') + (fleetVeh ? ' &nbsp;·&nbsp; <b style="color:var(--amber)">#' + fleetVeh.id + '</b>' : '') + '</div>';
+  if (v.vehicle_config && v.vehicle_config.car_type) {
+    html += '<div style="font-size:11px;color:var(--muted2);margin-top:2px">' + v.vehicle_config.car_type + '</div>';
+  }
+  html += '</div>';
+  html += '<span class="tesla-status-badge ' + stateClass + '">&#9889; ' + stateLabel + '</span>';
+  html += '</div>';
 
-    <div class="tesla-battery-wrap">
-      <div class="tesla-battery-lbl">
-        <span style="font-weight:700;font-size:16px">${battPct != null ? battPct + '%' : '—'}</span>
-        <span style="color:var(--muted2)">Limite: ${chargeLimit}</span>
-      </div>
-      <div class="tesla-battery-bar">
-        <div class="tesla-battery-fill" style="width:${battPct||0}%;background:${battColor}"></div>
-      </div>
-      <div class="tesla-battery-lbl">
-        <span style="color:var(--muted2)">Autonomia: ${estRange}</span>
-        ${isCharging && charge?.time_to_full_charge ? `<span style="color:var(--amber)">⚡ ${charge.time_to_full_charge}h p/ cheio</span>` : ''}
-      </div>
-    </div>
+  // Active reservation banner
+  if (activeRes) {
+    html += '<div style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px">';
+    html += '<span style="color:var(--green);font-weight:700">Em uso agora:</span> ' + activeRes.fullName;
+    html += ' &nbsp;<span style="color:var(--muted2)">' + fmtD(activeRes.pickupDate) + ' &rarr; ' + fmtD(activeRes.returnDate) + '</span>';
+    html += '</div>';
+  }
 
-    <div class="tesla-stat-row">
-      <div class="tesla-stat"><div class="tesla-stat-val">${odometer}</div><div class="tesla-stat-lbl">Odômetro</div></div>
-      <div class="tesla-stat">
-        <div class="tesla-stat-val">${charge?.charger_power ? charge.charger_power + ' kW' : '—'}</div>
-        <div class="tesla-stat-lbl">${isCharging ? 'Carregando' : 'Potência'}</div>
-      </div>
-    </div>
+  // Battery
+  html += '<div class="tesla-battery-wrap">';
+  html += '<div class="tesla-battery-lbl">';
+  html += '<span style="font-weight:700;font-size:18px">' + (battPct != null ? battPct + '%' : '--') + '</span>';
+  html += '<span style="color:var(--muted2);font-size:12px">Limite: ' + chargeLimit + ' &nbsp; Autonomia: ' + estRange + '</span>';
+  if (isCharging && charge && charge.time_to_full_charge) {
+    html += '<span style="color:var(--amber);font-size:12px">&#9889; ' + charge.time_to_full_charge + 'h p/ cheio</span>';
+  }
+  html += '</div>';
+  html += '<div class="tesla-battery-bar"><div class="tesla-battery-fill" style="width:' + battBar + '%;background:' + battColor + '"></div></div>';
+  html += '</div>';
 
-    <div style="font-size:11px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">
-      ⚡ Carregamentos no período — ${count} sessões
-    </div>
-    ${count > 0 ? `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--amber)">${totalKwh.toFixed(1)} kWh</div><div class="tesla-stat-lbl">Total carregado</div></div>
-      <div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--green)">$${totalCost.toFixed(2)}</div><div class="tesla-stat-lbl">Custo estimado</div></div>
-    </div>
-    <div style="overflow-x:auto"><table class="tesla-charge-table">
-      <thead><tr><th>Data / Hora</th><th>kWh</th><th>Custo</th><th>Bateria</th><th>Local</th></tr></thead>
-      <tbody>${histRows}</tbody>
-    </table></div>` :
-    `<div style="color:var(--muted2);font-size:12px;padding:8px 0">Nenhum carregamento no período${isSleeping?' (veículo dormindo)':''}</div>`}
-  </div>`;
+  // Stats row
+  html += '<div class="tesla-stat-row" style="margin-bottom:14px">';
+  html += '<div class="tesla-stat"><div class="tesla-stat-val">' + odometer + '</div><div class="tesla-stat-lbl">Odometro</div></div>';
+  html += '<div class="tesla-stat"><div class="tesla-stat-val">' + (charge && charge.charger_power ? charge.charger_power + ' kW' : '--') + '</div><div class="tesla-stat-lbl">' + (isCharging ? 'Carregando' : 'Potencia') + '</div></div>';
+  html += '</div>';
+
+  // Charge history
+  html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin-bottom:8px">';
+  html += '&#9889; Carregamentos no periodo &mdash; ' + result.count + ' sessoes';
+  html += '</div>';
+
+  if (result.count > 0) {
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+    html += '<div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--amber)">' + result.totalKwh.toFixed(1) + ' kWh</div><div class="tesla-stat-lbl">Total carregado</div></div>';
+    html += '<div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--green)">$' + result.totalCost.toFixed(2) + '</div><div class="tesla-stat-lbl">Custo estimado</div></div>';
+    html += '</div>';
+    html += '<div style="overflow-x:auto"><table class="tesla-charge-table">';
+    html += '<thead><tr><th>Data / Hora</th><th>kWh</th><th>Custo</th><th>Bateria</th><th>Local</th></tr></thead>';
+    html += '<tbody>' + result.rows + '</tbody>';
+    html += '</table></div>';
+  } else {
+    html += '<div style="color:var(--muted2);font-size:12px;padding:6px 0">Nenhum carregamento no periodo' + (isSleeping ? ' (veiculo dormindo)' : '') + '</div>';
+  }
+
+  html += '</div>';
+  return html;
 }
+
 
 // Build Tesla section for reservation modal
 function buildTeslaModalSection(r) {
@@ -3785,30 +3802,35 @@ function buildTeslaModalSection(r) {
 // Period filter helpers
 function teslaFilterCharges() {
   if (!T.vehicleData || !T.vehicleData.length) return;
-  const from = document.getElementById('tesla-from')?.value;
-  const to   = document.getElementById('tesla-to')?.value;
-  const rate = parseFloat(document.getElementById('tesla-rate')?.value) || 0.12;
+  const fromEl = document.getElementById('tesla-from');
+  const toEl   = document.getElementById('tesla-to');
+  const rateEl = document.getElementById('tesla-rate');
+  const from = fromEl ? fromEl.value : '';
+  const to   = toEl   ? toEl.value   : '';
+  const rate = parseFloat(rateEl ? rateEl.value : '0.12') || 0.12;
   const out  = document.getElementById('tesla-out');
   if (!out) return;
 
   let totalKwhAll = 0, totalCostAll = 0;
-  let html = '<div class="tesla-grid">';
-  T.vehicleData.forEach(({v, detail, chargeHistory}) => {
-    html += buildTeslaCard(v, detail, chargeHistory, from, to);
-    const { totalKwh, totalCost } = buildChargeRows(chargeHistory, rate, from, to);
-    totalKwhAll  += totalKwh;
-    totalCostAll += totalCost;
+  // Use vertical list — one card per vehicle full-width
+  let html = '<div style="display:flex;flex-direction:column;gap:16px">';
+  T.vehicleData.forEach(function(item) {
+    html += buildTeslaCard(item.v, item.detail, item.chargeHistory, from, to);
+    var r2 = buildChargeRows(item.chargeHistory, rate, from, to);
+    totalKwhAll  += r2.totalKwh;
+    totalCostAll += r2.totalCost;
   });
   html += '</div>';
   out.innerHTML = html;
 
   const tot = document.getElementById('tesla-period-totals');
   if (tot) {
-    tot.innerHTML = `<div style="display:flex;gap:20px;flex-wrap:wrap">
-      <span style="font-size:13px"><span style="color:var(--muted2)">Total kWh:</span> <b style="color:var(--amber)">${totalKwhAll.toFixed(1)} kWh</b></span>
-      <span style="font-size:13px"><span style="color:var(--muted2)">Custo estimado:</span> <b style="color:var(--green)">$${totalCostAll.toFixed(2)}</b></span>
-      <span style="font-size:13px"><span style="color:var(--muted2)">Taxa:</span> <b>$${rate}/kWh</b></span>
-    </div>`;
+    tot.innerHTML =
+      '<div style="display:flex;gap:20px;flex-wrap:wrap">' +
+      '<span style="font-size:13px"><span style="color:var(--muted2)">Total kWh todos os carros:</span> <b style="color:var(--amber)">' + totalKwhAll.toFixed(1) + ' kWh</b></span>' +
+      '<span style="font-size:13px"><span style="color:var(--muted2)">Custo estimado:</span> <b style="color:var(--green)">$' + totalCostAll.toFixed(2) + '</b></span>' +
+      '<span style="font-size:13px"><span style="color:var(--muted2)">Taxa:</span> <b>$' + rate + '/kWh</b></span>' +
+      '</div>';
   }
 }
 
