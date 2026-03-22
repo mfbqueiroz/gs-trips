@@ -937,7 +937,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.6';
+const APP_VERSION = 'v2.7';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3605,6 +3605,34 @@ async function teslaGet(path) {
     throw new Error('Proxy fetch failed: ' + e.message);
   }
   if (res.status === 401) { tClear(); renderTesla(); return null; }
+  if (res.status === 412) {
+    // App not registered in region — auto-register then retry once
+    console.log('Tesla 412: auto-registering app...');
+    const regRes = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer gsadmin',
+        'X-Tesla-Token': T.accessToken,
+        'X-Tesla-Path':  '/api/1/partner_accounts',
+      },
+      body: JSON.stringify({ domain: 'mfbqueiroz.github.io' }),
+    });
+    const regData = await regRes.json().catch(()=>({}));
+    console.log('Register result:', regRes.status, regData);
+    // Retry original request
+    const retry = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer gsadmin',
+        'X-Tesla-Token': T.accessToken,
+        'X-Tesla-Path':  path,
+      }
+    });
+    if (retry.ok) return retry.json();
+    const retryBody = await retry.text().catch(()=>'');
+    throw new Error('Tesla proxy ' + retry.status + ' (after register): ' + retryBody.slice(0,120));
+  }
   if (!res.ok) {
     const body = await res.text().catch(()=>'');
     throw new Error('Tesla proxy ' + res.status + ': ' + body.slice(0,120));
