@@ -576,7 +576,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
     <input type="password" id="pwd-input" class="login-input" placeholder="••••••••" autocomplete="off" autofocus>
     <button class="login-btn" onclick="doLogin()">ENTRAR</button>
     <div class="login-error" id="login-err"></div>
-    <div id="login-ver" style="margin-top:18px;font-size:11px;color:var(--muted2);text-align:center"></div>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted2);text-align:center;letter-spacing:0.05em">GS Trips <span id="login-ver-num" style="color:var(--amber);font-weight:700">v3.4</span></div>
   </div>
 </div>
 
@@ -1100,8 +1100,13 @@ const isDemo  = () => S.role === 'demo';
 // ════════════════════════════════════════════════════════
 document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
 // Show version on login screen immediately
-const _lv = document.getElementById('login-ver');
+const _lv = document.getElementById('login-ver-num');
 if (_lv) _lv.textContent = APP_VERSION;
+// Also update on DOM ready in case script runs before element
+document.addEventListener('DOMContentLoaded', function() {
+  const lv2 = document.getElementById('login-ver-num');
+  if (lv2) lv2.textContent = APP_VERSION;
+});
 if (_lv) _lv.textContent = APP_VERSION;
 
 function doLogin() {
@@ -1351,7 +1356,7 @@ function loadDemoData() {
 async function initApp() {
   document.getElementById('fin-year').textContent = S.finYear;
   document.getElementById('ver-badge').textContent = APP_VERSION;
-  const loginVer = document.getElementById('login-ver');
+  const loginVer = document.getElementById('login-ver-num');
   if (loginVer) loginVer.textContent = APP_VERSION;
   updateFrotaLabel();
   // Demo mode banner
@@ -4514,6 +4519,22 @@ function getTeslaChargesForReservation(res) {
     const d = new Date(h.timestamp*1000).toISOString().slice(0,10);
     return d >= res.pickupDate && d <= res.returnDate;
   });
+}
+
+function loginTeslaFromLogin() {
+  // Save a flag so after OAuth we auto-login as demo or prompt for password
+  sessionStorage.setItem('tesla_login_from_login', '1');
+  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  localStorage.setItem('tesla_oauth_state', state);
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id:     TESLA_CLIENT_ID,
+    redirect_uri:  TESLA_REDIRECT_URI,
+    scope:         TESLA_SCOPES,
+    state:         state,
+    locale:        'en-US',
+  });
+  window.location.href = 'https://auth.tesla.com/oauth2/v3/authorize?' + params.toString();
 }
 
 // Check OAuth callback on load
