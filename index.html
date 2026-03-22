@@ -607,7 +607,8 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <button class="tab-btn" data-tab="historico" data-roles="admin" onclick="switchTab('historico')"><span class="tab-icon">📋</span><span class="tab-label">Histórico</span></button>
       <button class="tab-btn" data-tab="financiamento" data-roles="admin" onclick="switchTab('financiamento')"><span class="tab-icon">🏦</span><span class="tab-label">Financ.</span><span id="fin-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;line-height:14px;text-align:center;margin-top:1px"></span></button>
       <button class="tab-btn" data-tab="investidores" data-roles="admin" onclick="switchTab('investidores')"><span class="tab-icon">📈</span><span class="tab-label">Invest.</span></button>
-      <button class="tab-btn" data-tab="tesla" data-roles="admin" onclick="switchTab('tesla')"><span class="tab-icon">⚡</span><span class="tab-label">Cargas</span></button>
+      <button class="tab-btn" data-tab="tesla" data-roles="admin" onclick="switchTab('tesla')"><span class="tab-icon">🚗</span><span class="tab-label">Tesla</span></button>
+      <button class="tab-btn" data-tab="cargas" data-roles="admin" onclick="switchTab('cargas')"><span class="tab-icon">⚡</span><span class="tab-label">Cargas</span></button>
     </nav>
   <main>
 
@@ -881,28 +882,38 @@ textarea.fld-input{resize:vertical;min-height:70px}
 
 
     <!-- ─── TESLA ─── -->
+    <!-- ─── TESLA ─── -->
     <section class="tab-panel" id="panel-tesla">
       <div class="section-header">
-        <div class="section-title">⚡ Carregamentos EV</div>
+        <div class="section-title">🚗 Tesla Fleet</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button class="btn" onclick="teslaRefresh()" id="tesla-refresh-btn" style="display:none">↻ Atualizar Tesla</button>
+          <button class="btn" onclick="teslaRefresh()" id="tesla-refresh-btn" style="display:none">↻ Atualizar</button>
           <button class="btn" onclick="teslaDisconnect()" id="tesla-disconnect-btn" style="display:none;color:var(--red)">Desconectar</button>
-          <button class="btn primary" id="btn-add-charge" onclick="openChargeModal()" style="display:none">+ Registrar Carga</button>
         </div>
       </div>
 
-      <!-- Tesla connection banner -->
-      <div id="tesla-auth-banner" style="background:var(--card2);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-weight:700;color:var(--amber);margin-bottom:2px">⚡ Tesla Fleet API</div>
-          <div style="font-size:12px;color:var(--muted2)">Conecte para importar carregamentos automaticamente</div>
+      <!-- Not connected -->
+      <div id="tesla-auth-banner" style="background:var(--card2);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:24px;margin-bottom:16px;max-width:540px">
+        <div style="font-size:32px;margin-bottom:8px">⚡</div>
+        <div style="font-weight:700;font-size:18px;color:var(--amber);margin-bottom:6px">Tesla Fleet API</div>
+        <div style="font-size:13px;color:var(--muted2);margin-bottom:16px;line-height:1.6">
+          Conecte sua conta Tesla para ver carregamentos por período,<br>
+          bateria em tempo real e vincular custos às reservas.
         </div>
-        <button class="btn primary" onclick="teslaConnect()" style="padding:8px 18px">Login com Tesla</button>
+        <button class="btn primary" onclick="teslaConnect()" style="padding:12px 24px">⚡ Login com Tesla</button>
       </div>
 
-      <!-- Tesla period filter (shown when connected) -->
+      <!-- Connected: period filter + vehicle cards -->
       <div id="tesla-period-bar" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fld-group">
+            <div class="fld-label">De</div>
+            <input type="date" class="fld-input" id="tesla-from" style="padding:6px 10px;width:150px" oninput="teslaFilterCharges()">
+          </div>
+          <div class="fld-group">
+            <div class="fld-label">Até</div>
+            <input type="date" class="fld-input" id="tesla-to" style="padding:6px 10px;width:150px" oninput="teslaFilterCharges()">
+          </div>
           <div class="fld-group">
             <div class="fld-label">$/kWh</div>
             <input type="number" step="0.01" class="fld-input" id="tesla-rate" value="0.12" style="padding:6px 10px;width:80px" oninput="teslaFilterCharges()">
@@ -916,11 +927,18 @@ textarea.fld-input{resize:vertical;min-height:70px}
           </div>
         </div>
         <div id="tesla-period-totals" style="margin-top:10px"></div>
-        <div id="tesla-out" style="margin-top:12px"></div>
       </div>
+      <div id="tesla-out"></div>
+    </section>
 
-      <!-- Manual charges section -->
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin-bottom:10px">Carregamentos registrados manualmente</div>
+    <!-- ─── CARGAS MANUAIS ─── -->
+    <section class="tab-panel" id="panel-cargas">
+      <div class="section-header">
+        <div class="section-title">⚡ Carregamentos</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn primary" id="btn-add-charge" onclick="openChargeModal()" style="display:none">+ Registrar Carga</button>
+        </div>
+      </div>
 
       <!-- Stats row -->
       <div class="stats-row" id="charge-stats" style="margin-bottom:16px"></div>
@@ -1041,7 +1059,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v3.6';
+const APP_VERSION = 'v3.7';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1460,7 +1478,8 @@ function renderCurrentTab() {
   else if (S.tab === 'cotacao') renderCotacao();
   else if (S.tab === 'financiamento') renderFinanciamento();
   else if (S.tab === 'investidores') renderInvestidores();
-  else if (S.tab === 'tesla') renderCharges();
+  else if (S.tab === 'tesla') renderTesla();
+  else if (S.tab === 'cargas') renderCharges();
 }
 
 // ════════════════════════════════════════════════════════
@@ -4602,7 +4621,7 @@ async function processPendingTeslaCallback() {
   const ok = await teslaHandleCallback(code, state);
   if (ok) {
     setTimeout(() => switchTab('tesla'), 300);
-    toast('⚡ Tesla conectado!', 'ok');
+    toast('⚡ Tesla conectado! Carregando veículos...', 'ok');
   }
 }
 
