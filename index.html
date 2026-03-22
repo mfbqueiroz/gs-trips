@@ -937,7 +937,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.5';
+const APP_VERSION = 'v2.6';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3690,8 +3690,9 @@ async function renderTesla() {
         '<b>No carro:</b> Controles → Segurança → Acesso a apps de terceiros → Ativar' +
         '</div>' +
         '<div style="display:flex;gap:8px">' +
-        '<button class="btn primary" onclick="teslaDisconnect();teslaConnect()">Reconectar com outra conta</button>' +
-        '<button class="btn" onclick="teslaDebug()">Ver diagnóstico</button>' +
+        '<button class="btn primary" onclick="teslaRegisterApp()">Registrar app na regiao</button>' +
+        '<button class="btn" onclick="teslaDisconnect();teslaConnect()">Reconectar</button>' +
+        '<button class="btn" onclick="teslaDebug()">Diagnostico</button>' +
         '</div>' +
         '</div>';
       return;
@@ -4175,6 +4176,37 @@ async function teslaDebug() {
   }
   loader(false);
   alert('Tesla API Debug:\n\n' + results.join('\n\n'));
+}
+
+async function teslaRegisterApp() {
+  // Required one-time registration per region
+  // Must be called with a valid access_token
+  if (!T.accessToken) { toast('Conecte o Tesla primeiro', 'err'); return; }
+  loader(true, 'Registrando app na regiao...');
+  try {
+    const res = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer gsadmin',
+        'X-Tesla-Token': T.accessToken,
+        'X-Tesla-Path':  '/api/1/partner_accounts',
+      },
+      body: JSON.stringify({ domain: 'mfbqueiroz.github.io' }),
+    });
+    const data = await res.json().catch(() => ({}));
+    console.log('Register response:', res.status, data);
+    loader(false);
+    if (res.ok || res.status === 200) {
+      toast('App registrado! Atualizando...', 'ok');
+      await teslaRefresh();
+    } else {
+      alert('Registro: ' + res.status + '\n' + JSON.stringify(data).slice(0,300));
+    }
+  } catch(e) {
+    loader(false);
+    toast('Erro registro: ' + e.message, 'err');
+  }
 }
 
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
