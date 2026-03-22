@@ -1062,7 +1062,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v4.1';
+const APP_VERSION = 'v4.2';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -4358,12 +4358,22 @@ async function renderTesla() {
       let detail = null;
       let chargeHistory = [];
 
-      // Wake if sleeping
+      // Wake if sleeping — uses POST
       if (v.state === 'asleep' || v.state === 'offline') {
         try {
-          out.innerHTML = '<div style="color:var(--amber);padding:8px 0">Acordando ' + (v.display_name||'veículo') + '... (aguarde)</div>';
-          await teslaGet('/api/1/vehicles/' + v.id_s + '/wake_up');
-          await new Promise(r => setTimeout(r, 6000));
+          out.innerHTML = '<div style="color:var(--amber);padding:8px 0">⚡ Acordando ' + (v.display_name||'veículo') + '... aguarde ~30s</div>';
+          const wakeRes = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+            method: 'POST',
+            headers: {
+              'Authorization':  'Bearer gsadmin',
+              'Content-Type':   'application/json',
+              'X-Tesla-Token':  T.accessToken,
+              'X-Tesla-Path':   '/api/1/vehicles/' + v.id_s + '/wake_up',
+            },
+            body: '{}',
+          });
+          console.log('wake_up status:', wakeRes.status);
+          await new Promise(r => setTimeout(r, 8000));
         } catch(e) { console.warn('Wake error:', e.message); }
       }
 
@@ -4373,14 +4383,25 @@ async function renderTesla() {
         detail = d ? d.response : null;
       } catch(e) { console.warn('Detail error:', v.display_name, e.message); }
 
-      // Charge history — try id_s then VIN
+      // Charge history with date range (Tesla API requires startTime/endTime)
+      const fromEl2 = document.getElementById('tesla-from');
+      const toEl2   = document.getElementById('tesla-to');
+      const startTime = fromEl2 && fromEl2.value ? fromEl2.value + 'T00:00:00Z' : new Date(Date.now()-365*86400000).toISOString();
+      const endTime   = toEl2   && toEl2.value   ? toEl2.value   + 'T23:59:59Z' : new Date().toISOString();
+      const histParams = '?startTime=' + encodeURIComponent(startTime) + '&endTime=' + encodeURIComponent(endTime);
+
       for (const vid of [v.id_s, v.vin].filter(Boolean)) {
         if (chargeHistory.length) break;
         try {
-          const h = await teslaGet('/api/1/vehicles/' + vid + '/charge_history');
-          console.log('charge_history [' + vid + ']:', JSON.stringify(h).slice(0,500));
+          const h = await teslaGet('/api/1/vehicles/' + vid + '/charge_history' + histParams);
+          console.log('charge_history [' + vid + ']:', JSON.stringify(h).slice(0,600));
           const arr = (h && h.response) ? h.response : (h && h.data) ? h.data : (Array.isArray(h) ? h : []);
-          if (arr.length) chargeHistory = arr;
+          if (arr.length) { chargeHistory = arr; break; }
+          // Try without params as fallback
+          const h2 = await teslaGet('/api/1/vehicles/' + vid + '/charge_history');
+          console.log('charge_history no-params [' + vid + ']:', JSON.stringify(h2).slice(0,400));
+          const arr2 = (h2 && h2.response) ? h2.response : (h2 && h2.data) ? h2.data : (Array.isArray(h2) ? h2 : []);
+          if (arr2.length) chargeHistory = arr2;
         } catch(e) { console.warn('charge_history [' + vid + '] error:', e.message); }
       }
       console.log(v.display_name + ': ' + chargeHistory.length + ' carregamentos');
