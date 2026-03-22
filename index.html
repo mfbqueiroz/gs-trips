@@ -1062,7 +1062,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v3.8';
+const APP_VERSION = 'v3.9';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -4184,15 +4184,19 @@ async function teslaGet(path) {
   }
   // Route through Vercel proxy to avoid CORS
   const PROXY = 'https://gs-rental-backend-gpke.vercel.app/api/tesla';
+  // wake_up requires POST
+  const isPost = path.includes('wake_up');
   let res;
   try {
     res = await fetch(PROXY, {
-      method: 'GET',
+      method: isPost ? 'POST' : 'GET',
       headers: {
         'Authorization':  'Bearer gsadmin',
         'X-Tesla-Token':  T.accessToken,
         'X-Tesla-Path':   path,
-      }
+        'Content-Type':   'application/json',
+      },
+      body: isPost ? '{}' : undefined,
     });
   } catch(e) {
     throw new Error('Proxy fetch failed: ' + e.message);
@@ -4343,39 +4347,36 @@ async function renderTesla() {
 
     for (let vi = 0; vi < vehicles.length; vi++) {
       const v = vehicles[vi];
-      out.innerHTML = '<div style="color:var(--muted2);padding:8px 0">Carregando ' + (vi+1) + '/' + vehicles.length + ': ' + (v.display_name||v.vin||'Tesla') + '...</div>';
+      out.innerHTML = '<div style="color:var(--muted2);padding:8px 0">Carregando ' + (vi+1) + '/' + vehicles.length + ': ' + (v.display_name||v.vin||'EV') + '...</div>';
       let detail = null;
       let chargeHistory = [];
+
+      // Wake if sleeping
+      if (v.state === 'asleep' || v.state === 'offline') {
+        try {
+          out.innerHTML = '<div style="color:var(--amber);padding:8px 0">Acordando ' + (v.display_name||'veículo') + '... (aguarde)</div>';
+          await teslaGet('/api/1/vehicles/' + v.id_s + '/wake_up');
+          await new Promise(r => setTimeout(r, 6000));
+        } catch(e) { console.warn('Wake error:', e.message); }
+      }
+
+      // Vehicle data
       try {
         const d = await teslaGet('/api/1/vehicles/' + v.id_s + '/vehicle_data?endpoints=charge_state%7Cdrive_state%7Cvehicle_state');
         detail = d ? d.response : null;
       } catch(e) { console.warn('Detail error:', v.display_name, e.message); }
-      try {
-        const h = await teslaGet('/api/1/vehicles/' + v.id_s + '/charge_history');
-        console.log('charge_history raw:', JSON.stringify(h).slice(0,300));
-        if (h && h.response && Array.isArray(h.response)) {
-          chargeHistory = h.response;
-        } else if (h && h.data && Array.isArray(h.data)) {
-          chargeHistory = h.data;
-        } else if (h && Array.isArray(h)) {
-          chargeHistory = h;
-        }
-        console.log(v.display_name + ': ' + chargeHistory.length + ' charges loaded');
-        // If no history, try charging_history endpoint (older API)
-        if (!chargeHistory.length) {
-          const h2 = await teslaGet('/api/1/vehicles/' + v.id_s + '/charging_history');
-          console.log('charging_history raw:', JSON.stringify(h2).slice(0,300));
-          if (h2 && h2.response && Array.isArray(h2.response)) chargeHistory = h2.response;
-        }
-      } catch(e) {
-        console.warn('Charge history error:', v.display_name, e.message);
-        // Try alternate endpoint
+
+      // Charge history — try id_s then VIN
+      for (const vid of [v.id_s, v.vin].filter(Boolean)) {
+        if (chargeHistory.length) break;
         try {
-          const h2 = await teslaGet('/api/1/vehicles/' + v.id_s + '/charging_history');
-          console.log('charging_history fallback:', JSON.stringify(h2).slice(0,300));
-          if (h2 && h2.response) chargeHistory = h2.response;
-        } catch(e2) { console.warn('charging_history also failed:', e2.message); }
+          const h = await teslaGet('/api/1/vehicles/' + vid + '/charge_history');
+          console.log('charge_history [' + vid + ']:', JSON.stringify(h).slice(0,500));
+          const arr = (h && h.response) ? h.response : (h && h.data) ? h.data : (Array.isArray(h) ? h : []);
+          if (arr.length) chargeHistory = arr;
+        } catch(e) { console.warn('charge_history [' + vid + '] error:', e.message); }
       }
+      console.log(v.display_name + ': ' + chargeHistory.length + ' carregamentos');
       T.vehicleData.push({ v, detail, chargeHistory });
     }
 
