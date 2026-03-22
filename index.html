@@ -867,7 +867,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <div id="tesla-auth-banner" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;margin-bottom:16px">
         <div style="font-weight:700;color:var(--amber);margin-bottom:6px">⚡ Tesla Fleet API</div>
         <div style="font-size:13px;color:var(--muted2);margin-bottom:12px">Conecte via client_credentials para ver bateria e histórico dos seus Tesla.</div>
-        <button class="btn primary" onclick="teslaConnect()">⚡ Conectar Tesla</button>
+        <button class="btn primary" onclick="teslaConnect(); document.getElementById('tesla-auth-banner').style.display='none';">⚡ Conectar Tesla</button>
       </div>
       <div id="tesla-out"></div>
     </section>
@@ -905,7 +905,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.0';
+const APP_VERSION = 'v2.1';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3419,73 +3419,47 @@ function tClear() {
 
 // ── Client Credentials flow (grant_type=client_credentials) ──
 async function teslaConnect() {
-  loader(true, 'Conectando Tesla...');
-  try {
-    // client_credentials: token gerado direto com client_id + secret
-    // Precisa do proxy backend pois CORS bloqueia direto do browser
-    const res = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer gsadmin' },
-      body: JSON.stringify({
-        grant_type:    'client_credentials',
-        client_id:     TESLA_CLIENT_ID,
-        client_secret: TESLA_CLIENT_SECRET,
-        scope:         TESLA_SCOPES,
-        audience:      'https://fleet-api.prd.na.vn.cloud.tesla.com',
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.access_token) {
-        T.accessToken = data.access_token;
-        T.expiresAt   = Date.now() + (data.expires_in || 3600) * 1000;
-        tSave();
-        loader(false);
-        toast('Tesla conectado ✓', 'ok');
-        renderTesla();
-        return;
-      }
-    }
-    // Backend not available — ask user to paste token manually
-    loader(false);
-    showTeslaTokenInput();
-  } catch(e) {
-    loader(false);
-    showTeslaTokenInput();
-  }
+  // Go straight to manual token — curl command is fastest approach
+  showTeslaTokenInput();
 }
 
 function showTeslaTokenInput() {
   const out = document.getElementById('tesla-out');
   if (!out) return;
+  const cmd = `curl -X POST https://auth.tesla.com/oauth2/v3/token -d "grant_type=client_credentials" -d "client_id=${TESLA_CLIENT_ID}" -d "client_secret=${encodeURIComponent(TESLA_CLIENT_SECRET)}" -d "scope=vehicle_device_data vehicle_charging_cmds" -d "audience=https://fleet-api.prd.na.vn.cloud.tesla.com"`;
   out.innerHTML = `
-    <div class="card-dark" style="max-width:520px">
-      <div style="font-weight:700;color:var(--amber);margin-bottom:8px">Conectar Tesla manualmente</div>
-      <div style="font-size:13px;color:var(--muted2);margin-bottom:14px">
-        O app usa <b>client_credentials</b>. Para obter o token:<br><br>
-        1. Abra o terminal e execute:<br>
-        <code style="background:var(--card);padding:6px 10px;border-radius:6px;display:block;margin:8px 0;font-size:12px;word-break:break-all">curl -X POST https://auth.tesla.com/oauth2/v3/token \<br>
-          -d "grant_type=client_credentials" \<br>
-          -d "client_id=${TESLA_CLIENT_ID}" \<br>
-          -d "client_secret=${TESLA_CLIENT_SECRET}" \<br>
-          -d "scope=vehicle_device_data vehicle_charging_cmds" \<br>
-          -d "audience=https://fleet-api.prd.na.vn.cloud.tesla.com"</code>
-        2. Copie o <b>access_token</b> da resposta<br>
-        3. Cole abaixo:
+    <div style="max-width:560px">
+      <div style="font-weight:700;color:var(--amber);font-size:18px;margin-bottom:12px">⚡ Conectar Tesla Fleet</div>
+
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Passo 1 — Gerar token no terminal</div>
+        <div style="font-size:12px;color:var(--muted2);margin-bottom:8px">Abra o Terminal no Mac ou CMD no Windows e execute:</div>
+        <div style="background:var(--card);border-radius:6px;padding:10px;font-size:11px;font-family:monospace;word-break:break-all;color:var(--amber);margin-bottom:8px">${cmd}</div>
+        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="navigator.clipboard.writeText(\`${cmd}\`).then(()=>toast('Comando copiado ✓','ok'))">📋 Copiar comando</button>
       </div>
-      <div class="fld-group" style="margin-bottom:12px">
-        <div class="fld-label">Access Token</div>
-        <textarea class="fld-input" id="tesla-token-input" rows="3" placeholder="Cole o token aqui..."></textarea>
+
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Passo 2 — Cole o access_token</div>
+        <textarea class="fld-input" id="tesla-token-input" rows="4" placeholder='{"access_token":"eyJhbG..."}'
+          style="font-size:11px;font-family:monospace"></textarea>
+        <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cole a resposta completa do curl ou apenas o valor de access_token</div>
       </div>
-      <button class="btn primary" onclick="teslaSetManualToken()">Conectar</button>
+
+      <button class="btn primary" style="width:100%;padding:12px" onclick="teslaSetManualToken()">⚡ Conectar</button>
     </div>`;
 }
 
 function teslaSetManualToken() {
-  const val = document.getElementById('tesla-token-input')?.value?.trim();
+  let val = document.getElementById('tesla-token-input')?.value?.trim();
   if (!val) { toast('Cole o token primeiro', 'err'); return; }
+  // Try parsing as JSON first
+  try {
+    const parsed = JSON.parse(val);
+    if (parsed.access_token) val = parsed.access_token;
+  } catch(e) { /* raw token string */ }
+  if (!val || val.length < 20) { toast('Token inválido', 'err'); return; }
   T.accessToken = val;
-  T.expiresAt   = Date.now() + 8 * 3600 * 1000; // assume 8h
+  T.expiresAt   = Date.now() + 8 * 3600 * 1000;
   tSave();
   toast('Token salvo ✓', 'ok');
   renderTesla();
@@ -3518,16 +3492,30 @@ async function teslaRefreshTokens() {
 }
 
 async function teslaGet(path) {
-  // Refresh if token expired
+  if (!T.accessToken) return null;
+  // Refresh if expired
   if (T.expiresAt && Date.now() > T.expiresAt - 60000) {
     const ok = await teslaRefreshTokens();
     if (!ok) { tClear(); renderTesla(); return null; }
   }
-  const res = await fetch(TESLA_BASE + path, {
-    headers: { 'Authorization': 'Bearer ' + T.accessToken }
-  });
-  if (res.status === 401) { tClear(); renderTesla(); return null; }
-  if (!res.ok) throw new Error('Tesla API ' + res.status);
+  const url = TESLA_BASE + path;
+  let res;
+  try {
+    res = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + T.accessToken }
+    });
+  } catch(e) {
+    throw new Error('Fetch failed: ' + e.message);
+  }
+  if (res.status === 401) {
+    tClear();
+    renderTesla();
+    return null;
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(()=>'');
+    throw new Error('Tesla API ' + res.status + ': ' + body.slice(0,120));
+  }
   return res.json();
 }
 
@@ -3606,7 +3594,20 @@ async function renderTesla() {
 
   } catch(e) {
     console.error('Tesla render error:', e);
-    out.innerHTML = `<div style="color:var(--red);padding:20px 0">Erro: ${e.message}</div>`;
+    const msg = e.message || String(e);
+    // If fetch failed entirely, likely bad token — clear and show connect
+    if (msg.includes('fetch') || msg.includes('401') || msg.includes('403')) {
+      tClear();
+      renderTesla();
+      return;
+    }
+    out.innerHTML = `<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:16px;color:var(--red)">
+      <div style="font-weight:700;margin-bottom:6px">Erro Tesla API</div>
+      <div style="font-size:13px">${msg}</div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted2)">
+        Verifique se o token é válido. Clique em Desconectar e reconecte.
+      </div>
+    </div>`;
   }
 }
 
