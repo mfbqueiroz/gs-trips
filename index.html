@@ -414,6 +414,91 @@ textarea.fld-input{resize:vertical;min-height:70px}
   .stats-row{grid-template-columns:1fr 1fr}
   .tab-panel{padding:16px 12px 40px}
 }
+/* ── VEÍCULOS ── */
+.veh-table{width:100%;border-collapse:collapse;font-size:13px}
+.veh-table th{background:var(--card2);color:var(--muted2);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.veh-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.veh-table tr:hover td{background:var(--card)}
+.veh-status{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px}
+.veh-status.active{background:rgba(16,185,129,.15);color:#10b981}
+.veh-status.inactive{background:rgba(107,114,128,.15);color:var(--muted2)}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:4px}
+.cat-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative}
+.cat-card-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--amber);margin-bottom:10px}
+.cat-rates{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.cat-rate-box{text-align:center}
+.cat-rate-lbl{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
+.cat-rate-val{font-size:16px;font-weight:700;color:var(--text);font-family:'Barlow Condensed',sans-serif}
+.cat-edit-btn{position:absolute;top:10px;right:10px;background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px}
+.cat-edit-btn:hover{border-color:var(--amber);color:var(--amber)}
+.cotacao-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.cotacao-wrap{grid-template-columns:1fr}}
+.card-dark{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:500px){.form-row{grid-template-columns:1fr}}
+.cot-result-card{background:var(--card2);border:1px solid var(--amber);border-radius:10px;padding:20px}
+.cot-days{font-size:13px;color:var(--muted2);margin-bottom:14px}
+.cot-breakdown{list-style:none;padding:0;margin:0 0 14px}
+.cot-breakdown li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.cot-breakdown li:last-child{border:none}
+.cot-total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;border-top:2px solid var(--amber)}
+.cot-total-lbl{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700}
+.cot-total-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:var(--amber)}
+.cot-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.cot-no-result{color:var(--muted2);font-size:14px;padding:40px 0;text-align:center}
+.fin-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.fin-card-hdr{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.fin-card-hdr:hover{background:var(--card)}
+.fin-card-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700}
+.fin-card-meta{font-size:12px;color:var(--muted2);margin-top:2px}
+.fin-progress-wrap{min-width:140px;text-align:right}
+.fin-progress{height:6px;background:var(--border);border-radius:3px;margin-top:4px;overflow:hidden}
+.fin-progress-bar{height:100%;background:var(--amber);border-radius:3px;transition:width .5s}
+.fin-progress-lbl{font-size:11px;color:var(--muted2)}
+.fin-payments{padding:0 16px 14px}
+.fin-pay-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.fin-pay-table th{color:var(--muted2);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border)}
+.fin-pay-table td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.fin-pay-table tr:hover td{background:var(--card)}
+.pay-confirm-btn{background:none;border:1px solid var(--green);color:var(--green);border-radius:5px;padding:2px 8px;cursor:pointer;font-size:11px}
+.pay-confirm-btn:hover{background:rgba(16,185,129,.15)}
+.pay-undo-btn{background:none;border:1px solid var(--muted);color:var(--muted2);border-radius:5px;padding:2px 8px;cursor:pointer;font-size:11px}
+/* ── INVESTIDORES ── */
+.inv-header-card{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+.inv-name{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:var(--amber)}
+.inv-pct-badge{background:var(--amber);color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;padding:6px 16px;border-radius:20px}
+.inv-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.inv-kpi{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.inv-kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--amber)}
+.inv-kpi-lbl{font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.inv-kpi-val.green{color:var(--green)}
+.inv-section-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--amber);margin:16px 0 8px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.inv-vehicles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+.inv-veh-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.inv-veh-id{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--amber)}
+.inv-veh-name{font-size:12px;color:var(--muted2);margin-top:2px}
+.inv-veh-stats{display:flex;gap:12px;margin-top:8px;font-size:12px}
+.inv-res-table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-res-table th{background:var(--card2);color:var(--muted2);font-weight:600;text-align:left;padding:7px 10px;border-bottom:1px solid var(--border)}
+.inv-res-table td{padding:7px 10px;border-bottom:1px solid var(--border)}
+.inv-res-table tr:hover td{background:var(--card)}
+.inv-year-nav{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.inv-month-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.inv-month-chip{padding:4px 10px;border-radius:12px;font-size:12px;cursor:pointer;border:1px solid var(--border);color:var(--muted2);background:transparent;font-family:'DM Sans',sans-serif}
+.inv-month-chip.active{background:var(--amber);color:#000;border-color:var(--amber);font-weight:700}
+.inv-list-table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-list-table th{background:var(--card2);color:var(--muted2);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+.inv-list-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.inv-list-table tr:hover td{background:var(--card)}
+.inv-cal-mini{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px}
+.inv-cal-day{height:18px;border-radius:2px;background:var(--border)}
+.inv-cal-day.occ{background:rgba(245,158,11,.5)}
+.inv-cal-day.today{outline:2px solid var(--amber)}
+
+.modal-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:500px){.modal-form-row{grid-template-columns:1fr}}
+.modal-form-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;color:var(--amber);font-weight:700;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.modal-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 </style>
 </head>
 <body>
@@ -439,6 +524,10 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <button class="tab-btn" data-tab="financeiro" onclick="switchTab('financeiro')"><span class="tab-icon">💰 </span>Financeiro</button>
       <button class="tab-btn" data-tab="historico" onclick="switchTab('historico')"><span class="tab-icon">📋 </span>Histórico</button>
       <button class="tab-btn" data-tab="frota" onclick="switchTab('frota')"><span class="tab-icon">🚗 </span>Frota</button>
+      <button class="tab-btn" data-tab="veiculos" onclick="switchTab('veiculos')"><span class="tab-icon">🔧 </span>Veículos</button>
+      <button class="tab-btn" data-tab="cotacao" onclick="switchTab('cotacao')"><span class="tab-icon">💲 </span>Cotação</button>
+      <button class="tab-btn" data-tab="financiamento" onclick="switchTab('financiamento')"><span class="tab-icon">🏦 </span>Financiamento</button>
+      <button class="tab-btn" data-tab="investidores" onclick="switchTab('investidores')"><span class="tab-icon">📈 </span>Investidores</button>
     </nav>
     <div class="header-right">
       <div class="save-dot" id="save-dot" title="Status de salvamento"></div>
@@ -560,6 +649,12 @@ textarea.fld-input{resize:vertical;min-height:70px}
         </div>
       </div>
 
+      <div style="margin-bottom:12px">
+        <select class="filter-sel" id="frota-cat-filter" onchange="renderFrota()" style="max-width:280px">
+          <option value="">Todas as categorias</option>
+        </select>
+      </div>
+
       <div id="fleet-mgmt-panel" style="display:none"></div>
 
       <div class="fleet-cal-scroll">
@@ -572,6 +667,123 @@ textarea.fld-input{resize:vertical;min-height:70px}
         <div class="legend-item"><div class="legend-dot" style="background:rgba(249,115,22,0.4)"></div>Retorno</div>
         <div class="legend-item"><div class="legend-dot" style="background:rgba(245,158,11,0.7);outline:1px solid var(--amber)"></div>Hoje</div>
       </div>
+    </section>
+
+    <!-- ─── VEÍCULOS ─── -->
+    <section class="tab-panel" id="panel-veiculos">
+      <div class="section-header">
+        <div class="section-title">Veículos &amp; Categorias</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn active" id="veh-tab-btn-list" onclick="switchVehTab('list')">Frota</button>
+          <button class="btn" id="veh-tab-btn-cat" onclick="switchVehTab('cat')">Categorias &amp; Preços</button>
+          <button class="btn primary" onclick="document.getElementById('veh-xl-input').click()" id="veh-import-btn">📊 Importar Excel</button>
+          <input type="file" id="veh-xl-input" accept=".xlsx,.xls" style="display:none" onchange="handleVehicleXL(this.files[0])">
+        </div>
+      </div>
+      <div id="veh-subtab-list">
+        <div id="veh-list-out"></div>
+        <button class="btn primary" onclick="openAddVehicleModal()" style="margin-top:12px" id="add-veh-btn">+ Adicionar Veículo</button>
+      </div>
+      <div id="veh-subtab-cat" style="display:none">
+        <div id="cat-pricing-out"></div>
+        <button class="btn primary" onclick="openAddCatModal()" style="margin-top:12px" id="add-cat-btn">+ Nova Categoria</button>
+      </div>
+    </section>
+
+    <!-- ─── COTAÇÃO ─── -->
+    <section class="tab-panel" id="panel-cotacao">
+      <div class="section-header">
+        <div class="section-title">Cotação Interna</div>
+        <div style="font-size:12px;color:var(--muted2)">Uso interno · Calcule valores para o cliente</div>
+      </div>
+      <div class="cotacao-wrap">
+        <div class="card-dark">
+          <div class="form-row">
+            <div class="fld-group">
+              <div class="fld-label">Data de Retirada</div>
+              <input type="date" class="fld-input" id="cot-start" oninput="calcCotacao()">
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Data de Devolução</div>
+              <input type="date" class="fld-input" id="cot-end" oninput="calcCotacao()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fld-group">
+              <div class="fld-label">Categoria</div>
+              <select class="filter-sel" id="cot-cat" onchange="onCatChange()" style="width:100%">
+                <option value="">Selecione ou digite a diária</option>
+              </select>
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Diária base ($) <span style="color:var(--amber);font-size:10px">editável</span></div>
+              <input type="number" step="0.01" class="fld-input" id="cot-daily" placeholder="0.00" oninput="calcCotacao()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fld-group">
+              <div class="fld-label">Local de Retirada</div>
+              <select class="filter-sel" id="cot-loc" onchange="calcCotacao()" style="width:100%">
+                <option value="no-airport">Não aeroporto</option>
+                <option value="airport">(P) Aeroporto (MCO/MIA/FLL)</option>
+              </select>
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Sunpass / Toll ($)</div>
+              <input type="number" step="0.01" class="fld-input" id="cot-sunpass" placeholder="0.00" value="0" oninput="calcCotacao()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fld-group">
+              <div class="fld-label">Taxa de Entrega ($)</div>
+              <input type="number" step="0.01" class="fld-input" id="cot-delivery" placeholder="0.00" value="0" oninput="calcCotacao()">
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Outros adicionais ($)</div>
+              <input type="number" step="0.01" class="fld-input" id="cot-extras" placeholder="0.00" value="0" oninput="calcCotacao()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fld-group">
+              <div class="fld-label">Nome do Cliente</div>
+              <input type="text" class="fld-input" id="cot-name" placeholder="Nome completo">
+            </div>
+            <div class="fld-group">
+              <div class="fld-label">Telefone / WhatsApp</div>
+              <input type="text" class="fld-input" id="cot-phone" placeholder="+55...">
+            </div>
+          </div>
+        </div>
+        <div id="cot-result"></div>
+      </div>
+    </section>
+
+    <!-- ─── FINANCIAMENTO ─── -->
+    <section class="tab-panel" id="panel-financiamento">
+      <div class="section-header">
+        <div class="section-title">Financiamentos</div>
+        <button class="btn primary" onclick="openAddFinModal()" id="add-fin-btn">+ Novo Financiamento</button>
+      </div>
+      <div id="fin-list-out"></div>
+    </section>
+
+    <!-- ─── INVESTIDORES ─── -->
+    <section class="tab-panel" id="panel-investidores">
+      <div class="section-header">
+        <div class="section-title">Investidores</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="filter-sel" id="inv-selector" onchange="renderInvestidores()" style="min-width:200px">
+            <option value="">— Selecione investidor —</option>
+          </select>
+          <button class="btn primary" onclick="openAddInvModal()" id="add-inv-btn">+ Novo Investidor</button>
+        </div>
+      </div>
+
+      <!-- Dashboard do investidor selecionado -->
+      <div id="inv-dashboard"></div>
+
+      <!-- Lista de todos investidores (admin overview) -->
+      <div id="inv-list-out" style="margin-top:20px"></div>
     </section>
 
   </main>
@@ -615,7 +827,7 @@ const EV_KW   = ['tesla','optiq','ev','electric','elétrico'];
 // ════════════════════════════════════════════════════════
 let S = {
   role: null, token: null,
-  data: { reservations: [], fleet: [], lastUpdated: null },
+  data: { reservations: [], fleet: [], vehicles: [], categories: [], financing: [], investors: [], lastUpdated: null },
   tab: 'agenda', filter: 'future',
   finYear: new Date().getFullYear(), finMonth: null,
   flY: new Date().getFullYear(), flM: new Date().getMonth(),
@@ -652,7 +864,7 @@ function doLogin() {
 }
 
 function doLogout() {
-  S = { ...S, role:null, token:null, data:{reservations:[],fleet:[],lastUpdated:null}, tab:'agenda', filter:'future', modal:null };
+  S = { ...S, role:null, token:null, data:{reservations:[],fleet:[],vehicles:[],categories:[],financing:[],investors:[],lastUpdated:null}, tab:'agenda', filter:'future', modal:null };
   document.getElementById('pwd-input').value = '';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -669,11 +881,19 @@ async function loadData() {
     const res = await fetch(API, { headers: { 'Authorization': `Bearer ${S.token}` } });
     if (res.ok) {
       const json = await res.json();
-      // Handle multiple response formats
       let stored = json.data ?? json.value ?? json;
       if (typeof stored === 'string') { try { stored = JSON.parse(stored); } catch(e) { stored = null; } }
       if (stored && typeof stored === 'object' && stored.reservations) {
-        S.data = stored;
+        // Merge — preserve new arrays if backend doesn't have them yet
+        S.data = {
+          reservations: stored.reservations || [],
+          fleet:        stored.fleet        || [],
+          vehicles:     stored.vehicles     || [],
+          categories:   stored.categories   || [],
+          financing:    stored.financing    || [],
+          investors:    stored.investors    || [],
+          lastUpdated:  stored.lastUpdated  || null,
+        };
       }
     }
   } catch(e) { console.warn('Load:', e); toast('Sem conexão — operando offline', 'err'); }
@@ -744,6 +964,10 @@ function renderCurrentTab() {
   else if (S.tab === 'financeiro') renderFinanceiro();
   else if (S.tab === 'historico') renderHistorico();
   else if (S.tab === 'frota') renderFrota();
+  else if (S.tab === 'veiculos') renderVeiculos();
+  else if (S.tab === 'cotacao') renderCotacao();
+  else if (S.tab === 'financiamento') renderFinanciamento();
+  else if (S.tab === 'investidores') renderInvestidores();
 }
 
 // ════════════════════════════════════════════════════════
@@ -1249,6 +1473,12 @@ function changeFlotaM(d) {
 }
 
 function renderFrota() {
+  // Populate category filter
+  const catSel = document.getElementById('frota-cat-filter');
+  if (catSel) {
+    const cats = [...new Set(S.data.fleet.map(v=>v.type).filter(Boolean))].sort();
+    catSel.innerHTML = '<option value="">Todas as categorias</option>' + cats.map(c=>`<option value="${c}"${catSel.value===c?' selected':''}>${c}</option>`).join('');
+  }
   renderFlotaCal();
   if (S.mgmtOpen) renderFleetMgmt();
 }
@@ -1276,9 +1506,13 @@ function renderFlotaCal() {
     (lu[r.vehicleId]=lu[r.vehicleId]||[]).push({start:r.pickupDate,end:r.returnDate||r.pickupDate,id:r.id});
   });
 
+  // Filter by category if selected
+  const catFilter = (document.getElementById('frota-cat-filter')||{}).value || '';
+  const fleet = catFilter ? S.data.fleet.filter(v=>v.type===catFilter) : S.data.fleet;
+
   // Rows
   let body = '<tbody>';
-  S.data.fleet.forEach(v=>{
+  fleet.forEach(v=>{
     const inactive = v.active===false;
     body += `<tr><td class="car-label-cell${inactive?' inactive':''}" title="${v.type}">${v.id}</td>`;
     const rsvs = lu[v.id]||[];
@@ -1589,7 +1823,846 @@ function loader(on, txt='Carregando...') {
 // ════════════════════════════════════════════════════════
 //  KEYBOARD
 // ════════════════════════════════════════════════════════
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+// ════════════════════════════════════════════════════════
+//  VEÍCULOS
+// ════════════════════════════════════════════════════════
+let vehSubtab = 'list';
+
+function switchVehTab(t) {
+  vehSubtab = t;
+  document.getElementById('veh-subtab-list').style.display = t==='list'?'':'none';
+  document.getElementById('veh-subtab-cat').style.display  = t==='cat'?'':'none';
+  document.getElementById('veh-tab-btn-list').classList.toggle('active', t==='list');
+  document.getElementById('veh-tab-btn-cat').classList.toggle('active', t==='cat');
+  renderVeiculos();
+}
+
+function renderVeiculos() {
+  if (vehSubtab === 'list') renderVehList();
+  else renderCatPricing();
+  // Show/hide admin buttons
+  const a = isAdmin();
+  const addV = document.getElementById('add-veh-btn');
+  const addC = document.getElementById('add-cat-btn');
+  const impB = document.getElementById('veh-import-btn');
+  if (addV) addV.style.display = a ? '' : 'none';
+  if (addC) addC.style.display = a ? '' : 'none';
+  if (impB) impB.style.display = a ? '' : 'none';
+}
+
+function renderVehList() {
+  const el = document.getElementById('veh-list-out');
+  const vehicles = S.data.vehicles || [];
+  if (!vehicles.length) {
+    el.innerHTML = '<div style="color:var(--muted2);padding:30px 0;text-align:center">Nenhum veículo cadastrado. Importe um Excel ou adicione manualmente.</div>';
+    return;
+  }
+  const catFilter = '';
+  let html = `<div style="overflow-x:auto"><table class="veh-table">
+    <thead><tr>
+      <th>ID / Placa</th><th>Veículo</th><th>Categoria</th><th>Ano</th>
+      <th>Cor</th><th>Milhas</th><th>Status</th>
+      ${isAdmin() ? '<th>Ações</th>' : ''}
+    </tr></thead><tbody>`;
+  vehicles.forEach((v, i) => {
+    const active = v.active !== false;
+    html += `<tr>
+      <td style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--amber)">${v.id||'—'}</td>
+      <td>${v.name||v.type||'—'}</td>
+      <td><span style="background:var(--amber-bg);color:var(--amber);padding:2px 8px;border-radius:8px;font-size:11px">${v.category||'—'}</span></td>
+      <td>${v.year||'—'}</td>
+      <td>${v.color||'—'}</td>
+      <td>${v.mileage ? fmt$(v.mileage,0)+' mi' : '—'}</td>
+      <td><span class="veh-status ${active?'active':'inactive'}">${active?'Ativo':'Inativo'}</span></td>
+      ${isAdmin() ? `<td><button class="btn" style="padding:3px 8px;font-size:11px" onclick="editVehicle(${i})">✏</button>
+        <button class="btn" style="padding:3px 8px;font-size:11px;margin-left:4px" onclick="toggleVehicle(${i})">${active?'Desativar':'Ativar'}</button></td>` : ''}
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function renderCatPricing() {
+  const el = document.getElementById('cat-pricing-out');
+  const cats = S.data.categories || [];
+  if (!cats.length) {
+    el.innerHTML = '<div style="color:var(--muted2);padding:30px 0;text-align:center">Nenhuma categoria cadastrada.</div>';
+    return;
+  }
+  let html = '<div class="cat-grid">';
+  cats.forEach((c, i) => {
+    html += `<div class="cat-card">
+      ${isAdmin() ? `<button class="cat-edit-btn" onclick="editCat(${i})">✏ Editar</button>` : ''}
+      <div class="cat-card-name">${c.name}</div>
+      <div class="cat-rates">
+        <div class="cat-rate-box"><div class="cat-rate-lbl">Diária</div><div class="cat-rate-val">$${fmt$(c.daily)}</div></div>
+        <div class="cat-rate-box"><div class="cat-rate-lbl">Semana</div><div class="cat-rate-val">$${fmt$(c.weekly)}</div></div>
+        <div class="cat-rate-box"><div class="cat-rate-lbl">Mês</div><div class="cat-rate-val">$${fmt$(c.monthly)}</div></div>
+      </div>
+      ${c.notes ? `<div style="font-size:12px;color:var(--muted2);margin-top:8px">${c.notes}</div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function toggleVehicle(i) {
+  if (!isAdmin()) return;
+  S.data.vehicles[i].active = S.data.vehicles[i].active === false ? true : false;
+  scheduleSave(); renderVehList();
+}
+
+function openAddVehicleModal() {
+  showFormModal('Adicionar Veículo', buildVehicleForm(null), () => saveVehicleForm(null));
+}
+function editVehicle(i) {
+  showFormModal('Editar Veículo', buildVehicleForm(S.data.vehicles[i]), () => saveVehicleForm(i));
+}
+
+function buildVehicleForm(v) {
+  const f = (id, lbl, val='', type='text', extra='') =>
+    `<div class="fld-group"><div class="fld-label">${lbl}</div>
+     <input type="${type}" class="fld-input" id="vf-${id}" value="${val}" ${extra}></div>`;
+  const cats = (S.data.categories||[]).map(c=>`<option value="${c.name}" ${v&&v.category===c.name?'selected':''}>${c.name}</option>`).join('');
+  return `<div class="modal-form">
+    <div class="modal-form-row">
+      ${f('id','ID / Placa',v?.id||'')}
+      ${f('name','Modelo / Nome',v?.name||'')}
+    </div>
+    <div class="modal-form-row">
+      <div class="fld-group"><div class="fld-label">Categoria</div>
+        <select class="filter-sel" id="vf-category" style="width:100%">
+          <option value="">Sem categoria</option>${cats}
+        </select></div>
+      ${f('year','Ano',v?.year||'','number')}
+    </div>
+    <div class="modal-form-row">
+      ${f('color','Cor',v?.color||'')}
+      ${f('vin','VIN / Chassi',v?.vin||'')}
+    </div>
+    <div class="modal-form-row">
+      ${f('licensePlate','Placa Local (FL)',v?.licensePlate||'')}
+      ${f('mileage','Quilometragem',v?.mileage||'','number')}
+    </div>
+    <div class="fld-group"><div class="fld-label">Observações</div>
+      <input type="text" class="fld-input" id="vf-notes" value="${v?.notes||''}"></div>
+  </div>`;
+}
+
+function saveVehicleForm(idx) {
+  const gv = id => document.getElementById('vf-'+id)?.value?.trim()||'';
+  const veh = {
+    id: gv('id'), name: gv('name'), category: gv('category'),
+    year: gv('year'), color: gv('color'), vin: gv('vin'),
+    licensePlate: gv('licensePlate'), mileage: parseFloat(gv('mileage'))||0,
+    notes: gv('notes'), active: idx!==null ? S.data.vehicles[idx]?.active : true
+  };
+  if (!veh.id) { toast('ID obrigatório', 'err'); return; }
+  if (idx === null) {
+    if (S.data.vehicles.find(v=>v.id===veh.id)) { toast('Veículo já existe', 'err'); return; }
+    S.data.vehicles.push(veh);
+    // Also sync to fleet
+    if (!S.data.fleet.find(f=>f.id===veh.id))
+      S.data.fleet.push({id:veh.id, type:veh.category||veh.name, active:true});
+  } else {
+    S.data.vehicles[idx] = veh;
+  }
+  scheduleSave(); closeFormModal(); renderVeiculos();
+  toast('Veículo salvo ✓', 'ok');
+}
+
+function openAddCatModal() {
+  showFormModal('Nova Categoria', buildCatForm(null), () => saveCatForm(null));
+}
+function editCat(i) {
+  showFormModal('Editar Categoria', buildCatForm(S.data.categories[i]), () => saveCatForm(i));
+}
+
+function buildCatForm(c) {
+  const f = (id, lbl, val='') =>
+    `<div class="fld-group"><div class="fld-label">${lbl}</div>
+     <input type="number" step="0.01" class="fld-input" id="cf-${id}" value="${val}" placeholder="0.00"></div>`;
+  return `<div class="modal-form">
+    <div class="fld-group"><div class="fld-label">Nome da Categoria</div>
+      <input type="text" class="fld-input" id="cf-name" value="${c?.name||''}" placeholder="Ex: GS - Premium SUV"></div>
+    <div class="modal-form-row">
+      ${f('daily','Diária ($)',c?.daily||'')}
+      ${f('weekly','Semanal ($)',c?.weekly||'')}
+    </div>
+    <div class="modal-form-row">
+      ${f('monthly','Mensal ($)',c?.monthly||'')}
+      ${f('weekend','Final de semana ($)',c?.weekend||'')}
+    </div>
+    <div class="fld-group"><div class="fld-label">Observações</div>
+      <input type="text" class="fld-input" id="cf-notes" value="${c?.notes||''}" placeholder="Incluso milhas ilimitadas, etc"></div>
+  </div>`;
+}
+
+function saveCatForm(idx) {
+  const gv = id => document.getElementById('cf-'+id)?.value?.trim()||'';
+  const cat = {
+    name: gv('name'),
+    daily: parseFloat(gv('daily'))||0,
+    weekly: parseFloat(gv('weekly'))||0,
+    monthly: parseFloat(gv('monthly'))||0,
+    weekend: parseFloat(gv('weekend'))||0,
+    notes: gv('notes')
+  };
+  if (!cat.name) { toast('Nome obrigatório', 'err'); return; }
+  if (idx === null) {
+    if (S.data.categories.find(c=>c.name===cat.name)) { toast('Categoria já existe', 'err'); return; }
+    S.data.categories.push(cat);
+  } else {
+    S.data.categories[idx] = cat;
+  }
+  scheduleSave(); closeFormModal(); renderCatPricing();
+  updateCotacaoSelect(); toast('Categoria salva ✓', 'ok');
+}
+
+// Vehicle Excel Import — handles VehicleSummary and Frota (financing) formats
+function handleVehicleXL(file) {
+  if (!file || !isAdmin()) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+      const sheetName = wb.SheetNames[0];
+      const sn = sheetName.toLowerCase();
+      if (sn.includes('parcela') || sn.includes('frota') || sn.includes('financ')) {
+        importFrotaFinancing(wb.Sheets[sheetName]);
+      } else {
+        importVehicleSummary(wb.Sheets[sheetName]);
+      }
+    } catch(err) { console.error(err); toast('Erro ao ler arquivo', 'err'); }
+  };
+  r.readAsBinaryString(file);
+}
+
+// VehicleSummary format: header at row 9, data rows come in pairs
+// Odd row = vehicle label (col 0), Even row = data (type col2, year col4, odo col5, fuel col6, make col8, model col9, vin col10, plate col13)
+function importVehicleSummary(ws) {
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  // Find header row with "Current Location"
+  const hdrIdx = raw.findIndex(r => String(r[0]||'').toLowerCase().includes('current location'));
+  if (hdrIdx < 0) { toast('Formato VehicleSummary não reconhecido', 'err'); return; }
+  // Col positions from header: Current Location=0, Type=2, Year=4, Odometer=5, Fuel=6, TankSize=7, Make=8, Model=9, VIN=10, Plate=13
+  let added=0, updated=0;
+  for (let i = hdrIdx + 1; i < raw.length - 1; i += 2) {
+    const labelRow = raw[i];
+    const dataRow  = raw[i+1];
+    if (!labelRow || !dataRow) continue;
+    // Label row col0 = "107 - Altima IC47HV" style ID
+    const label = String(labelRow[0]||'').trim();
+    if (!label || label === 'GS Car Rental') { i -= 1; continue; } // skip location headers, only offset by 1
+    // Skip if dataRow col0 is "GS Car Rental" (location row, not data)
+    if (String(dataRow[0]||'').trim() !== 'GS Car Rental') { i -= 1; continue; }
+    // Extract numeric ID from label
+    const idMatch = label.match(/^(\d+)/);
+    const id = idMatch ? idMatch[1] : label.split(' ')[0];
+    if (!id) continue;
+    const veh = {
+      id,
+      name:         String(dataRow[8]||'') + ' ' + String(dataRow[9]||''),
+      category:     String(dataRow[2]||'').trim(),
+      year:         String(dataRow[4]||'').trim(),
+      color:        '',
+      vin:          String(dataRow[10]||'').trim(),
+      licensePlate: String(dataRow[13]||'').trim(),
+      mileage:      parseFloat(String(dataRow[5]||'0').replace(/[^0-9.]/g,'')) || 0,
+      fuel:         String(dataRow[6]||'').trim(),
+      tankSize:     String(dataRow[7]||'').trim(),
+      notes:        label,
+      active:       true
+    };
+    const idx = S.data.vehicles.findIndex(v=>v.id===id);
+    if (idx >= 0) { S.data.vehicles[idx] = {...S.data.vehicles[idx], ...veh}; updated++; }
+    else { S.data.vehicles.push(veh); added++; }
+    if (!S.data.fleet.find(f=>f.id===id))
+      S.data.fleet.push({id, type:veh.category||veh.name.trim(), active:true});
+  }
+  scheduleSave(); renderVeiculos();
+  toast(`✅ VehicleSummary: ${added} novos · ${updated} atualizados`, 'ok');
+}
+
+// Frota.xlsx: Numero, Ano, Carro, Placa, Carfax, Valor(parcela), Payoff, Dia, Financeira, Jan..Dec
+function importFrotaFinancing(ws) {
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  if (!raw.length) { toast('Arquivo vazio', 'err'); return; }
+  const hdr = raw[0];
+  const ci = {};
+  hdr.forEach((h,i) => { if(h) ci[String(h).toLowerCase().trim()] = i; });
+  const MONTH_NAMES = ['jan','fev','feb','mar','apr','abr','may','mai','jun','jul','aug','ago','sep','set','oct','out','nov','dec','dez'];
+  const monthCols = hdr.map((h,i) => ({ i, m: MONTH_NAMES.indexOf(String(h).toLowerCase().trim()) >= 0 ? String(h) : null })).filter(x=>x.m);
+  let added=0, updated=0;
+  for (let i=1; i<raw.length; i++) {
+    const row = raw[i];
+    const num = String(row[ci['numero']||0]||'').trim();
+    if (!num || isNaN(Number(num))) continue;
+    const payAmt   = parseFloat(String(row[ci['valor']||5]||'0').replace(/[^0-9.]/g,'')) || 0;
+    const payoff   = parseFloat(String(row[ci['payoff']||6]||'0').replace(/[^0-9.]/g,'')) || 0;
+    const dia      = parseInt(String(row[ci['dia']||7]||'1')) || 1;
+    const bank     = String(row[ci['financeira']||8]||'').trim();
+    const plate    = String(row[ci['placa']||3]||'').trim();
+    const year     = String(row[ci['ano']||1]||'').trim();
+    const name     = String(row[ci['carro']||2]||'').trim();
+    // Build payments from month columns
+    const curYear = new Date().getFullYear();
+    const payments = monthCols.map((mc, mi) => {
+      const paid = String(row[mc.i]||'').toLowerCase().trim() === 'ok';
+      // Guess year: assume current year for now
+      const mIdx = ['jan','fev','feb','mar','apr','abr','may','mai','jun','jul','aug','ago','sep','set','oct','out','nov','dec','dez'].indexOf(mc.m.toLowerCase());
+      const mNum = [0,1,1,2,3,3,4,4,5,6,7,7,8,8,9,9,10,11,11][mIdx] ?? mi;
+      const d = new Date(curYear, mNum, dia);
+      return { num: mi+1, date: ds(d), amount: payAmt, paid, paidDate: paid ? ds(d) : null };
+    });
+    const vehicleId = num;
+    const fin = { vehicleId, bank, totalFinanced: payoff, description: `${year} ${name} — Placa ${plate}`, payments };
+    const existIdx = S.data.financing.findIndex(f=>f.vehicleId===vehicleId);
+    if (existIdx >= 0) {
+      // Preserve confirmed payments
+      const existPays = S.data.financing[existIdx].payments || [];
+      fin.payments = payments.map((p,pi) => ({...p, paid: existPays[pi]?.paid || p.paid, paidDate: existPays[pi]?.paidDate || p.paidDate}));
+      S.data.financing[existIdx] = fin; updated++;
+    } else { S.data.financing.push(fin); added++; }
+    // Also ensure vehicle exists
+    if (!S.data.vehicles.find(v=>v.id===vehicleId))
+      S.data.vehicles.push({id:vehicleId, name, category:'', year, color:'', vin:'', licensePlate:plate, mileage:0, notes:'', active:true});
+  }
+  scheduleSave(); renderFinanciamento();
+  toast(`✅ Frota: ${added} financiamentos novos · ${updated} atualizados`, 'ok');
+}
+
+// ════════════════════════════════════════════════════════
+//  COTAÇÃO
+// ════════════════════════════════════════════════════════
+function renderCotacao() {
+  updateCotacaoSelect();
+  calcCotacao();
+}
+
+function updateCotacaoSelect() {
+  const sel = document.getElementById('cot-cat');
+  if (!sel) return;
+  const cats = S.data.categories || [];
+  sel.innerHTML = '<option value="">Selecione ou digite a diária</option>' +
+    cats.map(c=>`<option value="${c.name}" data-daily="${c.daily}">${c.name} — $${fmt$(c.daily)}/dia</option>`).join('');
+}
+
+function onCatChange() {
+  const sel = document.getElementById('cot-cat');
+  const opt = sel?.options[sel.selectedIndex];
+  const daily = opt?.dataset?.daily;
+  if (daily) document.getElementById('cot-daily').value = daily;
+  calcCotacao();
+}
+
+function calcCotacao() {
+  const start    = document.getElementById('cot-start')?.value;
+  const end      = document.getElementById('cot-end')?.value;
+  const daily    = parseFloat(document.getElementById('cot-daily')?.value) || 0;
+  const sunpass  = parseFloat(document.getElementById('cot-sunpass')?.value) || 0;
+  const delivery = parseFloat(document.getElementById('cot-delivery')?.value) || 0;
+  const extras   = parseFloat(document.getElementById('cot-extras')?.value) || 0;
+  const airport  = document.getElementById('cot-loc')?.value === 'airport';
+  const out      = document.getElementById('cot-result');
+  if (!out) return;
+
+  if (!start || !end || !daily) {
+    out.innerHTML = `<div class="cot-no-result">Preencha as datas e a diária para calcular.</div>`;
+    return;
+  }
+  const d1 = new Date(start), d2 = new Date(end);
+  if (d2 <= d1) { out.innerHTML = `<div class="cot-no-result" style="color:var(--red)">Data de devolução deve ser após a retirada.</div>`; return; }
+
+  const days = Math.round((d2 - d1) / (1000*60*60*24));
+  const rentalBase   = daily * days;
+  const sunpassTotal = sunpass * days;
+  const flTax        = 2.00 * days;
+  const taxableBase  = rentalBase + sunpassTotal + delivery + extras;
+  const salesTax     = taxableBase * 0.065;
+  const airportTax   = airport ? taxableBase * 0.10 : 0;
+  const total        = taxableBase + flTax + salesTax + airportTax;
+  const brlRate      = 6.1;
+
+  const catSel  = document.getElementById('cot-cat');
+  const catName = catSel?.options[catSel.selectedIndex]?.text?.split(' —')[0] || '';
+  const name    = document.getElementById('cot-name')?.value || '';
+  const phone   = document.getElementById('cot-phone')?.value || '';
+
+  const rows = [
+    { lbl: `Diária $${fmt$(daily)} × ${days} dia${days>1?'s':''}`, val: rentalBase },
+    ...(sunpass > 0  ? [{ lbl: `Sunpass $${fmt$(sunpass)}/dia × ${days} dias`, val: sunpassTotal }] : []),
+    ...(delivery > 0 ? [{ lbl: 'Taxa de entrega', val: delivery }] : []),
+    ...(extras > 0   ? [{ lbl: 'Outros adicionais', val: extras }] : []),
+    { lbl: `Florida Rental Tax ($2/dia × ${days})`, val: flTax, tax: true },
+    { lbl: 'Sales Tax 6.5%', val: salesTax, tax: true },
+    ...(airport ? [{ lbl: 'Airport Tax 10%', val: airportTax, tax: true }] : []),
+  ];
+
+  const pdata = JSON.stringify({total,days,start,end,rentalBase,sunpassTotal,delivery,extras,flTax,salesTax,airportTax,daily,sunpass,catName,name,phone,airport})
+    .replace(/'/g, "&#39;");
+
+  out.innerHTML = `<div class="cot-result-card">
+    <div class="cot-days">📅 ${fmtD(start)} → ${fmtD(end)} &nbsp;·&nbsp; <strong>${days} dia${days>1?'s':''}</strong>${catName ? ' &nbsp;·&nbsp; '+catName : ''}</div>
+    <ul class="cot-breakdown">
+      ${rows.map(r=>`<li>
+        <span style="${r.tax?'color:var(--muted2)':''}">${r.lbl}</span>
+        <span style="font-weight:600;color:${r.tax?'var(--muted2)':'var(--text)'}">$${fmt$(r.val)}</span>
+      </li>`).join('')}
+    </ul>
+    <div class="cot-total-row">
+      <div class="cot-total-lbl">TOTAL USD</div>
+      <div class="cot-total-val">$${fmt$(total)}</div>
+    </div>
+    <div style="text-align:right;font-size:12px;color:var(--muted2);margin-top:4px">≈ R$ ${fmt$(total*brlRate)} <span style="font-size:10px">(câmbio ~${brlRate})</span></div>
+    <div class="cot-actions">
+      <button class="btn primary" onclick='copyCotacaoData(${pdata})'>📋 Copiar para WhatsApp</button>
+    </div>
+  </div>`;
+}
+
+function copyCotacaoData(p) {
+  const brlRate = 6.1;
+  const lines = [
+    '*GS Car Rental — Cotação*', '',
+    ...(p.name  ? ['👤 ' + p.name]  : []),
+    ...(p.phone ? ['📱 ' + p.phone] : []),
+    '',
+    '📅 Retirada: ' + fmtD(p.start),
+    '📅 Devolução: ' + fmtD(p.end),
+    '⏱ ' + p.days + ' dia' + (p.days>1?'s':''),
+    ...(p.catName ? ['🚗 ' + p.catName] : []),
+    ...(p.airport ? ['✈️ Aeroporto'] : []),
+    '',
+    'Diária: $' + fmt$(p.daily) + '/dia → $' + fmt$(p.rentalBase),
+    ...(p.sunpass  > 0 ? ['Sunpass: $' + fmt$(p.sunpassTotal)] : []),
+    ...(p.delivery > 0 ? ['Entrega: $' + fmt$(p.delivery)]     : []),
+    ...(p.extras   > 0 ? ['Adicionais: $' + fmt$(p.extras)]    : []),
+    'FL Tax ($2/dia): $' + fmt$(p.flTax),
+    'Sales Tax 6.5%: $' + fmt$(p.salesTax),
+    ...(p.airport ? ['Airport Tax 10%: $' + fmt$(p.airportTax)] : []),
+    '',
+    '💵 *TOTAL: $' + fmt$(p.total) + ' USD*',
+    '≈ R$ ' + fmt$(p.total * brlRate) + ' BRL',
+    '',
+    '_GS Car Rental — Orlando · Miami · Fort Lauderdale_',
+  ];
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(()=>toast('Copiado ✓','ok')).catch(()=>toast('Erro ao copiar','err'));
+}
+
+
+// ════════════════════════════════════════════════════════
+//  FINANCIAMENTO
+// ════════════════════════════════════════════════════════
+function renderFinanciamento() {
+  const el = document.getElementById('fin-list-out');
+  const fins = S.data.financing || [];
+  const addBtn = document.getElementById('add-fin-btn');
+  if (addBtn) addBtn.style.display = isAdmin() ? '' : 'none';
+
+  if (!fins.length) {
+    el.innerHTML = '<div style="color:var(--muted2);padding:30px 0;text-align:center">Nenhum financiamento cadastrado.</div>';
+    return;
+  }
+
+  const today = ds(new Date());
+  let html = '';
+  fins.forEach((fin, fi) => {
+    const payments = fin.payments || [];
+    const paid = payments.filter(p=>p.paid).length;
+    const total = payments.length;
+    const pct = total ? Math.round(paid/total*100) : 0;
+    const paidAmt = payments.filter(p=>p.paid).reduce((s,p)=>s+(p.amount||0),0);
+    const totalAmt = payments.reduce((s,p)=>s+(p.amount||0),0);
+    const nextDue = payments.find(p=>!p.paid && p.date >= today);
+
+    html += `<div class="fin-card">
+      <div class="fin-card-hdr" onclick="toggleFinCard(${fi})">
+        <div>
+          <div class="fin-card-title">${fin.vehicleId||'Veículo'} — ${fin.bank||'Financiamento'}</div>
+          <div class="fin-card-meta">${fin.description||''} · ${total} parcelas · ${nextDue?'Próx: '+fmtD(nextDue.date):'Quitado'}</div>
+        </div>
+        <div class="fin-progress-wrap">
+          <div class="fin-progress-lbl">${paid}/${total} pagas · $${fmt$(paidAmt)} / $${fmt$(totalAmt)}</div>
+          <div class="fin-progress"><div class="fin-progress-bar" style="width:${pct}%"></div></div>
+          ${isAdmin()?`<div style="margin-top:4px;text-align:right"><button class="btn" style="font-size:11px;padding:2px 8px" onclick="event.stopPropagation();editFin(${fi})">✏</button>
+          <button class="btn" style="font-size:11px;padding:2px 8px;margin-left:4px;color:var(--red)" onclick="event.stopPropagation();deleteFin(${fi})">🗑</button></div>`:''}
+        </div>
+      </div>
+      <div class="fin-payments" id="fin-payments-${fi}" style="display:none">
+        <table class="fin-pay-table">
+          <thead><tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th>${isAdmin()?'<th></th>':''}</tr></thead>
+          <tbody>
+            ${payments.map((p,pi) => {
+              const isPaid = !!p.paid;
+              const isOverdue = !isPaid && p.date < today;
+              const cls = isPaid ? 'fin-pay-paid' : isOverdue ? 'fin-pay-due' : 'fin-pay-future';
+              const icon = isPaid ? '✅' : isOverdue ? '⚠️' : '⏳';
+              return `<tr class="${cls}">
+                <td>${p.num||pi+1}</td>
+                <td>${fmtD(p.date)}</td>
+                <td>$${fmt$(p.amount)}</td>
+                <td>${icon} ${isPaid ? 'Pago em '+fmtD(p.paidDate||p.date) : isOverdue ? 'Atrasado' : 'Pendente'}</td>
+                ${isAdmin()?`<td>${isPaid
+                  ? `<button class="pay-undo-btn" onclick="togglePayment(${fi},${pi},false)">Desfazer</button>`
+                  : `<button class="pay-confirm-btn" onclick="togglePayment(${fi},${pi},true)">Confirmar</button>`
+                }</td>`:''}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function toggleFinCard(fi) {
+  const el = document.getElementById(`fin-payments-${fi}`);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function togglePayment(fi, pi, paid) {
+  if (!isAdmin()) return;
+  S.data.financing[fi].payments[pi].paid = paid;
+  S.data.financing[fi].payments[pi].paidDate = paid ? ds(new Date()) : null;
+  scheduleSave(); renderFinanciamento();
+  toast(paid ? '✅ Pagamento confirmado' : 'Pagamento revertido', paid?'ok':'');
+}
+
+function deleteFin(fi) {
+  if (!isAdmin()) return;
+  if (!confirm('Remover este financiamento?')) return;
+  S.data.financing.splice(fi, 1);
+  scheduleSave(); renderFinanciamento();
+}
+
+function openAddFinModal() {
+  showFormModal('Novo Financiamento', buildFinForm(null), () => saveFinForm(null));
+}
+function editFin(fi) {
+  showFormModal('Editar Financiamento', buildFinForm(S.data.financing[fi]), () => saveFinForm(fi));
+}
+
+function buildFinForm(fin) {
+  const vehOpts = S.data.vehicles.map(v=>`<option value="${v.id}" ${fin&&fin.vehicleId===v.id?'selected':''}>${v.id} — ${v.name||v.category||''}</option>`).join('');
+  return `<div class="modal-form">
+    <div class="modal-form-row">
+      <div class="fld-group"><div class="fld-label">Veículo</div>
+        <select class="filter-sel" id="ff-vehicle" style="width:100%">
+          <option value="">Selecionar veículo</option>${vehOpts}
+        </select></div>
+      <div class="fld-group"><div class="fld-label">Banco / Financiadora</div>
+        <input type="text" class="fld-input" id="ff-bank" value="${fin?.bank||''}" placeholder="Ex: Chase, Ally Financial"></div>
+    </div>
+    <div class="modal-form-row">
+      <div class="fld-group"><div class="fld-label">Valor total financiado ($)</div>
+        <input type="number" step="0.01" class="fld-input" id="ff-total" value="${fin?.totalFinanced||''}"></div>
+      <div class="fld-group"><div class="fld-label">Nº de parcelas</div>
+        <input type="number" class="fld-input" id="ff-installments" value="${fin?.payments?.length||60}" min="1" max="360"></div>
+    </div>
+    <div class="modal-form-row">
+      <div class="fld-group"><div class="fld-label">Valor da parcela ($)</div>
+        <input type="number" step="0.01" class="fld-input" id="ff-payment" value="${fin?.payments?.[0]?.amount||''}"></div>
+      <div class="fld-group"><div class="fld-label">Primeiro vencimento</div>
+        <input type="date" class="fld-input" id="ff-startdate" value="${fin?.payments?.[0]?.date||''}"></div>
+    </div>
+    <div class="fld-group"><div class="fld-label">Descrição</div>
+      <input type="text" class="fld-input" id="ff-desc" value="${fin?.description||''}" placeholder="Ex: Ford Transit 2025 — 60x"></div>
+  </div>`;
+}
+
+function saveFinForm(idx) {
+  const gv = id => (document.getElementById('ff-'+id)?.value||'').trim();
+  const vehicleId    = gv('vehicle');
+  const bank         = gv('bank');
+  const totalFin     = parseFloat(gv('total'))||0;
+  const nInst        = parseInt(gv('installments'))||1;
+  const payAmt       = parseFloat(gv('payment'))||0;
+  const startDate    = gv('startdate');
+  const description  = gv('desc');
+
+  if (!vehicleId || !startDate || !payAmt) { toast('Veículo, parcela e data são obrigatórios', 'err'); return; }
+
+  // Build payment schedule
+  let payments;
+  if (idx !== null && S.data.financing[idx]) {
+    // Preserve existing paid status
+    const existing = S.data.financing[idx].payments || [];
+    payments = Array.from({length: nInst}, (_, i) => {
+      const d = new Date(startDate);
+      d.setMonth(d.getMonth() + i);
+      const dateStr = ds(d);
+      const prev = existing[i];
+      return { num: i+1, date: dateStr, amount: payAmt, paid: prev?.paid||false, paidDate: prev?.paidDate||null };
+    });
+  } else {
+    payments = Array.from({length: nInst}, (_, i) => {
+      const d = new Date(startDate);
+      d.setMonth(d.getMonth() + i);
+      return { num: i+1, date: ds(d), amount: payAmt, paid: false, paidDate: null };
+    });
+  }
+
+  const fin = { vehicleId, bank, totalFinanced: totalFin, description, payments };
+  if (idx === null) S.data.financing.push(fin);
+  else S.data.financing[idx] = fin;
+  scheduleSave(); closeFormModal(); renderFinanciamento();
+  toast('Financiamento salvo ✓', 'ok');
+}
+
+// ════════════════════════════════════════════════════════
+//  FORM MODAL (generic)
+// ════════════════════════════════════════════════════════
+let _formCb = null;
+function showFormModal(title, bodyHtml, onSave) {
+  _formCb = onSave;
+  document.getElementById('m-title').textContent = title;
+  document.getElementById('m-sub').textContent = '';
+  document.getElementById('m-body').innerHTML = `
+    ${bodyHtml}
+    <div class="modal-form-actions">
+      <button class="btn" onclick="closeFormModal()">Cancelar</button>
+      <button class="btn primary" onclick="_formCb && _formCb()">Salvar</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeFormModal() {
+  _formCb = null;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// Override closeModal to also handle form modal
+const _origCloseModal = typeof closeModal === 'function' ? closeModal : ()=>{};
+
+// ════════════════════════════════════════════════════════
+//  INVESTIDORES
+// ════════════════════════════════════════════════════════
+let invYear  = new Date().getFullYear();
+let invMonth = null;
+
+function renderInvestidores() {
+  const addBtn = document.getElementById('add-inv-btn');
+  if (addBtn) addBtn.style.display = isAdmin() ? '' : 'none';
+  const sel = document.getElementById('inv-selector');
+  if (sel) {
+    const cur = sel.value;
+    const investors = S.data.investors || [];
+    sel.innerHTML = '<option value="">— Selecione investidor —</option>' +
+      investors.map(inv=>`<option value="${inv.id}" ${cur===inv.id?'selected':''}>${inv.name}</option>`).join('');
+    if (!sel.value && investors.length) sel.value = investors[0].id;
+  }
+  const invId = sel?.value;
+  const inv   = (S.data.investors||[]).find(i=>i.id===invId);
+  const dash  = document.getElementById('inv-dashboard');
+  const list  = document.getElementById('inv-list-out');
+  if (inv) {
+    dash.innerHTML = buildInvDashboard(inv);
+    list.innerHTML = isAdmin() ? buildInvListTable() : '';
+  } else {
+    dash.innerHTML = `<div style="color:var(--muted2);padding:40px 0;text-align:center">${(S.data.investors||[]).length?'Selecione um investidor acima.':'Nenhum investidor cadastrado. Clique em "+ Novo Investidor".'}</div>`;
+    list.innerHTML = isAdmin() ? buildInvListTable() : '';
+  }
+}
+
+function calcInvBase(r) {
+  const days  = r.days || Math.max(1, Math.round((new Date(r.returnDate||r.pickupDate)-new Date(r.pickupDate))/86400000));
+  const cat   = (S.data.categories||[]).find(c=>c.name===r.vehicleType);
+  const daily = cat?.daily || (r.total&&r.days ? r.total/r.days : 0);
+  return daily * days;
+}
+
+function buildInvDashboard(inv) {
+  const pct  = inv.percentage ?? 40;
+  const vehs = inv.vehicleIds || [];
+  const today= ds(new Date());
+  const y    = invYear;
+  const res  = (S.data.reservations||[]).filter(r => {
+    if (!vehs.includes(r.vehicleId)) return false;
+    if (invMonth !== null) {
+      const m = String(invMonth+1).padStart(2,'0');
+      return r.pickupDate?.startsWith(`${y}-${m}`) || r.returnDate?.startsWith(`${y}-${m}`);
+    }
+    return r.pickupDate?.startsWith(String(y)) || r.returnDate?.startsWith(String(y));
+  });
+  const totalBase = res.reduce((s,r)=>s+calcInvBase(r),0);
+  const invShare  = totalBase*(pct/100);
+  const totalDays = res.reduce((s,r)=>s+(r.days||0),0);
+  const activeNow = res.filter(r=>r.pickupDate<=today&&(r.returnDate||r.pickupDate)>=today).length;
+  const periodLabel = invMonth!==null ? `${MONTHS[invMonth]} ${y}` : `Ano ${y}`;
+  const monthChips = MSHORT.map((m,i)=>`<button class="inv-month-chip ${invMonth===i?'active':''}" onclick="setInvMonth(${i})">${m}</button>`).join('');
+  const vehCards = vehs.map(vid=>{
+    const v=(S.data.vehicles||[]).find(x=>x.id===vid)||(S.data.fleet||[]).find(x=>x.id===vid);
+    const vRes=res.filter(r=>r.vehicleId===vid);
+    const vBase=vRes.reduce((s,r)=>s+calcInvBase(r),0);
+    const vDays=vRes.reduce((s,r)=>s+(r.days||0),0);
+    const period=invMonth!==null?30:365;
+    const occ=Math.min(100,Math.round(vDays/period*100));
+    return `<div class="inv-veh-card">
+      <div class="inv-veh-id">${vid}</div>
+      <div class="inv-veh-name">${v?.name||v?.type||v?.category||''}</div>
+      <div class="inv-veh-stats">
+        <span style="color:var(--green)">$${fmt$(vBase)}</span>
+        <span style="color:var(--muted2)">${vDays}d</span>
+        <span style="color:var(--amber)">${occ}% ocup.</span>
+      </div>
+      <div class="inv-cal-mini">${buildMiniCal(vid,y,invMonth??new Date().getMonth())}</div>
+    </div>`;
+  }).join('');
+  const resRows = res.slice().sort((a,b)=>(b.pickupDate||'').localeCompare(a.pickupDate||'')).map(r=>{
+    const base=calcInvBase(r); const share=base*(pct/100);
+    return `<tr>
+      <td style="color:var(--amber);font-family:'Barlow Condensed',sans-serif">#${r.id}</td>
+      <td>${r.vehicleId||'—'}</td><td>${r.fullName||'—'}</td>
+      <td style="white-space:nowrap">${fmtD(r.pickupDate)} → ${fmtD(r.returnDate)}</td>
+      <td style="text-align:right">${r.days||0}d</td>
+      <td style="text-align:right">$${fmt$(base)}</td>
+      <td style="text-align:right;color:var(--green);font-weight:700">$${fmt$(share)}</td>
+      <td><span class="status-badge ${sCls(r.status)}">${r.status||'—'}</span></td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="inv-header-card">
+      <div>
+        <div class="inv-name">📈 ${inv.name}</div>
+        <div style="font-size:13px;color:var(--muted2);margin-top:4px">${vehs.length} veículo${vehs.length!==1?'s':''} · ${periodLabel}</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="inv-pct-badge">${pct}%</div>
+        ${isAdmin()?`<button class="btn" onclick="editInv('${inv.id}')" style="font-size:12px">✏ Editar</button>`:''}
+      </div>
+    </div>
+    <div class="inv-year-nav">
+      <button class="year-nav-btn" onclick="changeInvYear(-1)">‹</button>
+      <div class="year-label">${y}</div>
+      <button class="year-nav-btn" onclick="changeInvYear(1)">›</button>
+      <div class="inv-month-strip" style="margin:0 0 0 12px">
+        <button class="inv-month-chip ${invMonth===null?'active':''}" onclick="setInvMonth(null)">Ano</button>
+        ${monthChips}
+      </div>
+    </div>
+    <div class="inv-kpi-row">
+      <div class="inv-kpi"><div class="inv-kpi-val">$${fmt$(totalBase)}</div><div class="inv-kpi-lbl">Base de diárias</div></div>
+      <div class="inv-kpi"><div class="inv-kpi-val green">$${fmt$(invShare)}</div><div class="inv-kpi-lbl">A receber (${pct}%)</div></div>
+      <div class="inv-kpi"><div class="inv-kpi-val">${res.length}</div><div class="inv-kpi-lbl">Reservas</div></div>
+      <div class="inv-kpi"><div class="inv-kpi-val">${totalDays}</div><div class="inv-kpi-lbl">Dias locados</div></div>
+      <div class="inv-kpi"><div class="inv-kpi-val" style="color:#60a5fa">${activeNow}</div><div class="inv-kpi-lbl">Ativos hoje</div></div>
+    </div>
+    ${vehs.length?`<div class="inv-section-title">Veículos</div><div class="inv-vehicles-grid">${vehCards}</div>`:''}
+    <div class="inv-section-title">Reservas</div>
+    ${res.length?`<div style="overflow-x:auto"><table class="inv-res-table">
+      <thead><tr><th>Reserva</th><th>Veículo</th><th>Cliente</th><th>Período</th>
+        <th style="text-align:right">Dias</th><th style="text-align:right">Base diária</th>
+        <th style="text-align:right">Repasse (${pct}%)</th><th>Status</th></tr></thead>
+      <tbody>${resRows}</tbody></table></div>`
+    :`<div style="color:var(--muted2);font-size:13px;padding:20px 0;text-align:center">Nenhuma reserva no período.</div>`}`;
+}
+
+function buildMiniCal(vehicleId,y,m) {
+  const dim=new Date(y,m+1,0).getDate();
+  const today=ds(new Date());
+  const res=(S.data.reservations||[]).filter(r=>r.vehicleId===vehicleId);
+  return Array.from({length:dim},(_,i)=>{
+    const d=`${y}-${String(m+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
+    const occ=res.some(r=>d>=r.pickupDate&&d<=(r.returnDate||r.pickupDate));
+    return `<div class="inv-cal-day${occ?' occ':''}${d===today?' today':''}"></div>`;
+  }).join('');
+}
+
+function buildInvListTable() {
+  const investors=S.data.investors||[];
+  if(!investors.length) return '';
+  const curY=String(new Date().getFullYear());
+  let html=`<div style="margin-top:24px"><div class="inv-section-title" style="margin-top:0">Todos os investidores</div>
+    <table class="inv-list-table"><thead><tr>
+      <th>Nome</th><th>%</th><th>Veículos</th>
+      <th style="text-align:right">Base ${curY}</th>
+      <th style="text-align:right">A receber ${curY}</th>
+      <th>Ações</th></tr></thead><tbody>`;
+  investors.forEach(inv=>{
+    const pct=inv.percentage??40; const vehs=inv.vehicleIds||[];
+    const res=(S.data.reservations||[]).filter(r=>vehs.includes(r.vehicleId)&&(r.pickupDate?.startsWith(curY)||r.returnDate?.startsWith(curY)));
+    const base=res.reduce((s,r)=>s+calcInvBase(r),0);
+    const share=base*(pct/100);
+    html+=`<tr>
+      <td style="font-weight:600">${inv.name}</td>
+      <td><span class="inv-pct-badge" style="font-size:13px;padding:2px 10px">${pct}%</span></td>
+      <td style="color:var(--muted2);font-size:12px">${vehs.slice(0,4).join(', ')+(vehs.length>4?'…':'')}</td>
+      <td style="text-align:right">$${fmt$(base)}</td>
+      <td style="text-align:right;color:var(--green);font-weight:700">$${fmt$(share)}</td>
+      <td>
+        <button class="btn" style="font-size:11px;padding:3px 8px" onclick="selectInvestidor('${inv.id}')">Ver</button>
+        ${isAdmin()?`<button class="btn" style="font-size:11px;padding:3px 8px;margin-left:4px" onclick="editInv('${inv.id}')">✏</button>
+        <button class="btn" style="font-size:11px;padding:3px 8px;margin-left:4px;color:var(--red)" onclick="deleteInv('${inv.id}')">🗑</button>`:''}
+      </td></tr>`;
+  });
+  return html+'</tbody></table></div>';
+}
+
+function selectInvestidor(id) {
+  document.getElementById('inv-selector').value=id;
+  renderInvestidores();
+  document.getElementById('inv-dashboard')?.scrollIntoView({behavior:'smooth'});
+}
+function changeInvYear(d) { invYear+=d; renderInvestidores(); }
+function setInvMonth(m)   { invMonth=m; renderInvestidores(); }
+
+function openAddInvModal() { showFormModal('Novo Investidor', buildInvForm(null), ()=>saveInvForm(null)); }
+function editInv(id) {
+  const inv=(S.data.investors||[]).find(i=>i.id===id);
+  if(inv) showFormModal('Editar Investidor', buildInvForm(inv), ()=>saveInvForm(id));
+}
+function deleteInv(id) {
+  if(!confirm('Remover investidor?')) return;
+  S.data.investors=S.data.investors.filter(i=>i.id!==id);
+  scheduleSave(); renderInvestidores();
+}
+
+function buildInvForm(inv) {
+  const allVehs=[...new Set([...(S.data.vehicles||[]).map(v=>v.id),...(S.data.fleet||[]).map(v=>v.id)])].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const selected=new Set(inv?.vehicleIds||[]);
+  const vehBoxes=allVehs.map(id=>{
+    const v=(S.data.vehicles||[]).find(x=>x.id===id)||(S.data.fleet||[]).find(x=>x.id===id);
+    const lbl=v?`${id} — ${v.name||v.type||''}`:id;
+    return `<label style="display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;font-size:13px">
+      <input type="checkbox" class="inv-veh-check" value="${id}" ${selected.has(id)?'checked':''}><span>${lbl}</span></label>`;
+  }).join('');
+  return `<div class="modal-form">
+    <div class="modal-form-row">
+      <div class="fld-group"><div class="fld-label">Nome do investidor</div>
+        <input type="text" class="fld-input" id="if-name" value="${inv?.name||''}" placeholder="Ex: João Silva"></div>
+      <div class="fld-group"><div class="fld-label">% sobre diárias <span style="color:var(--amber)">(padrão 40%)</span></div>
+        <input type="number" step="0.1" min="0" max="100" class="fld-input" id="if-pct" value="${inv?.percentage??40}"></div>
+    </div>
+    <div class="fld-group"><div class="fld-label">Veículos do investidor</div>
+      <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--card)">
+        ${vehBoxes||'<span style="color:var(--muted2);font-size:13px">Nenhum veículo cadastrado ainda.</span>'}
+      </div></div>
+    <div class="fld-group"><div class="fld-label">Observações</div>
+      <input type="text" class="fld-input" id="if-notes" value="${inv?.notes||''}" placeholder="Contrato, observações..."></div>
+  </div>`;
+}
+
+function saveInvForm(existingId) {
+  const name=document.getElementById('if-name')?.value?.trim();
+  const pct=parseFloat(document.getElementById('if-pct')?.value)??40;
+  const notes=document.getElementById('if-notes')?.value?.trim()||'';
+  const vehicleIds=[...document.querySelectorAll('.inv-veh-check:checked')].map(c=>c.value);
+  if(!name){toast('Nome obrigatório','err');return;}
+  if(!S.data.investors) S.data.investors=[];
+  if(existingId) {
+    const idx=S.data.investors.findIndex(i=>i.id===existingId);
+    if(idx>=0) S.data.investors[idx]={id:existingId,name,percentage:pct,vehicleIds,notes};
+  } else {
+    S.data.investors.push({id:'inv_'+Date.now(),name,percentage:pct,vehicleIds,notes});
+  }
+  scheduleSave(); closeFormModal(); renderInvestidores();
+  toast('Investidor salvo ✓','ok');
+}
+
+
 </script>
 </body>
 </html>
