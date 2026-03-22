@@ -841,7 +841,12 @@ textarea.fld-input{resize:vertical;min-height:70px}
         <div class="modal-title" id="m-title"></div>
         <div class="modal-sub" id="m-sub"></div>
       </div>
-      <button class="modal-x" onclick="closeModal()">✕</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" id="modal-edit-btn" onclick="toggleModalEdit()" style="font-size:11px;padding:4px 12px">✏ Editar</button>
+        <button class="btn primary" id="modal-save-btn" onclick="saveModalEdit()" style="font-size:11px;padding:4px 12px;display:none">💾 Salvar</button>
+        <button class="btn" id="modal-report-btn" onclick="exportReservationReport()" style="font-size:11px;padding:4px 12px">📄 Relatório</button>
+        <button class="modal-x" onclick="closeModal()">✕</button>
+      </div>
     </div>
     <div class="modal-body" id="m-body"></div>
   </div>
@@ -858,7 +863,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v1.7-pwa';
+const APP_VERSION = 'v1.8';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -2039,6 +2044,9 @@ function openModal(id) {
   const r = S.data.reservations.find(x=>x.id===id);
   if (!r) return;
   S.modal = id;
+  // Always refresh photos from localStorage when opening modal
+  loadPhotosLocal([r]);
+  S._modalEdit = false; // start in view mode
   document.getElementById('m-title').textContent = `Reserva #${r.id}`;
   document.getElementById('m-sub').textContent   = `${r.fullName||'—'} · ${r.vehicleType||r.vehicleId||'—'}`;
   const isEV = EV_KW.some(k=>(r.vehicleType||'').toLowerCase().includes(k));
@@ -2055,9 +2063,9 @@ function openModal(id) {
   updMilesDelta(r);
 }
 
-function buildModal(r, isEV) {
+function buildModal(r, isEV, editMode) {
   const admin = isAdmin();
-  const canEdit = true; // both roles can edit operational fields
+  const canEdit = editMode === true || S._modalEdit === true;
   // Accessories list for checkboxes
   const ACC_LIST = ['Cadeirinha Infantil','Carrinho de Bebê','GPS','Wifi','Rack de Teto','Booster'];
   const selAcc = r.accessories || [];
@@ -2081,14 +2089,14 @@ function buildModal(r, isEV) {
         <div class="info-lbl">⬆ Horário de Saída</div>
         <div class="info-val">
           <input type="time" class="fld-input" style="padding:4px 8px;font-size:14px"
-            value="${r.pickupTime||''}" oninput="updField('pickupTime',this.value)">
+            value="${r.pickupTime||''}" ${!canEdit?'readonly':''} oninput="updField('pickupTime',this.value)">
         </div>
       </div>
       <div class="info-box">
         <div class="info-lbl">⬇ Horário de Retorno</div>
         <div class="info-val">
           <input type="time" class="fld-input" style="padding:4px 8px;font-size:14px"
-            value="${r.returnTime||''}" oninput="updField('returnTime',this.value)">
+            value="${r.returnTime||''}" ${!canEdit?'readonly':''} oninput="updField('returnTime',this.value)">
         </div>
       </div>
       <div class="info-box">
@@ -2116,7 +2124,7 @@ function buildModal(r, isEV) {
       <div class="info-box"><div class="info-lbl">Telefone</div><div class="info-val">${r.phone||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">Cidade / País</div>
         <div class="info-val"><input type="text" class="fld-input" style="padding:2px 6px;height:auto;font-size:12px"
-          value="${r.city||''}" placeholder="Ex: São Paulo / Brasil"
+          value="${r.city||''}" placeholder="Ex: São Paulo / Brasil" ${!canEdit?'readonly':''}
           oninput="updField('city',this.value)"></div></div>
       <div class="info-box"><div class="info-lbl">Veículo</div><div class="info-val">${r.vehicleType||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">ID do Veículo</div><div class="info-val">${r.vehicleId||'—'}</div></div>
@@ -2281,7 +2289,7 @@ function updMilesDeltaById() {
 }
 
 async function addPhotos(dir, files) {
-  const r=curRes(); if(!r||!isAdmin()) return;
+  const r=curRes(); if(!r) return;
   const key=`photos${dir}`;
   if(!r[key]) r[key]=[];
   loader(true,'Comprimindo...');
@@ -2293,7 +2301,7 @@ async function addPhotos(dir, files) {
 }
 
 function delPhoto(i, dir) {
-  const r=curRes(); if(!r||!isAdmin()) return;
+  const r=curRes(); if(!r) return;
   if(!confirm('Remover esta foto?')) return;
   r[`photos${dir}`].splice(i,1);
   document.getElementById(`ph-${dir}`).innerHTML = renderPhotos(r[`photos${dir}`],r.id,dir,true);
@@ -3335,6 +3343,115 @@ function importJSON(file) {
 }
 
 document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+// ── Modal edit mode ──
+function toggleModalEdit() {
+  S._modalEdit = !S._modalEdit;
+  const editBtn = document.getElementById('modal-edit-btn');
+  const saveBtn = document.getElementById('modal-save-btn');
+  if (editBtn) editBtn.style.display = S._modalEdit ? 'none' : '';
+  if (saveBtn) saveBtn.style.display = S._modalEdit ? '' : 'none';
+  // Re-render modal in edit/view mode
+  const r = curRes(); if (!r) return;
+  const isEV = EV_KW.some(k=>(r.vehicleType||'').toLowerCase().includes(k));
+  document.getElementById('m-body').innerHTML = buildModal(r, isEV, S._modalEdit);
+  ['Out','In'].forEach(dir=>{
+    FUELS.forEach((_,i)=>{
+      const b = document.getElementById(`f${dir}${i}`);
+      if (b) { b.classList.toggle('sel', r[`fuel${dir}`]===i); b.onclick=()=>setFuel(dir,i); }
+    });
+  });
+  updFuelEst(r, isEV);
+  updMilesDelta(r);
+}
+
+function saveModalEdit() {
+  scheduleSave();
+  toggleModalEdit();
+  toast('Reserva atualizada ✓', 'ok');
+}
+
+// ── Export reservation report as printable HTML ──
+function exportReservationReport() {
+  const r = curRes(); if (!r) return;
+  const brlRate = 6.1;
+  const extras = r.extrasVal || 0;
+  const acc = (r.accessories||[]).join(', ') || '—';
+  const fuelCost = (() => {
+    if (r.fuelOut!=null&&r.fuelIn!=null&&r.fuelIn<r.fuelOut) {
+      const used = ([0,.25,.5,.75,1])[r.fuelOut] - ([0,.25,.5,.75,1])[r.fuelIn];
+      return used*16*GAS_PPG;
+    }
+    return 0;
+  })();
+  const totalExtras = extras + fuelCost;
+  
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+  <meta charset="UTF-8">
+  <title>Relatório #${r.id} — ${r.fullName}</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:680px;margin:40px auto;padding:20px;color:#111}
+    h1{color:#F59E0B;font-size:28px;margin-bottom:4px}
+    h2{font-size:15px;color:#555;font-weight:400;margin-bottom:24px}
+    .logo{font-size:32px;font-weight:900;color:#F59E0B;letter-spacing:2px}
+    .logo span{color:#888;font-weight:400}
+    table{width:100%;border-collapse:collapse;margin:16px 0}
+    th{background:#F59E0B;color:#000;text-align:left;padding:8px 12px;font-size:13px}
+    td{padding:8px 12px;border-bottom:1px solid #eee;font-size:13px}
+    .section{margin:24px 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;
+      letter-spacing:1px;color:#888;border-bottom:2px solid #F59E0B;padding-bottom:4px}
+    .total-row td{font-weight:700;font-size:15px;color:#e65c00;background:#fff8f0}
+    .footer{margin-top:40px;font-size:11px;color:#aaa;text-align:center}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <div class="logo">GS<span> CAR RENTAL</span></div>
+  <h2>Orlando · Miami · Fort Lauderdale</h2>
+
+  <div class="section">Dados do Cliente</div>
+  <table>
+    <tr><td><b>Nome</b></td><td>${r.fullName||'—'}</td><td><b>Telefone</b></td><td>${r.phone||'—'}</td></tr>
+    <tr><td><b>Cidade</b></td><td>${r.city||'—'}</td><td><b>Reserva #</b></td><td>${r.id}</td></tr>
+  </table>
+
+  <div class="section">Detalhes da Locação</div>
+  <table>
+    <tr><td><b>Veículo</b></td><td colspan="3">${r.vehicleType||'—'} ${r.vehicleId?'('+r.vehicleId+')':''}</td></tr>
+    <tr><td><b>Retirada</b></td><td>${fmtD(r.pickupDate)} ${r.pickupTime||''}</td><td><b>Local</b></td><td>${r.locOut||'—'}</td></tr>
+    <tr><td><b>Devolução</b></td><td>${fmtD(r.returnDate)} ${r.returnTime||''}</td><td><b>Local</b></td><td>${r.locIn||'—'}</td></tr>
+    <tr><td><b>Dias</b></td><td>${r.days||0}</td><td><b>Status</b></td><td>${r.status||'—'}</td></tr>
+    <tr><td><b>Acessórios</b></td><td colspan="3">${acc}</td></tr>
+  </table>
+
+  <div class="section">Milhas & Combustível</div>
+  <table>
+    <tr><td><b>Odômetro Saída</b></td><td>${r.milesOut!=null?r.milesOut+' mi':'—'}</td>
+        <td><b>Odômetro Retorno</b></td><td>${r.milesIn!=null?r.milesIn+' mi':'—'}</td></tr>
+    <tr><td><b>Combustível Saída</b></td><td>${r.fuelOut!=null?(['E','1/4','1/2','3/4','F'])[r.fuelOut]:'—'}</td>
+        <td><b>Combustível Retorno</b></td><td>${r.fuelIn!=null?(['E','1/4','1/2','3/4','F'])[r.fuelIn]:'—'}</td></tr>
+  </table>
+
+  <div class="section">Cobranças Extras</div>
+  <table>
+    <tr><th>Descrição</th><th>Valor USD</th><th>Valor BRL</th></tr>
+    ${fuelCost>0?`<tr><td>Reposição de combustível (${(['E','1/4','1/2','3/4','F'])[r.fuelOut]}→${(['E','1/4','1/2','3/4','F'])[r.fuelIn]})</td><td>$${fuelCost.toFixed(2)}</td><td>R$ ${(fuelCost*brlRate).toFixed(2)}</td></tr>`:''}
+    ${extras>0?`<tr><td>${r.extras||'Extras'}</td><td>$${Number(extras).toFixed(2)}</td><td>R$ ${(extras*brlRate).toFixed(2)}</td></tr>`:''}
+    ${totalExtras===0?`<tr><td colspan="3" style="color:#aaa;text-align:center">Sem cobranças extras</td></tr>`:''}
+    ${totalExtras>0?`<tr class="total-row"><td><b>TOTAL EXTRAS</b></td><td><b>$${totalExtras.toFixed(2)}</b></td><td><b>R$ ${(totalExtras*brlRate).toFixed(2)}</b></td></tr>`:''}
+  </table>
+
+  ${r.notes?`<div class="section">Observações</div><p style="font-size:13px">${r.notes}</p>`:''}
+
+  <div class="footer">
+    GS Car Rental · Gerado em ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR','HH:mm')}<br>
+    Este documento é um relatório interno de operações.
+  </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
 
 // Register PWA Service Worker
 if ('serviceWorker' in navigator) {
