@@ -1041,7 +1041,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v3.5';
+const APP_VERSION = 'v3.6';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -4069,14 +4069,14 @@ function teslaSetManualToken() {
   renderTesla();
 }
 
-async function teslaHandleCallback() {
+async function teslaHandleCallback(overrideCode, overrideState) {
   const params = new URLSearchParams(window.location.search);
-  const code  = params.get('code');
-  const state = params.get('state');
+  const code  = overrideCode  || params.get('code');
+  const state = overrideState || params.get('state');
   if (!code) return false;
   const savedState = localStorage.getItem('tesla_oauth_state');
   if (state !== savedState) {
-    toast('Tesla: estado OAuth invalido', 'err');
+    toast('Tesla: estado OAuth inválido', 'err');
     return false;
   }
   localStorage.removeItem('tesla_oauth_state');
@@ -4579,12 +4579,14 @@ function loginTeslaFromLogin() {
       sessionStorage.setItem('tesla_pending_state', state);
       // Clean URL immediately so it doesn't confuse the app
       window.history.replaceState({}, '', window.location.pathname);
-      // Show a hint on the login screen
+      // Show hint and pre-fill nothing — just show the message
       const hint = document.getElementById('login-err');
       if (hint) {
         hint.style.color = '#10B981';
-        hint.textContent = '✓ Tesla autorizado — faça login para continuar';
+        hint.textContent = '✓ Tesla autorizado — faça login com sua senha para continuar';
       }
+      // Focus the password field
+      setTimeout(() => document.getElementById('pwd-input')?.focus(), 100);
     }
   }
 })();
@@ -4595,13 +4597,9 @@ async function processPendingTeslaCallback() {
   if (!code || !state) return;
   sessionStorage.removeItem('tesla_pending_code');
   sessionStorage.removeItem('tesla_pending_state');
-  // Inject into location search temporarily so teslaHandleCallback reads it
-  const savedSearch = window.location.search;
-  window.history.replaceState({}, '', window.location.pathname + '?code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state));
-  // Also set the state in localStorage so validation passes
+  // Pass code/state directly — no URL manipulation needed
   localStorage.setItem('tesla_oauth_state', state);
-  const ok = await teslaHandleCallback();
-  window.history.replaceState({}, '', window.location.pathname);
+  const ok = await teslaHandleCallback(code, state);
   if (ok) {
     setTimeout(() => switchTab('tesla'), 300);
     toast('⚡ Tesla conectado!', 'ok');
