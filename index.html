@@ -1158,11 +1158,21 @@ async function loadData() {
     };
     console.log('Firestore load OK — ' + allRes.length + ' reservas, ' + nChunks + ' docs');
     toast('✓ ' + allRes.length + ' reservas carregadas', 'ok');
-    syncFleetFromRes();
-    renderCurrentTab();
   } catch(e) {
     console.error('Load error:', e);
-    toast('Erro ao carregar — dados locais mantidos', 'err');
+    // Show persistent error in agenda-out so user knows what happened
+    const agOut = document.getElementById('agenda-out');
+    if (agOut && S.data.reservations.length === 0) {
+      agOut.innerHTML = '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:16px;margin-top:16px">' +
+        '<div style="font-weight:700;color:var(--red);margin-bottom:6px">Erro ao carregar dados do servidor</div>' +
+        '<div style="font-size:13px;color:var(--muted2);margin-bottom:10px">' + (e.message||e.code||String(e)) + '</div>' +
+        '<div style="display:flex;gap:8px">' +
+        '<button class="btn primary" onclick="syncNow()">↻ Tentar novamente</button>' +
+        '<button class="btn" onclick="testFirestore()">🔍 Diagnóstico</button>' +
+        '</div></div>';
+    }
+    syncFleetFromRes();
+    renderCurrentTab();
   }
   loader(false);
 }
@@ -1268,9 +1278,20 @@ async function initApp() {
   document.getElementById('fin-year').textContent = S.finYear;
   document.getElementById('ver-badge').textContent = APP_VERSION;
   updateFrotaLabel();
-  await loadData();
+  try { await loadData(); } catch(e) { console.error('initApp loadData error:', e); }
   syncFleetFromRes();
   renderCurrentTab();
+  // Pre-compute financing badge
+  setTimeout(function() {
+    const today2 = ds(new Date());
+    const in7_2  = ds(new Date(Date.now() + 7*86400000));
+    let urgent = 0;
+    (S.data.financing||[]).forEach(function(fin) {
+      (fin.payments||[]).forEach(function(p) { if (!p.paid && p.date <= in7_2) urgent++; });
+    });
+    const badge = document.getElementById('fin-badge');
+    if (badge) { badge.textContent = urgent; badge.style.display = urgent > 0 ? '' : 'none'; }
+  }, 800);
 }
 
 function syncFleetFromRes() {
