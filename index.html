@@ -762,6 +762,12 @@ textarea.fld-input{resize:vertical;min-height:70px}
               <input type="text" class="fld-input" id="cot-name" placeholder="Nome completo">
             </div>
             <div class="fld-group">
+              <div class="fld-label">Câmbio USD → BRL <span style="color:var(--amber);font-size:10px">editável</span></div>
+              <input type="number" step="0.01" class="fld-input" id="cot-brl" placeholder="5.80" value="5.80" oninput="calcCotacao()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fld-group">
               <div class="fld-label">Telefone / WhatsApp</div>
               <input type="text" class="fld-input" id="cot-phone" placeholder="+55...">
             </div>
@@ -918,13 +924,25 @@ async function saveData() {
   saveDot('saving');
   try {
     S.data.lastUpdated = new Date().toISOString();
+    const body = JSON.stringify(S.data);
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer gsadmin', 'Content-Type': 'application/json' },
-      body: JSON.stringify(S.data)
+      body
     });
-    if (res.ok) saveDot('saved'); else saveDot('');
-  } catch(e) { console.warn('Save:', e); saveDot(''); }
+    if (res.ok) {
+      saveDot('saved');
+    } else {
+      const txt = await res.text().catch(()=>'');
+      console.error('Save failed:', res.status, txt);
+      saveDot('');
+      toast(`Erro ao salvar (${res.status})`, 'err');
+    }
+  } catch(e) {
+    console.error('Save error:', e);
+    saveDot('');
+    toast('Sem conexão — dados não salvos', 'err');
+  }
 }
 
 function scheduleSave() {
@@ -963,11 +981,17 @@ function syncFleetFromRes() {
       knownCats.add(t);
     }
   });
-  const known = new Set(S.data.fleet.map(f => f.id));
+  // Upsert fleet: update type if vehicle already exists, add if new
   S.data.reservations.forEach(r => {
-    if (r.vehicleId && !known.has(r.vehicleId)) {
+    if (!r.vehicleId) return;
+    const idx = S.data.fleet.findIndex(f => f.id === r.vehicleId);
+    if (idx >= 0) {
+      // Update type if the existing entry has no type or is just the id
+      if (!S.data.fleet[idx].type || S.data.fleet[idx].type === r.vehicleId) {
+        S.data.fleet[idx].type = r.vehicleType || r.vehicleId;
+      }
+    } else {
       S.data.fleet.push({ id: r.vehicleId, type: r.vehicleType || r.vehicleId, active: true });
-      known.add(r.vehicleId);
     }
   });
 }
@@ -1185,9 +1209,8 @@ function upsertReservation(res, _cb, _a, _u) {
 
 function finalizeImport(added, updated) {
   syncFleetFromRes();
-  scheduleSave();
+  saveData().then(() => toast(`✅ ${added} novos · ${updated} atualizados — salvo`, 'ok'));
   renderCurrentTab();
-  toast(`✅ ${added} novos · ${updated} atualizados`, 'ok');
 }
 
 function normDate(v) {
@@ -1476,22 +1499,68 @@ function renderFinAnalytics() {
     </tr>`
   ).join('');
 
-  // --- Origem do cliente (cidade a partir da localização de saída) ---
+  // --- Origem do cliente ---
   const locMap = {};
+  const cityMap = {};
+  const sexMap = {M:0, F:0, '—':0};
+  const ageRanges = {'18-25':0,'26-35':0,'36-45':0,'46-60':0,'60+':0,'N/A':0};
   active.forEach(r => {
+    // Pickup location
     const raw = r.locOut || 'Não informado';
     const loc = raw.replace(/^\(P\)\s*/,'').trim() || 'Não informado';
     locMap[loc] = (locMap[loc]||0) + 1;
+    // City from manual field
+    const city = (r.city||'').trim();
+    if (city) cityMap[city] = (cityMap[city]||0) + 1;
+    // Sex
+    if (r.sex === 'M') sexMap['M']++;
+    else if (r.sex === 'F') sexMap['F']++;
+    else sexMap['—']++;
+    // Age ranges
+    const age = parseInt(r.age);
+    if (!age) ageRanges['N/A']++;
+    else if (age <= 25) ageRanges['18-25']++;
+    else if (age <= 35) ageRanges['26-35']++;
+    else if (age <= 45) ageRanges['36-45']++;
+    else if (age <= 60) ageRanges['46-60']++;
+    else ageRanges['60+']++;
   });
   const locRows = Object.entries(locMap).sort((a,b)=>b[1]-a[1]).map(([loc,n])=>{
     const pct = active.length ? Math.round(n/active.length*100) : 0;
     return `<tr>
-      <td>${loc}</td>
-      <td style="text-align:right">${n}</td>
-      <td style="text-align:right">${pct}%</td>
+      <td>${loc}</td><td style="text-align:right">${n}</td><td style="text-align:right">${pct}%</td>
       <td style="padding-left:8px"><div style="height:6px;background:var(--amber);border-radius:3px;width:${pct}%;min-width:4px"></div></td>
     </tr>`;
   }).join('');
+  const cityRows = Object.entries(cityMap).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([city,n])=>{
+    const pct = active.length ? Math.round(n/active.length*100) : 0;
+    return `<tr><td>${city}</td><td style="text-align:right">${n}</td><td style="text-align:right">${pct}%</td>
+      <td style="padding-left:8px"><div style="height:6px;background:rgba(96,165,250,.7);border-radius:3px;width:${Math.min(100,pct*3)}%;min-width:4px"></div></td></tr>`;
+  }).join('');
+  const hasDemog = sexMap['M'] + sexMap['F'] > 0;
+  const totalSex = sexMap['M'] + sexMap['F'] || 1;
+  const sexHtml = hasDemog ? `
+    <div style="display:flex;gap:16px;margin:8px 0">
+      <div style="flex:1;text-align:center;background:rgba(96,165,250,.1);border-radius:8px;padding:10px">
+        <div style="font-size:22px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#60a5fa">${sexMap['M']}</div>
+        <div style="font-size:11px;color:var(--muted2)">♂ Masculino (${Math.round(sexMap['M']/totalSex*100)}%)</div>
+      </div>
+      <div style="flex:1;text-align:center;background:rgba(244,114,182,.1);border-radius:8px;padding:10px">
+        <div style="font-size:22px;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:#f472b6">${sexMap['F']}</div>
+        <div style="font-size:11px;color:var(--muted2)">♀ Feminino (${Math.round(sexMap['F']/totalSex*100)}%)</div>
+      </div>
+    </div>` : '<div style="color:var(--muted2);font-size:12px;padding:8px 0">Preencha sexo nas reservas para ver dados.</div>';
+  const totalAge = Object.values(ageRanges).reduce((s,v)=>s+v,0) - ageRanges['N/A'];
+  const ageHtml = totalAge > 0 ? Object.entries(ageRanges).filter(([k])=>k!=='N/A').map(([range,n])=>{
+    const pct = totalAge ? Math.round(n/totalAge*100) : 0;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-size:12px;min-width:40px;color:var(--muted2)">${range}</span>
+      <div style="flex:1;height:14px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:var(--amber);border-radius:4px"></div>
+      </div>
+      <span style="font-size:12px;min-width:32px;text-align:right">${n}</span>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted2);font-size:12px;padding:8px 0">Preencha idade nas reservas para ver dados.</div>';
 
   // --- Ocupação por categoria ---
   const daysInYear = 365;
@@ -1535,11 +1604,31 @@ function renderFinAnalytics() {
       </div>
 
       <div class="chart-card" style="margin-bottom:0">
-        <div class="chart-title">📍 Origem das retiradas — ${y}</div>
+        <div class="chart-title">📍 Local de retirada — ${y}</div>
         <div class="tbl-wrap"><table style="font-size:12px">
           <thead><tr><th>Local</th><th style="text-align:right">Qtd</th><th style="text-align:right">%</th><th></th></tr></thead>
           <tbody>${locRows||'<tr><td colspan="4" style="text-align:center;color:var(--muted2)">Sem dados</td></tr>'}</tbody>
         </table></div>
+      </div>
+
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">🌍 Cidade de origem do cliente — ${y}</div>
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:6px">Preenche o campo "Cidade/País" no modal de cada reserva</div>
+        ${cityMap && Object.keys(cityMap).length ? `<div class="tbl-wrap"><table style="font-size:12px">
+          <thead><tr><th>Cidade</th><th style="text-align:right">Clientes</th><th style="text-align:right">%</th><th></th></tr></thead>
+          <tbody>${cityRows}</tbody></table></div>`
+        : '<div style="color:var(--muted2);font-size:12px;padding:12px 0">Nenhuma cidade preenchida ainda.</div>'}
+      </div>
+
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">👥 Perfil demográfico — ${y}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted2);margin-bottom:4px">Sexo</div>
+        ${sexHtml}
+        <div style="font-size:12px;font-weight:600;color:var(--muted2);margin:10px 0 6px">Faixa etária</div>
+        ${ageHtml}
       </div>
 
     </div>
@@ -1803,6 +1892,23 @@ function buildModal(r, isEV) {
     <div class="info-grid">
       <div class="info-box"><div class="info-lbl">Cliente</div><div class="info-val">${r.fullName||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">Telefone</div><div class="info-val">${r.phone||'—'}</div></div>
+      ${can?`
+      <div class="info-box"><div class="info-lbl">Cidade / País</div>
+        <div class="info-val"><input type="text" class="fld-input" style="padding:2px 6px;height:auto;font-size:12px"
+          id="m-city" value="${r.city||''}" placeholder="Ex: São Paulo / Brasil"
+          oninput="updField('city',this.value)"></div></div>
+      <div class="info-box"><div class="info-lbl">Sexo</div>
+        <div class="info-val"><select class="filter-sel" id="m-sex" style="padding:2px 6px;height:auto;font-size:12px;width:100%"
+          onchange="updField('sex',this.value)">
+          <option value="">—</option>
+          <option value="M" ${r.sex==='M'?'selected':''}>Masculino</option>
+          <option value="F" ${r.sex==='F'?'selected':''}>Feminino</option>
+        </select></div></div>
+      <div class="info-box"><div class="info-lbl">Idade</div>
+        <div class="info-val"><input type="number" class="fld-input" style="padding:2px 6px;height:auto;font-size:12px"
+          id="m-age" value="${r.age||''}" placeholder="—" min="18" max="99"
+          oninput="updField('age',+this.value||null)"></div></div>
+      `:''}
       <div class="info-box"><div class="info-lbl">Veículo</div><div class="info-val">${r.vehicleType||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">ID do Veículo</div><div class="info-val">${r.vehicleId||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">Saída</div><div class="info-val">${fmtD(r.pickupDate)} <span style="color:var(--amber);font-size:12px">${r.locOut?'('+r.locOut+')':''}</span></div></div>
@@ -2255,8 +2361,9 @@ function importVehicleSummary(ws) {
     const idx = S.data.vehicles.findIndex(v=>v.id===id);
     if (idx >= 0) { S.data.vehicles[idx] = {...S.data.vehicles[idx], ...veh}; updated++; }
     else { S.data.vehicles.push(veh); added++; }
-    if (!S.data.fleet.find(f=>f.id===id))
-      S.data.fleet.push({id, type:veh.category||veh.name.trim(), active:true});
+    const fi = S.data.fleet.findIndex(f=>f.id===id);
+    if (fi >= 0) S.data.fleet[fi] = {...S.data.fleet[fi], type: veh.category||veh.name.trim()};
+    else S.data.fleet.push({id, type:veh.category||veh.name.trim(), active:true});
   }
   // Auto-create categories from vehicle types if they don't exist yet
   const newCats = [...new Set(S.data.vehicles.map(v=>v.category).filter(Boolean))];
@@ -2266,8 +2373,8 @@ function importVehicleSummary(ws) {
     }
   });
   if (!S.data.categories) S.data.categories = [];
-  scheduleSave(); renderVeiculos(); updateCotacaoSelect();
-  toast(`✅ VehicleSummary: ${added} novos · ${updated} atualizados · ${newCats.length} categorias sincronizadas`, 'ok');
+  saveData().then(() => toast(`✅ VehicleSummary: ${added} novos · ${updated} atualizados · ${newCats.length} categorias — salvo`, 'ok'));
+  renderVeiculos(); updateCotacaoSelect();
 }
 
 // Frota.xlsx: Numero, Ano, Carro, Placa, Carfax, Valor(parcela), Payoff, Dia, Financeira, Jan..Dec
@@ -2321,8 +2428,12 @@ function importFrotaFinancing(ws) {
       S.data.financing[existIdx] = fin; updated++;
     } else { S.data.financing.push(fin); added++; }
     // Also ensure vehicle exists
-    if (!S.data.vehicles.find(v=>v.id===vehicleId))
-      S.data.vehicles.push({id:vehicleId, name, category:'', year, color:'', vin:'', licensePlate:plate, mileage:0, notes:'', active:true});
+    const vIdx = S.data.vehicles.findIndex(v=>v.id===vehicleId);
+    if (vIdx < 0) S.data.vehicles.push({id:vehicleId, name, category:'', year, color:'', vin:'', licensePlate:plate, mileage:0, notes:'', active:true});
+    // Upsert fleet too
+    const fIdx2 = S.data.fleet.findIndex(f=>f.id===vehicleId);
+    if (fIdx2 >= 0) { if(!S.data.fleet[fIdx2].type) S.data.fleet[fIdx2].type = name; }
+    else S.data.fleet.push({id:vehicleId, type:name, active:true});
   }
   // Auto-create categories from vehicleTypes found in reservations for these vehicles
   const finVehIds = new Set(S.data.financing.map(f=>f.vehicleId));
@@ -2341,8 +2452,8 @@ function importFrotaFinancing(ws) {
     if (!S.data.fleet.find(f=>f.id===fin.vehicleId))
       S.data.fleet.push({id:fin.vehicleId, type:'', active:true});
   });
-  scheduleSave(); renderFinanciamento();
-  toast(`✅ Frota: ${added} financiamentos novos · ${updated} atualizados`, 'ok');
+  saveData().then(() => toast(`✅ Frota: ${added} novos · ${updated} atualizados — salvo`, 'ok'));
+  renderFinanciamento();
 }
 
 // ════════════════════════════════════════════════════════
@@ -2412,7 +2523,7 @@ function calcCotacao() {
   const salesTax     = taxableBase * 0.065;
   const airportTax   = airport ? taxableBase * 0.10 : 0;
   const total        = taxableBase + flTax + salesTax + airportTax;
-  const brlRate      = 6.1;
+  const brlRate      = parseFloat(document.getElementById('cot-brl')?.value) || 5.80;
 
   const catSel  = document.getElementById('cot-cat');
   const catName = catSel?.options[catSel.selectedIndex]?.text?.split(' —')[0] || '';
@@ -2429,7 +2540,8 @@ function calcCotacao() {
     ...(airport ? [{ lbl: 'Airport Tax 10%', val: airportTax, tax: true }] : []),
   ];
 
-  const pdata = JSON.stringify({total,days,start,end,rentalBase,sunpassTotal,delivery,extras,flTax,salesTax,airportTax,daily,sunpass,catName,name,phone,airport})
+  const brlRateVal = parseFloat(document.getElementById('cot-brl')?.value) || 5.80;
+  const pdata = JSON.stringify({total,days,start,end,rentalBase,sunpassTotal,delivery,extras,flTax,salesTax,airportTax,daily,sunpass,catName,name,phone,airport,brlRate:brlRateVal})
     .replace(/'/g, "&#39;");
 
   out.innerHTML = `<div class="cot-result-card">
@@ -2452,7 +2564,7 @@ function calcCotacao() {
 }
 
 function copyCotacaoData(p) {
-  const brlRate = 6.1;
+  const brlRate = p.brlRate || 5.80;
   const lines = [
     '*GS Car Rental — Cotação*', '',
     ...(p.name  ? ['👤 ' + p.name]  : []),
