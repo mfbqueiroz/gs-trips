@@ -81,20 +81,30 @@ a{color:inherit;text-decoration:none}
 #app{display:none;flex-direction:column;height:100vh;overflow:hidden}
 header{
   background:var(--surface);border-bottom:1px solid var(--border);
-  padding:0 20px;display:flex;align-items:center;gap:12px;height:52px;flex-shrink:0;
+  padding:0 16px;display:flex;align-items:center;gap:10px;height:50px;flex-shrink:0;
   position:sticky;top:0;z-index:200;
 }
 .logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:var(--amber);letter-spacing:0.06em;white-space:nowrap;user-select:none}
 .logo span{color:var(--muted);font-weight:400}
-.tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+/* Bottom tab bar */
+.tabs{
+  display:flex;position:fixed;bottom:0;left:0;right:0;z-index:300;
+  background:var(--surface);border-top:1px solid var(--border);
+  overflow-x:auto;scrollbar-width:none;padding:0 4px;
+}
 .tabs::-webkit-scrollbar{display:none}
 .tab-btn{
-  background:none;border:none;color:var(--muted);font-family:'Barlow Condensed',sans-serif;
-  font-weight:700;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;
-  padding:7px 14px;border-radius:var(--radius-sm);transition:all 0.15s;white-space:nowrap;
+  flex:1;min-width:60px;max-width:110px;
+  background:none;border:none;color:var(--muted);
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;
+  letter-spacing:0.04em;text-transform:uppercase;
+  padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:all 0.15s;white-space:nowrap;border-top:2px solid transparent;
 }
-.tab-btn:hover{color:var(--text);background:var(--card)}
-.tab-btn.active{color:var(--amber);background:var(--amber-bg)}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--amber);border-top-color:var(--amber)}
+.tab-icon{font-size:18px;line-height:1}
+.tab-label{font-size:10px}
 .header-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
 .save-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background 0.3s;flex-shrink:0}
 .save-dot.saving{background:var(--amber);animation:pulse 1s infinite}
@@ -113,7 +123,7 @@ header{
   font-family:'Barlow Condensed',sans-serif;letter-spacing:0.08em;text-transform:uppercase;
 }
 
-main{flex:1;overflow-y:auto;overflow-x:hidden}
+main{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:70px}
 
 /* ── PANELS ── */
 .tab-panel{display:none;padding:20px 20px 40px}
@@ -409,13 +419,11 @@ textarea.fld-input{resize:vertical;min-height:70px}
 
 @media(max-width:640px){
   header{padding:0 12px;gap:8px}
-  .tab-btn{padding:7px 10px;font-size:12px}
-  .tab-btn .tab-icon{display:none}
   .logo span{display:none}
   .info-grid{grid-template-columns:1fr}
   .fld-row{grid-template-columns:1fr}
   .stats-row{grid-template-columns:1fr 1fr}
-  .tab-panel{padding:16px 12px 40px}
+  .tab-panel{padding:16px 12px 80px}
 }
 /* ── VEÍCULOS ── */
 .veh-table{width:100%;border-collapse:collapse;font-size:13px}
@@ -522,15 +530,15 @@ textarea.fld-input{resize:vertical;min-height:70px}
 <div id="app">
   <header>
     <div class="logo">GS<span> TRIPS</span></div>
-    <nav class="tabs">
-      <button class="tab-btn active" data-tab="agenda" onclick="switchTab('agenda')"><span class="tab-icon">📅 </span>Agenda</button>
-      <button class="tab-btn" data-tab="financeiro" onclick="switchTab('financeiro')"><span class="tab-icon">💰 </span>Financeiro</button>
-      <button class="tab-btn" data-tab="historico" onclick="switchTab('historico')"><span class="tab-icon">📋 </span>Histórico</button>
-      <button class="tab-btn" data-tab="frota" onclick="switchTab('frota')"><span class="tab-icon">📊 </span>Overview</button>
-      <button class="tab-btn" data-tab="veiculos" onclick="switchTab('veiculos')"><span class="tab-icon">🔧 </span>Veículos</button>
-      <button class="tab-btn" data-tab="cotacao" onclick="switchTab('cotacao')"><span class="tab-icon">💲 </span>Cotação</button>
-      <button class="tab-btn" data-tab="financiamento" onclick="switchTab('financiamento')"><span class="tab-icon">🏦 </span>Financiamento</button>
-      <button class="tab-btn" data-tab="investidores" onclick="switchTab('investidores')"><span class="tab-icon">📈 </span>Investidores</button>
+    <nav class="tabs" id="main-tabs">
+      <button class="tab-btn active" data-tab="agenda" data-roles="admin,team" onclick="switchTab('agenda')"><span class="tab-icon">📅</span><span class="tab-label">Agenda</span></button>
+      <button class="tab-btn" data-tab="frota" data-roles="admin,team" onclick="switchTab('frota')"><span class="tab-icon">📊</span><span class="tab-label">Overview</span></button>
+      <button class="tab-btn" data-tab="cotacao" data-roles="admin,team" onclick="switchTab('cotacao')"><span class="tab-icon">💲</span><span class="tab-label">Cotação</span></button>
+      <button class="tab-btn" data-tab="veiculos" data-roles="admin,team" onclick="switchTab('veiculos')"><span class="tab-icon">🔧</span><span class="tab-label">Veículos</span></button>
+      <button class="tab-btn" data-tab="financeiro" data-roles="admin" onclick="switchTab('financeiro')"><span class="tab-icon">💰</span><span class="tab-label">Financeiro</span></button>
+      <button class="tab-btn" data-tab="historico" data-roles="admin" onclick="switchTab('historico')"><span class="tab-icon">📋</span><span class="tab-label">Histórico</span></button>
+      <button class="tab-btn" data-tab="financiamento" data-roles="admin" onclick="switchTab('financiamento')"><span class="tab-icon">🏦</span><span class="tab-label">Financ.</span></button>
+      <button class="tab-btn" data-tab="investidores" data-roles="admin" onclick="switchTab('investidores')"><span class="tab-icon">📈</span><span class="tab-label">Invest.</span></button>
     </nav>
     <div class="header-right">
       <div class="save-dot" id="save-dot" title="Status de salvamento"></div>
@@ -896,6 +904,11 @@ function doLogin() {
     document.getElementById('th-total').style.display = 'none';
     document.getElementById('th-saldo').style.display = 'none';
   }
+  // Show/hide tabs based on role
+  document.querySelectorAll('.tab-btn[data-roles]').forEach(btn => {
+    const allowed = btn.dataset.roles.split(',');
+    btn.style.display = allowed.includes(role) ? '' : 'none';
+  });
   initApp();
 }
 
@@ -914,28 +927,62 @@ function doLogout() {
 async function loadData() {
   loader(true, 'Sincronizando...');
   try {
-    const snap = await db.collection('gsdata').doc('main').get();
-    if (snap.exists) {
-      const stored = snap.data();
-      S.data = {
-        reservations: stored.reservations || [],
-        fleet:        stored.fleet        || [],
-        vehicles:     stored.vehicles     || [],
-        categories:   stored.categories   || [],
-        financing:    stored.financing    || [],
-        investors:    stored.investors    || [],
-        lastUpdated:  stored.lastUpdated  || null,
-      };
-      // Load photos separately
-      const photoSnap = await db.collection('gsdata').doc('photos').get();
-      if (photoSnap.exists) {
-        const photos = photoSnap.data();
-        S.data.reservations.forEach(r => {
-          if (photos[r.id + '_Out']) r.photosOut = photos[r.id + '_Out'];
-          if (photos[r.id + '_In'])  r.photosIn  = photos[r.id + '_In'];
-        });
+    // Load meta first to know how many chunks
+    const metaSnap = await db.collection('gsdata').doc('meta').get();
+    if (!metaSnap.exists) {
+      // Try legacy 'main' doc for backwards compat
+      const legacySnap = await db.collection('gsdata').doc('main').get();
+      if (legacySnap.exists) {
+        const d = legacySnap.data();
+        S.data = {
+          reservations: d.reservations || [],
+          fleet:        d.fleet        || [],
+          vehicles:     d.vehicles     || [],
+          categories:   d.categories   || [],
+          financing:    d.financing    || [],
+          investors:    d.investors    || [],
+          lastUpdated:  d.lastUpdated  || null,
+        };
       }
+      loader(false);
+      return;
     }
+
+    const meta = metaSnap.data();
+    const nChunks = meta.resChunks || 1;
+
+    // Load all chunks in parallel
+    const chunkPromises = [];
+    for (let i = 0; i < nChunks; i++)
+      chunkPromises.push(db.collection('gsdata').doc('res_' + i).get());
+    const [photoPromise, ...chunkSnaps] = await Promise.all([
+      db.collection('gsdata').doc('photos').get(),
+      ...chunkPromises
+    ]);
+
+    // Reassemble reservations
+    const allRes = [];
+    chunkSnaps.forEach(snap => {
+      if (snap.exists) allRes.push(...(snap.data().reservations || []));
+    });
+
+    // Attach photos
+    const photos = photoPromise.exists ? photoPromise.data() : {};
+    allRes.forEach(r => {
+      r.photosOut = photos[r.id + '_Out'] || [];
+      r.photosIn  = photos[r.id + '_In']  || [];
+    });
+
+    S.data = {
+      reservations: allRes,
+      fleet:        meta.fleet        || [],
+      vehicles:     meta.vehicles     || [],
+      categories:   meta.categories   || [],
+      financing:    meta.financing    || [],
+      investors:    meta.investors    || [],
+      lastUpdated:  meta.lastUpdated  || null,
+    };
+    console.log('Firebase load OK — ' + allRes.length + ' reservas, ' + nChunks + ' chunks');
   } catch(e) {
     console.warn('Load error:', e);
     toast('Erro ao carregar dados — verifique conexão', 'err');
@@ -943,41 +990,53 @@ async function loadData() {
   loader(false);
 }
 
+// Firestore batch has 500 op limit; chunk into 200 reservations per doc
+const RES_CHUNK = 200;
+
 async function saveData() {
   if (!isAdmin()) return;
   saveDot('saving');
   try {
     S.data.lastUpdated = new Date().toISOString();
 
-    // Separate photos from main data (Firestore 1MB doc limit)
+    // Strip photos, save separately
     const photos = {};
-    const resWithoutPhotos = S.data.reservations.map(r => {
-      if ((r.photosOut && r.photosOut.length) || (r.photosIn && r.photosIn.length)) {
-        if (r.photosOut?.length) photos[r.id + '_Out'] = r.photosOut;
-        if (r.photosIn?.length)  photos[r.id + '_In']  = r.photosIn;
-      }
+    const resClean = S.data.reservations.map(r => {
+      if (r.photosOut?.length) photos[r.id + '_Out'] = r.photosOut;
+      if (r.photosIn?.length)  photos[r.id + '_In']  = r.photosIn;
       const { photosOut, photosIn, ...rest } = r;
       return rest;
     });
 
-    const mainDoc = {
-      reservations: resWithoutPhotos,
+    // Split reservations into chunks of RES_CHUNK
+    const chunks = [];
+    for (let i = 0; i < resClean.length; i += RES_CHUNK)
+      chunks.push(resClean.slice(i, i + RES_CHUNK));
+    if (chunks.length === 0) chunks.push([]);
+
+    // Meta doc: everything except reservations + chunk count
+    const metaDoc = {
       fleet:        S.data.fleet        || [],
       vehicles:     S.data.vehicles     || [],
       categories:   S.data.categories   || [],
       financing:    S.data.financing    || [],
       investors:    S.data.investors    || [],
       lastUpdated:  S.data.lastUpdated,
+      resChunks:    chunks.length,
+      resTotal:     resClean.length,
     };
 
-    // Use batch write for atomicity
-    const batch = db.batch();
-    batch.set(db.collection('gsdata').doc('main'),   mainDoc);
-    batch.set(db.collection('gsdata').doc('photos'), photos);
-    await batch.commit();
+    // Write meta + all chunks + photos in parallel (each batch ≤ 500 ops)
+    const writes = [];
+    writes.push(db.collection('gsdata').doc('meta').set(metaDoc));
+    chunks.forEach((chunk, i) =>
+      writes.push(db.collection('gsdata').doc('res_' + i).set({ reservations: chunk }))
+    );
+    writes.push(db.collection('gsdata').doc('photos').set(photos));
 
+    await Promise.all(writes);
     saveDot('saved');
-    console.log('Firebase save OK — ' + resWithoutPhotos.length + ' reservas');
+    console.log('Firebase save OK — ' + resClean.length + ' reservas em ' + chunks.length + ' chunks');
   } catch(e) {
     console.error('Firebase save error:', e);
     saveDot('');
@@ -1336,6 +1395,8 @@ function renderAgenda() {
           <span class="res-chip">${r.days||0}d</span>
           ${r.milesOut!=null?`<span class="res-chip">🛣 ${r.milesOut}mi</span>`:''}
           ${r.fuelOut!=null?`<span class="res-chip">⛽ ${FUELS[r.fuelOut]||'?'}</span>`:''}
+          ${(()=>{ if(r.fuelOut!=null&&r.fuelIn!=null&&r.fuelIn<r.fuelOut){ const used=(([0,.25,.5,.75,1])[r.fuelOut]-([0,.25,.5,.75,1])[r.fuelIn]); const cost=used*16*GAS_PPG; return cost>0?`<span class="res-chip" style="color:var(--orange)">⛽ -$${cost.toFixed(0)}</span>`:''; } return ''; })()}
+          ${r.extras?`<span class="res-chip" style="color:var(--amber)">+ ${r.extras}</span>`:''}
           ${isAdmin()&&r.total?`<span class="res-val">$${fmt$(r.total)}</span>`:''}
         </div>
       </div>`;
@@ -2005,7 +2066,25 @@ function buildModal(r, isEV) {
   </div>
 
   <div class="m-section">
-    <div class="m-section-title">Notas</div>
+    <div class="m-section-title">Extras / Cobranças adicionais</div>
+    <div class="fld-row">
+      <div class="fld-group">
+        <div class="fld-label">Descrição (ex: gasolina, dano, multa)</div>
+        <input type="text" class="fld-input" id="m-extras"
+          value="${r.extras||''}" placeholder="Ex: Gasolina $45 + multa $120"
+          oninput="updField('extras',this.value)">
+      </div>
+      <div class="fld-group">
+        <div class="fld-label">Valor adicional ($)</div>
+        <input type="number" step="0.01" class="fld-input" id="m-extras-val"
+          value="${r.extrasVal||''}" placeholder="0.00"
+          oninput="updField('extrasVal',+this.value||0)">
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">Notas internas</div>
     <textarea class="fld-input" ${!can?'disabled':''} rows="3"
       oninput="updField('notes',this.value)">${r.notes||''}</textarea>
   </div>
