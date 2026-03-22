@@ -544,8 +544,8 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <div class="save-dot" id="save-dot" title="Status de salvamento"></div>
       <span class="role-badge" id="role-badge"></span>
       <button class="hdr-btn" onclick="syncNow()" title="Sincronizar dados">↻ Sync</button>
-      <button class="hdr-btn" onclick="exportJSON()" title="Exportar todos os dados como JSON">⬇ Export</button>
-      <button class="hdr-btn" onclick="document.getElementById('import-json-input').click()" title="Importar dados de um JSON exportado anteriormente" id="import-json-btn">⬆ Import</button>
+      <button class="hdr-btn" id="btn-export" onclick="exportJSON()" title="Exportar todos os dados como JSON">⬇ Export</button>
+      <button class="hdr-btn" id="btn-import-json" onclick="document.getElementById('import-json-input').click()" title="Importar dados de um JSON exportado anteriormente">⬆ Import</button>
       <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(this.files[0])">
       <button class="hdr-btn" onclick="doLogout()">Sair</button>
     </div>
@@ -566,7 +566,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
         </div>
       </div>
 
-      <div class="import-zone" id="import-zone"
+      <div class="import-zone" id="import-zone" style="display:none"
         onclick="document.getElementById('xl-input').click()"
         ondragover="handleDragOver(event)"
         ondragleave="handleDragLeave(event)"
@@ -909,6 +909,12 @@ function doLogin() {
     const allowed = btn.dataset.roles.split(',');
     btn.style.display = allowed.includes(role) ? '' : 'none';
   });
+  // Show admin-only UI elements
+  const adminOnly = ['import-zone','btn-export','btn-import-json','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn'];
+  adminOnly.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = role === 'admin' ? '' : 'none';
+  });
   initApp();
 }
 
@@ -1073,6 +1079,10 @@ function scheduleSave() {
 }
 
 async function syncNow() {
+  if (S._localDirty) {
+    toast('⚠️ Salvamento em andamento — aguarde', 'err');
+    return;
+  }
   const before = S.data.reservations.length;
   await loadData();
   syncFleetFromRes();
@@ -1238,9 +1248,13 @@ function processReservations(raw) {
 
 // Handle "RentalDetailsReport" export format (header at row 4, data from row 5)
 function processRentalDetails(raw) {
-  let hdrIdx = raw.findIndex(r => String(r[0]||'').toLowerCase().includes('ra#'));
-  if (hdrIdx < 0) hdrIdx = raw.findIndex(r => String(r[0]||'').toLowerCase() === 'ra#');
-  if (hdrIdx < 0) { toast('Formato não reconhecido', 'err'); return; }
+  // Find header row: look for 'RA#' or 'Customer ID' in first few cols
+  let hdrIdx = raw.findIndex(r =>
+    String(r[0]||'').toUpperCase().includes('RA#') ||
+    String(r[0]||'').toUpperCase() === 'RA#' ||
+    (String(r[0]||'').toUpperCase().includes('RA') && String(r[1]||'').toLowerCase().includes('customer'))
+  );
+  if (hdrIdx < 0) { toast('Formato RentalDetails não reconhecido', 'err'); return; }
   const hdr = raw[hdrIdx];
   const ci = {};
   hdr.forEach((h,i) => { if(h) ci[String(h).toLowerCase().trim()] = i; });
@@ -1259,8 +1273,12 @@ function processRentalDetails(raw) {
     // Use Res# as the reservation ID; fall back to RA# if Res# missing
     const resNum = g(row, 'res#', 'res #', 'reservation#');
     const raNum  = g(row, 'ra#');
-    const rawId  = resNum || raNum;
-    if (!rawId || isNaN(Number(String(rawId).replace(/\D/g,'')))) continue;
+    // Prefer Res# if available, fall back to RA# with prefix to avoid collision
+    const rawId  = resNum || (raNum ? 'RA' + raNum : null);
+    if (!rawId) continue;
+    // Skip summary/total rows
+    const numPart = String(rawId).replace(/[^0-9]/g,'');
+    if (!numPart || numPart.length < 4) continue;
     const id = String(rawId).trim();
     const firstName = String(g(row, 'first name', 'firstname') || '').trim();
     const lastName  = String(g(row, 'last name', 'lastname') || '').trim();
@@ -1330,10 +1348,14 @@ function upsertReservation(res, _cb, _a, _u) {
   // noop placeholder — actual logic inline above
 }
 
-function finalizeImport(added, updated) {
+async function finalizeImport(added, updated) {
   syncFleetFromRes();
-  saveData().then(() => toast(`✅ ${added} novos · ${updated} atualizados — salvo`, 'ok'));
+  S._localDirty = true; // mark as locally modified
   renderCurrentTab();
+  toast(`💾 ${added} novos · ${updated} atualizados — salvando...`, 'ok');
+  await saveData();
+  S._localDirty = false;
+  toast(`✅ ${added} novos · ${updated} atualizados — salvo no Firebase`, 'ok');
 }
 
 function normDate(v) {
