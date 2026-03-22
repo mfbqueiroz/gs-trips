@@ -898,7 +898,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
           Veja bateria em tempo real, histórico de carregamentos por carro e período,<br>
           e quanto cada cliente gastou em carregamento durante a locação.
         </div>
-        <button class="btn primary" style="padding:12px 24px;font-size:14px" onclick="teslaConnect()">⚡ Conectar Tesla</button>
+        <button class="btn primary" style="padding:12px 24px;font-size:14px" onclick="teslaConnect()">⚡ Login com Tesla</button>
       </div>
 
       <div id="tesla-out"></div>
@@ -937,7 +937,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.3';
+const APP_VERSION = 'v2.4';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3453,9 +3453,19 @@ function tClear() {
 }
 
 // ── Client Credentials flow (grant_type=client_credentials) ──
-async function teslaConnect() {
-  // Go straight to manual token — curl command is fastest approach
-  showTeslaTokenInput();
+function teslaConnect() {
+  // authorization_code OAuth flow
+  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  localStorage.setItem('tesla_oauth_state', state);
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id:     TESLA_CLIENT_ID,
+    redirect_uri:  TESLA_REDIRECT_URI,
+    scope:         TESLA_SCOPES,
+    state:         state,
+    locale:        'en-US',
+  });
+  window.location.href = 'https://auth.tesla.com/oauth2/v3/authorize?' + params.toString();
 }
 
 function showTeslaTokenInput() {
@@ -3500,26 +3510,72 @@ function teslaSetManualToken() {
   renderTesla();
 }
 
-async function teslaHandleCallback() { return false; }
+async function teslaHandleCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code  = params.get('code');
+  const state = params.get('state');
+  if (!code) return false;
+  const savedState = localStorage.getItem('tesla_oauth_state');
+  if (state !== savedState) {
+    toast('Tesla: estado OAuth invalido', 'err');
+    return false;
+  }
+  localStorage.removeItem('tesla_oauth_state');
+  window.history.replaceState({}, '', window.location.pathname);
+  loader(true, 'Autenticando Tesla...');
+  try {
+    // Exchange code via Vercel proxy
+    const res = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer gsadmin' },
+      body: JSON.stringify({
+        grant_type:    'authorization_code',
+        code:          code,
+        redirect_uri:  TESLA_REDIRECT_URI,
+        client_id:     TESLA_CLIENT_ID,
+        client_secret: TESLA_CLIENT_SECRET,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(()=>'');
+      throw new Error('Token exchange failed ' + res.status + ': ' + err.slice(0,120));
+    }
+    const data = await res.json();
+    if (!data.access_token) throw new Error('No access_token in response');
+    T.accessToken  = data.access_token;
+    T.refreshToken = data.refresh_token || null;
+    T.expiresAt    = Date.now() + (data.expires_in || 28800) * 1000;
+    tSave();
+    loader(false);
+    toast('Tesla conectado!', 'ok');
+    return true;
+  } catch(e) {
+    loader(false);
+    console.error('Tesla callback error:', e);
+    toast('Erro Tesla: ' + e.message, 'err');
+    return false;
+  }
+}
 
 async function teslaRefreshTokens() {
+  if (!T.refreshToken) return false;
   try {
     const res = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer gsadmin' },
       body: JSON.stringify({
-        grant_type:    'client_credentials',
+        grant_type:    'refresh_token',
+        refresh_token: T.refreshToken,
         client_id:     TESLA_CLIENT_ID,
         client_secret: TESLA_CLIENT_SECRET,
-        scope:         TESLA_SCOPES,
-        audience:      'https://fleet-api.prd.na.vn.cloud.tesla.com',
       }),
     });
     if (!res.ok) return false;
     const data = await res.json();
     if (!data.access_token) return false;
-    T.accessToken = data.access_token;
-    T.expiresAt   = Date.now() + (data.expires_in || 3600) * 1000;
+    T.accessToken  = data.access_token;
+    T.refreshToken = data.refresh_token || T.refreshToken;
+    T.expiresAt    = Date.now() + (data.expires_in || 28800) * 1000;
     tSave();
     return true;
   } catch(e) { return false; }
@@ -3863,9 +3919,12 @@ function getTeslaChargesForReservation(res) {
 
 // Check OAuth callback on load
 (async function checkTeslaCallback() {
-  if (window.location.search.includes('code=')) {
+  if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
     const ok = await teslaHandleCallback();
-    if (ok) switchTab('tesla');
+    if (ok) {
+      // Wait for app to load then switch to Tesla tab
+      setTimeout(() => switchTab('tesla'), 500);
+    }
   }
 })();
 
