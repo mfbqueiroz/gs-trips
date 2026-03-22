@@ -431,16 +431,30 @@ textarea.fld-input{resize:vertical;min-height:70px}
 .legend-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
 
 @media(max-width:640px){
-  header{padding:0 10px;gap:6px}
+  header{padding:0 8px;gap:5px;height:44px}
   .logo span{display:none}
   .info-grid{grid-template-columns:1fr}
   .fld-row{grid-template-columns:1fr}
   .stats-row{grid-template-columns:1fr 1fr}
-  .tab-panel{padding:14px 10px 20px}
-  .tabs{width:56px}
-  .tab-btn{padding:8px 2px 6px}
-  .tab-icon{font-size:18px}
-  .tab-label{font-size:8px}
+  .tab-panel{padding:12px 8px 20px}
+  .tabs{width:52px}
+  .tab-btn{padding:7px 2px 5px}
+  .tab-icon{font-size:17px}
+  .tab-label{font-size:7.5px}
+  .hdr-btn{font-size:10px;padding:3px 5px}
+  .day-cards{grid-template-columns:1fr}
+  .modal-box{width:calc(100vw - 12px);max-height:92vh}
+}
+@media(max-width:900px) and (orientation:landscape){
+  #app-body{flex-direction:column}
+  .tabs{flex-direction:row;width:100%;height:50px;min-height:50px;border-right:none;border-top:1px solid var(--border);overflow-x:auto;overflow-y:hidden;padding:0 4px;order:2;flex-shrink:0}
+  main{order:1;overflow-y:auto}
+  .tab-btn{flex-direction:row;gap:5px;padding:0 10px;min-width:auto;height:50px;border-left:none;border-top:2px solid transparent;white-space:nowrap}
+  .tab-btn.active{border-left-color:transparent;border-top-color:var(--amber)}
+  .tab-label{font-size:10px}
+  .tab-icon{font-size:15px}
+  .tab-panel{padding:10px 12px}
+  .day-cards{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 }
 /* ── VEÍCULOS ── */
 .veh-table{width:100%;border-collapse:collapse;font-size:13px}
@@ -562,11 +576,15 @@ textarea.fld-input{resize:vertical;min-height:70px}
     <input type="password" id="pwd-input" class="login-input" placeholder="••••••••" autocomplete="off" autofocus>
     <button class="login-btn" onclick="doLogin()">ENTRAR</button>
     <div class="login-error" id="login-err"></div>
+    <div id="login-ver" style="margin-top:18px;font-size:11px;color:var(--muted2);text-align:center"></div>
   </div>
 </div>
 
 <!-- ═══ APP ═══ -->
 <div id="app">
+  <div id="demo-banner" style="display:none;background:rgba(59,130,246,.15);border-bottom:1px solid rgba(59,130,246,.3);padding:6px 16px;font-size:12px;color:#60a5fa;text-align:center;flex-shrink:0">
+    👁 Modo Demo — dados fictícios para demonstração
+  </div>
   <header>
     <div class="logo">GS<span> TRIPS</span><span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px" id="ver-badge"></span></div>
     <div class="header-right">
@@ -992,7 +1010,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v3.1';
+const APP_VERSION = 'v3.3';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1044,7 +1062,18 @@ function loadPhotosLocal(reservations) {
   } catch(e) {}
 }
 
-const CREDS   = { 'gsadmin': 'admin', 'gs2026': 'team' };
+// Passwords → roles: admin / team / demo
+const CREDS = {
+  'gs_marcelo':   'admin',
+  'gs_diogo':     'admin',
+  'gs_gabriela':  'admin',
+  'gsadmin':      'admin',
+  'gs_jonathan':  'team',
+  'gs_fernando':  'team',
+  'gs2026':       'team',
+  'gsdemo':       'demo',
+};
+const DEMO_NAMES = { gs_marcelo:'Marcelo', gs_diogo:'Diogo', gs_gabriela:'Gabriela', gsadmin:'Admin', gs_jonathan:'Jonathan', gs_fernando:'Fernando', gs2026:'Equipe', gsdemo:'Demo' };
 const FUELS   = ['E', '1/4', '1/2', '3/4', 'F'];
 const MONTHS  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MSHORT  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1064,11 +1093,16 @@ let S = {
 };
 
 const isAdmin = () => S.role === 'admin';
+const isDemo  = () => S.role === 'demo';
 
 // ════════════════════════════════════════════════════════
 //  AUTH
 // ════════════════════════════════════════════════════════
 document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+// Show version on login screen immediately
+const _lv = document.getElementById('login-ver');
+if (_lv) _lv.textContent = APP_VERSION;
+if (_lv) _lv.textContent = APP_VERSION;
 
 function doLogin() {
   const pwd = document.getElementById('pwd-input').value.trim();
@@ -1083,7 +1117,8 @@ function doLogin() {
   S.role = role; S.token = pwd;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  document.getElementById('role-badge').textContent = role === 'admin' ? '👑 Admin' : '👤 Equipe';
+  const uname = DEMO_NAMES[pwd] || (role === 'admin' ? 'Admin' : 'Equipe');
+  document.getElementById('role-badge').textContent = role === 'admin' ? '👑 ' + uname : role === 'demo' ? '👁 Demo' : '👤 ' + uname;
   // Hide money columns for team
   if (role !== 'admin') {
     document.getElementById('th-total').style.display = 'none';
@@ -1274,11 +1309,59 @@ async function syncNow() {
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
+function loadDemoData() {
+  const td = ds(new Date());
+  const d1 = ds(new Date(Date.now() - 2*86400000));
+  const d2 = ds(new Date(Date.now() + 3*86400000));
+  const d3 = ds(new Date(Date.now() + 7*86400000));
+  const d4 = ds(new Date(Date.now() - 5*86400000));
+  const d5 = ds(new Date(Date.now() + 14*86400000));
+
+  S.data = {
+    reservations: [
+      { id:'D001', vehicleId:'TESLA-Y1', vehicleType:'Tesla Model Y', fullName:'João Silva', phone:'(11) 99999-0001', status:'Confirmed', pickupDate:td, returnDate:d2, pickupTime:'10:00', returnTime:'10:00', locOut:'MCO Airport', locIn:'MCO Airport', days:5, total:620, paid:620, balance:0, city:'Orlando', notes:'Demo reservation' },
+      { id:'D002', vehicleId:'TESLA-Y2', vehicleType:'Tesla Model Y', fullName:'Maria Santos', phone:'(21) 98888-0002', status:'Confirmed', pickupDate:d1, returnDate:d3, pickupTime:'14:00', returnTime:'14:00', locOut:'MIA Airport', locIn:'MIA Airport', days:8, total:990, paid:500, balance:490, city:'Miami', notes:'' },
+      { id:'D003', vehicleId:'CAD-OPT1', vehicleType:'Cadillac Optiq', fullName:'Pedro Costa', phone:'(31) 97777-0003', status:'Pending', pickupDate:d3, returnDate:d5, pickupTime:'09:00', returnTime:'09:00', locOut:'FLL Airport', locIn:'FLL Airport', days:7, total:840, paid:0, balance:840, city:'Fort Lauderdale', notes:'' },
+      { id:'D004', vehicleId:'TESLA-Y1', vehicleType:'Tesla Model Y', fullName:'Ana Oliveira', phone:'(41) 96666-0004', status:'Closed', pickupDate:d4, returnDate:d1, pickupTime:'11:00', returnTime:'11:00', locOut:'MCO Airport', locIn:'MCO Airport', days:3, total:370, paid:370, balance:0, city:'Orlando', notes:'' },
+      { id:'D005', vehicleId:'CAD-OPT1', vehicleType:'Cadillac Optiq', fullName:'Carlos Souza', phone:'(51) 95555-0005', status:'Confirmed', pickupDate:d5, returnDate:ds(new Date(Date.now()+21*86400000)), pickupTime:'13:00', returnTime:'13:00', locOut:'MIA Airport', locIn:'MIA Airport', days:7, total:840, paid:420, balance:420, city:'Miami', notes:'' },
+    ],
+    fleet: [
+      { id:'TESLA-Y1', type:'Tesla Model Y', active:true },
+      { id:'TESLA-Y2', type:'Tesla Model Y', active:true },
+      { id:'CAD-OPT1', type:'Cadillac Optiq', active:true },
+    ],
+    vehicles: [
+      { id:'TESLA-Y1', name:'Tesla Model Y 2024', category:'Tesla Model Y', year:2024, color:'Branco', vin:'5YJ3E1EA0NF000001', licensePlate:'FL-DEMO1', mileage:12000, active:true },
+      { id:'TESLA-Y2', name:'Tesla Model Y 2024', category:'Tesla Model Y', year:2024, color:'Preto', vin:'5YJ3E1EA0NF000002', licensePlate:'FL-DEMO2', mileage:8500, active:true },
+      { id:'CAD-OPT1', name:'Cadillac Optiq 2024', category:'Cadillac Optiq', year:2024, color:'Cinza', vin:'1GYFZER41RF000001', licensePlate:'FL-DEMO3', mileage:5200, active:true },
+    ],
+    categories: [
+      { name:'Tesla Model Y', daily:124, weekly:750, monthly:2800, weekend:280, notes:'' },
+      { name:'Cadillac Optiq', daily:120, weekly:720, monthly:2650, weekend:260, notes:'' },
+    ],
+    financing: [
+      { vehicleId:'TESLA-Y1', bank:'Tesla Financial', totalFinanced:52000, description:'36x parcelas', payments: Array.from({length:36},(_,i)=>({ num:i+1, date:ds(new Date(2024,0+i,15)), amount:1555, paid:i<14, paidDate:i<14?ds(new Date(2024,0+i,15)):null })) },
+    ],
+    investors: [],
+    charges: [],
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
 async function initApp() {
   document.getElementById('fin-year').textContent = S.finYear;
   document.getElementById('ver-badge').textContent = APP_VERSION;
+  const loginVer = document.getElementById('login-ver');
+  if (loginVer) loginVer.textContent = APP_VERSION;
   updateFrotaLabel();
-  try { await loadData(); } catch(e) { console.error('initApp loadData error:', e); }
+  // Demo mode banner
+  const demoBanner = document.getElementById('demo-banner');
+  if (demoBanner) demoBanner.style.display = isDemo() ? '' : 'none';
+  if (isDemo()) {
+    loadDemoData();
+  } else {
+    try { await loadData(); } catch(e) { console.error('initApp loadData error:', e); }
+  }
   syncFleetFromRes();
   renderCurrentTab();
   // Pre-compute financing badge
@@ -2119,7 +2202,11 @@ function renderFlotaCal() {
 
   // Filter by category if selected
   const catFilter = (document.getElementById('frota-cat-filter')||{}).value || '';
-  const fleet = catFilter ? S.data.fleet.filter(v=>v.type===catFilter) : S.data.fleet;
+  const fleet = S.data.fleet.filter(v => {
+    if (v.active === false) return false;
+    if (catFilter && v.type !== catFilter) return false;
+    return true;
+  });
 
   // Rows
   let body = '<tbody>';
