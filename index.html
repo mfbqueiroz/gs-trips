@@ -937,7 +937,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.4';
+const APP_VERSION = 'v2.5';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3454,6 +3454,8 @@ function tClear() {
 
 // ── Client Credentials flow (grant_type=client_credentials) ──
 function teslaConnect() {
+  // Clear any old token first
+  tClear();
   // authorization_code OAuth flow
   const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   localStorage.setItem('tesla_oauth_state', state);
@@ -3659,12 +3661,39 @@ async function renderTesla() {
   out.innerHTML = '<div style="color:var(--muted2);padding:24px 0;text-align:center">Carregando veiculos Tesla...</div>';
 
   try {
-    const vehiclesData = await teslaGet('/api/1/vehicles');
-    if (!vehiclesData) return;
-    const vehicles = vehiclesData.response || [];
+    // Try /api/1/vehicles first
+    let vehiclesData = await teslaGet('/api/1/vehicles');
+    console.log('Tesla /api/1/vehicles response:', JSON.stringify(vehiclesData));
+    let vehicles = (vehiclesData && vehiclesData.response) ? vehiclesData.response : [];
+
+    // Fallback: try /api/1/products (also lists vehicles)
+    if (!vehicles.length) {
+      const productsData = await teslaGet('/api/1/products');
+      console.log('Tesla /api/1/products response:', JSON.stringify(productsData));
+      if (productsData && productsData.response) {
+        vehicles = productsData.response.filter(function(p) {
+          return p.id_s || p.vehicle_id || p.id;
+        });
+      }
+    }
 
     if (!vehicles.length) {
-      out.innerHTML = '<div style="color:var(--muted2);padding:24px 0">Nenhum Tesla encontrado na conta.</div>';
+      out.innerHTML =
+        '<div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:500px">' +
+        '<div style="font-weight:700;color:var(--amber);margin-bottom:8px">Nenhum veículo encontrado</div>' +
+        '<div style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:14px">' +
+        'A conta autenticada não tem veículos associados.<br><br>' +
+        '<b>Verifique no app Tesla:</b><br>' +
+        '1. Abre o app Tesla no celular<br>' +
+        '2. Toca no perfil → anota o email<br>' +
+        '3. Clica Desconectar aqui e faz login com esse email<br><br>' +
+        '<b>No carro:</b> Controles → Segurança → Acesso a apps de terceiros → Ativar' +
+        '</div>' +
+        '<div style="display:flex;gap:8px">' +
+        '<button class="btn primary" onclick="teslaDisconnect();teslaConnect()">Reconectar com outra conta</button>' +
+        '<button class="btn" onclick="teslaDebug()">Ver diagnóstico</button>' +
+        '</div>' +
+        '</div>';
       return;
     }
 
@@ -4131,6 +4160,24 @@ async function testFirestore() {
       : '❌ Problema detectado. Verifique as regras.');
   alert('Diagnóstico Firestore:\n\n' + msg);
 }
+
+async function teslaDebug() {
+  loader(true, 'Diagnosticando...');
+  const results = [];
+  const endpoints = ['/api/1/vehicles', '/api/1/products', '/api/1/users/me'];
+  for (const ep of endpoints) {
+    try {
+      const d = await teslaGet(ep);
+      results.push(ep + ':\n' + JSON.stringify(d).slice(0,300));
+    } catch(e) {
+      results.push(ep + ': ERRO — ' + e.message);
+    }
+  }
+  loader(false);
+  alert('Tesla API Debug:\n\n' + results.join('\n\n'));
+}
+
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
 </script>
 </body>
 </html>
