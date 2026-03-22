@@ -858,6 +858,30 @@ const FB_CONFIG = {
 };
 firebase.initializeApp(FB_CONFIG);
 const db = firebase.firestore();
+const CHUNK = 150; // reservations per Firestore doc (~100KB each)
+
+// Photos stay in localStorage only (never uploaded to cloud)
+function savePhotosLocal(reservations) {
+  try {
+    const photos = {};
+    reservations.forEach(r => {
+      if (r.photosOut?.length) photos[r.id + '_Out'] = r.photosOut;
+      if (r.photosIn?.length)  photos[r.id + '_In']  = r.photosIn;
+    });
+    localStorage.setItem('gs_photos', JSON.stringify(photos));
+  } catch(e) { console.warn('localStorage photos:', e); }
+}
+function loadPhotosLocal(reservations) {
+  try {
+    const raw = localStorage.getItem('gs_photos');
+    if (!raw) return;
+    const photos = JSON.parse(raw);
+    reservations.forEach(r => {
+      r.photosOut = photos[r.id + '_Out'] || r.photosOut || [];
+      r.photosIn  = photos[r.id + '_In']  || r.photosIn  || [];
+    });
+  } catch(e) {}
+}
 
 const CREDS   = { 'gsadmin': 'admin', 'gs2026': 'team' };
 const FUELS   = ['E', '1/4', '1/2', '3/4', 'F'];
@@ -933,70 +957,33 @@ function doLogout() {
 async function loadData() {
   loader(true, 'Sincronizando...');
   try {
+    // Read meta doc to know chunk count
     const metaSnap = await db.collection('gsdata').doc('meta').get();
-
-    // ── Firebase vazio: dados ainda não foram salvos ──
     if (!metaSnap.exists) {
-      // Tenta doc legado 'main' (compatibilidade)
-      const legacySnap = await db.collection('gsdata').doc('main').get();
-      if (legacySnap.exists) {
-        const d = legacySnap.data();
-        // Só substitui se o Firebase tiver mais dados que o estado local
-        if ((d.reservations||[]).length >= S.data.reservations.length) {
-          S.data = {
-            reservations: d.reservations || [],
-            fleet:        d.fleet        || S.data.fleet,
-            vehicles:     d.vehicles     || S.data.vehicles,
-            categories:   d.categories   || S.data.categories,
-            financing:    d.financing    || S.data.financing,
-            investors:    d.investors    || S.data.investors,
-            lastUpdated:  d.lastUpdated  || null,
-          };
-          toast('Dados carregados ✓', 'ok');
-        } else {
-          toast('Firebase vazio — mantendo dados locais', '');
-        }
-      } else {
-        // Nenhum dado no Firebase — mantém o que está em memória
-        if (S.data.reservations.length > 0)
-          toast('Firebase sem dados — use Import JSON ou importe o Excel', '');
-      }
-      loader(false);
-      return;
+      if (S.data.reservations.length === 0)
+        toast('Banco vazio — importe o Excel', '');
+      loader(false); return;
     }
-
     const meta = metaSnap.data();
     const nChunks = meta.resChunks || 1;
 
-    // Carrega todos os chunks em paralelo
-    const chunkPromises = [];
-    for (let i = 0; i < nChunks; i++)
-      chunkPromises.push(db.collection('gsdata').doc('res_' + i).get());
-
-    const allSnaps = await Promise.all([
-      db.collection('gsdata').doc('photos').get(),
-      ...chunkPromises
-    ]);
-    const photoSnap = allSnaps[0];
-    const chunkSnaps = allSnaps.slice(1);
+    // Load all reservation chunks in parallel
+    const snaps = await Promise.all(
+      Array.from({length: nChunks}, (_, i) =>
+        db.collection('gsdata').doc('res_' + i).get()
+      )
+    );
 
     const allRes = [];
-    chunkSnaps.forEach(snap => {
-      if (snap.exists) allRes.push(...(snap.data().reservations || []));
-    });
+    snaps.forEach(s => { if (s.exists) allRes.push(...(s.data().reservations || [])); });
 
-    // Só substitui dados locais se o Firebase tiver dados válidos
     if (allRes.length === 0 && S.data.reservations.length > 0) {
-      toast('Firebase retornou vazio — mantendo dados locais', '');
-      loader(false);
-      return;
+      toast('Servidor retornou vazio — dados locais mantidos', '');
+      loader(false); return;
     }
 
-    const photos = photoSnap.exists ? photoSnap.data() : {};
-    allRes.forEach(r => {
-      r.photosOut = photos[r.id + '_Out'] || [];
-      r.photosIn  = photos[r.id + '_In']  || [];
-    });
+    // Attach photos from localStorage
+    loadPhotosLocal(allRes);
 
     S.data = {
       reservations: allRes,
@@ -1007,18 +994,14 @@ async function loadData() {
       investors:    meta.investors    || [],
       lastUpdated:  meta.lastUpdated  || null,
     };
-    console.log('Firebase load OK — ' + allRes.length + ' reservas, ' + nChunks + ' chunks');
-    toast('Sincronizado ✓ — ' + allRes.length + ' reservas', 'ok');
+    console.log('Firestore load OK — ' + allRes.length + ' reservas, ' + nChunks + ' docs');
+    toast('✓ ' + allRes.length + ' reservas carregadas', 'ok');
   } catch(e) {
-    console.warn('Load error:', e);
-    // NÃO apaga dados locais em caso de erro de conexão
-    toast('Erro de conexão — dados locais mantidos', 'err');
+    console.error('Load error:', e);
+    toast('Erro ao carregar — dados locais mantidos', 'err');
   }
   loader(false);
 }
-
-// Firestore batch has 500 op limit; chunk into 200 reservations per doc
-const RES_CHUNK = 200;
 
 async function saveData() {
   if (!isAdmin()) return;
@@ -1026,23 +1009,26 @@ async function saveData() {
   try {
     S.data.lastUpdated = new Date().toISOString();
 
-    // Strip photos, save separately
-    const photos = {};
+    // Strip photos — save to localStorage only
     const resClean = S.data.reservations.map(r => {
-      if (r.photosOut?.length) photos[r.id + '_Out'] = r.photosOut;
-      if (r.photosIn?.length)  photos[r.id + '_In']  = r.photosIn;
       const { photosOut, photosIn, ...rest } = r;
       return rest;
     });
+    savePhotosLocal(S.data.reservations); // persist photos locally
 
-    // Split reservations into chunks of RES_CHUNK
+    // Split into chunks
     const chunks = [];
-    for (let i = 0; i < resClean.length; i += RES_CHUNK)
-      chunks.push(resClean.slice(i, i + RES_CHUNK));
-    if (chunks.length === 0) chunks.push([]);
+    for (let i = 0; i < resClean.length; i += CHUNK)
+      chunks.push(resClean.slice(i, i + CHUNK));
+    if (!chunks.length) chunks.push([]);
 
-    // Meta doc: everything except reservations + chunk count
-    const metaDoc = {
+    // Write all chunk docs sequentially (avoids Firestore batch 500-op limit)
+    for (let i = 0; i < chunks.length; i++) {
+      await db.collection('gsdata').doc('res_' + i).set({ reservations: chunks[i] });
+    }
+
+    // Write meta last (acts as commit marker)
+    await db.collection('gsdata').doc('meta').set({
       fleet:        S.data.fleet        || [],
       vehicles:     S.data.vehicles     || [],
       categories:   S.data.categories   || [],
@@ -1051,21 +1037,12 @@ async function saveData() {
       lastUpdated:  S.data.lastUpdated,
       resChunks:    chunks.length,
       resTotal:     resClean.length,
-    };
+    });
 
-    // Write meta + all chunks + photos in parallel (each batch ≤ 500 ops)
-    const writes = [];
-    writes.push(db.collection('gsdata').doc('meta').set(metaDoc));
-    chunks.forEach((chunk, i) =>
-      writes.push(db.collection('gsdata').doc('res_' + i).set({ reservations: chunk }))
-    );
-    writes.push(db.collection('gsdata').doc('photos').set(photos));
-
-    await Promise.all(writes);
     saveDot('saved');
-    console.log('Firebase save OK — ' + resClean.length + ' reservas em ' + chunks.length + ' chunks');
+    console.log('Firestore save OK — ' + resClean.length + ' reservas, ' + chunks.length + ' docs');
   } catch(e) {
-    console.error('Firebase save error:', e);
+    console.error('Firestore save error:', e);
     saveDot('');
     toast('Erro ao salvar: ' + e.message, 'err');
   }
