@@ -939,6 +939,8 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <div class="section-header">
         <div class="section-title">⚡ Carregamentos</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn" id="btn-import-tesla-csv" onclick="document.getElementById('tesla-csv-input').click()" style="display:none">⬆ CSV Tesla</button>
+          <input type="file" id="tesla-csv-input" accept=".csv" multiple style="display:none" onchange="importTeslaCSV(this.files)">
           <button class="btn primary" id="btn-add-charge" onclick="openChargeModal()" style="display:none">+ Registrar Carga</button>
         </div>
       </div>
@@ -1062,7 +1064,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v4.3';
+const APP_VERSION = 'v4.4';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1189,7 +1191,7 @@ function doLogin() {
     btn.style.display = allowed.includes(effectiveRole) ? '' : 'none';
   });
   // Show admin-only UI elements
-  const adminOnly = ['import-zone','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
+  const adminOnly = ['import-zone','btn-import-tesla-csv','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = (role === 'admin' || role === 'demo') ? '' : 'none';
@@ -3759,6 +3761,138 @@ function initCharges() {
   if (!S.data.charges) S.data.charges = [];
 }
 
+async function importTeslaCSV(files) {
+  if (!files || !files.length) return;
+  initCharges();
+  let added = 0, skipped = 0;
+  const existingIds = new Set((S.data.charges||[]).map(function(c){ return c.id; }));
+
+  for (let fi = 0; fi < files.length; fi++) {
+    const text = await new Promise(function(res) {
+      const r = new FileReader();
+      r.onload = function(e) { res(e.target.result); };
+      r.readAsText(files[fi]);
+    });
+
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(function(h){ return h.trim().replace(/"/g,''); });
+    const idx = {};
+    headers.forEach(function(h,i){ idx[h] = i; });
+
+    // Group by invoice to combine congestion fees
+    const invoiceMap = {};
+
+    for (let li = 1; li < lines.length; li++) {
+      // CSV parse handling quotes
+      const row = [];
+      let cur = '', inQ = false;
+      for (let ci = 0; ci < lines[li].length; ci++) {
+        const ch = lines[li][ci];
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { row.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      row.push(cur.trim());
+
+      const desc = row[idx['Description']] || '';
+      const vin  = row[idx['Vin']] || '';
+      const dt   = row[idx['ChargeStartDateTime']] || '';
+      const qty  = row[idx['QuantityBase']] || '';
+      const costStr = row[idx['Total Inc. VAT']] || '0';
+      const unitStr = row[idx['UnitCostBase']] || '';
+      const loc  = (row[idx['SiteLocationName']] || '').replace(/^"|"$/g,'');
+      const inv  = row[idx['InvoiceNumber']] || '';
+      const invUrl = row[idx['Invoice']] || '';
+
+      // Parse date/time
+      let date = dt.slice(0,10);
+      let time = dt.slice(11,16);
+
+      // Parse kWh
+      let kwh = 0;
+      const kwhMatch = qty.match(/([\d.]+)\s*kwh/i);
+      if (kwhMatch) kwh = parseFloat(kwhMatch[1]);
+
+      // Parse cost
+      let cost = parseFloat(costStr) || 0;
+
+      // Parse unit cost
+      let unitCost = 0;
+      const ucMatch = unitStr.match(/([\d.]+)\s*\/kwh/i);
+      if (ucMatch) unitCost = parseFloat(ucMatch[1]);
+
+      const isNoCharge = desc.includes('NO_CHARGE');
+      const isCongestion = desc.includes('CONGESTION');
+      const isCharging = desc.includes('CHARGING');
+
+      if (isCongestion) {
+        if (inv && invoiceMap[inv]) invoiceMap[inv].congestion = (invoiceMap[inv].congestion||0) + cost;
+        continue;
+      }
+      if (!isCharging || !kwh) continue;
+
+      // Match car by VIN
+      const carMatch = (S.data.vehicles||[]).find(function(v){ return v.vin === vin; }) ||
+                       (S.data.fleet||[]).find(function(v){ return v.vin === vin; });
+      const carId = carMatch ? carMatch.id : vin;
+
+      const id = 'csv_' + vin.slice(-6) + '_' + date.replace(/-/g,'') + '_' + time.replace(':','');
+      if (existingIds.has(id)) { skipped++; continue; }
+
+      const entry = {
+        id: id,
+        carId: carId,
+        carVin: vin,
+        date: date,
+        time: time,
+        kwh: Math.round(kwh * 10000) / 10000,
+        cost: cost,
+        estimatedCost: isNoCharge && unitCost > 0 ? Math.round(kwh * unitCost * 100) / 100 : 0,
+        isNoCharge: isNoCharge,
+        unitCost: unitCost,
+        location: loc,
+        invoiceNumber: inv,
+        invoiceUrl: invUrl,
+        congestion: 0,
+        notes: isNoCharge ? 'Gratuito (empresa) — custo estimado' : '',
+        reservationId: null,
+      };
+      invoiceMap[inv || id] = entry;
+      S.data.charges.push(entry);
+      existingIds.add(id);
+      added++;
+    }
+
+    // Apply congestion fees
+    Object.values(invoiceMap).forEach(function(entry) {
+      if (entry.congestion) {
+        entry.cost += entry.congestion;
+      }
+    });
+  }
+
+  // Auto-link to reservations
+  autoLinkCharges();
+  scheduleSave();
+  renderCharges();
+  toast('✓ ' + added + ' carregamentos importados' + (skipped ? ' (' + skipped + ' duplicados ignorados)' : ''), 'ok');
+}
+
+function autoLinkCharges() {
+  (S.data.charges||[]).forEach(function(ch) {
+    if (ch.reservationId) return; // already linked
+    const vin = ch.carVin;
+    // Find vehicle by VIN
+    const veh = (S.data.vehicles||[]).find(function(v){ return v.vin === vin; });
+    if (!veh) return;
+    // Find reservation for this vehicle on this date
+    const res = (S.data.reservations||[]).find(function(r) {
+      return r.vehicleId === veh.id && r.pickupDate <= ch.date && r.returnDate >= ch.date;
+    });
+    if (res) ch.reservationId = res.id;
+  });
+}
+
 function renderCharges() {
   initCharges();
   const fromEl = document.getElementById('charge-from');
@@ -3770,10 +3904,21 @@ function renderCharges() {
 
   // Populate car filter
   const evCars = getEVCars();
+  // Also add VIN-only cars from CSV imports not yet matched to vehicles
+  const vinOnlyCars = [];
+  const knownVins = new Set((S.data.vehicles||[]).map(function(v){ return v.vin; }).filter(Boolean));
+  (S.data.charges||[]).forEach(function(ch) {
+    if (ch.carVin && !knownVins.has(ch.carVin) && !vinOnlyCars.find(function(v){ return v.id===ch.carVin; })) {
+      vinOnlyCars.push({ id: ch.carVin, name: ch.carVin.slice(-6), vin: ch.carVin });
+    }
+  });
+  const allChargeCars = evCars.concat(vinOnlyCars);
   if (carEl) {
     const cur = carEl.value;
     carEl.innerHTML = '<option value="">Todos os carros</option>' +
-      evCars.map(v => '<option value="' + v.id + '"' + (cur===v.id?' selected':'') + '>' + v.id + ' — ' + (v.name||v.type||v.id) + '</option>').join('');
+      allChargeCars.map(function(v) {
+        return '<option value="' + v.id + '"' + (cur===v.id?' selected':'') + '>' + v.id + (v.name&&v.name!==v.id?' — '+v.name:'') + '</option>';
+      }).join('');
   }
 
   // Set default period
@@ -3790,23 +3935,26 @@ function renderCharges() {
   let charges = (S.data.charges || []).filter(function(ch) {
     if (from && ch.date < from) return false;
     if (to   && ch.date > to)   return false;
-    if (carFil && ch.carId !== carFil) return false;
+    if (carFil && ch.carId !== carFil && ch.carVin !== carFil) return false;
     return true;
   }).sort(function(a,b) {
     return (b.date + (b.time||'')).localeCompare(a.date + (a.time||''));
   });
 
   // Stats
-  const totalCost = charges.reduce(function(s,ch){ return s+(ch.cost||0); }, 0);
-  const totalKwh  = charges.reduce(function(s,ch){ return s+(ch.kwh||0);  }, 0);
-  const billed    = charges.filter(function(ch){ return ch.reservationId; }).reduce(function(s,ch){ return s+(ch.cost||0); }, 0);
+  const totalCost  = charges.reduce(function(s,ch){ return s+(ch.cost||0); }, 0);
+  const totalEst   = charges.filter(function(ch){ return ch.isNoCharge; }).reduce(function(s,ch){ return s+(ch.estimatedCost||0); }, 0);
+  const totalKwh   = charges.reduce(function(s,ch){ return s+(ch.kwh||0);  }, 0);
+  const billed     = charges.filter(function(ch){ return ch.reservationId; }).reduce(function(s,ch){
+    return s + (ch.isNoCharge ? (ch.estimatedCost||0) : (ch.cost||0));
+  }, 0);
 
   if (stats) {
     stats.innerHTML =
       '<div class="stat-card"><div class="stat-label">Carregamentos</div><div class="stat-val amber">' + charges.length + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Custo Total</div><div class="stat-val green">$' + totalCost.toFixed(2) + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Custo Pago</div><div class="stat-val green">$' + totalCost.toFixed(2) + '</div></div>' +
       '<div class="stat-card"><div class="stat-label">kWh Total</div><div class="stat-val">' + totalKwh.toFixed(1) + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">A cobrar clientes</div><div class="stat-val orange">$' + billed.toFixed(2) + '</div></div>';
+      '<div class="stat-card"><div class="stat-label">Estimado (gratuitos)</div><div class="stat-val amber">≈ $' + totalEst.toFixed(2) + '</div></div>';
   }
 
   if (!charges.length) {
@@ -3850,7 +3998,11 @@ function renderCharges() {
       html += '<tr>' +
         '<td style="white-space:nowrap">' + fmtD(ch.date) + (ch.time?' <span style="color:var(--muted2)">'+ch.time+'</span>':'') + '</td>' +
         '<td style="color:var(--muted2);font-size:12px">' + (ch.location||'—') + '</td>' +
-        '<td style="color:var(--green);font-weight:700">$' + (ch.cost||0).toFixed(2) + '</td>' +
+        (ch.isNoCharge
+          ? '<td><span style="color:var(--muted2)">$0.00</span>' +
+            (ch.estimatedCost > 0 ? '<br><span style="font-size:10px;color:var(--amber)">≈ $' + ch.estimatedCost.toFixed(2) + ' est.</span>' : '') +
+            '</td>'
+          : '<td style="color:var(--green);font-weight:700">$' + ((ch.cost||0) + (ch.congestion||0)).toFixed(2) + '</td>') +
         '<td style="color:var(--muted2)">' + (ch.kwh ? ch.kwh.toFixed(1)+' kWh' : '—') + '</td>' +
         '<td>' + resInfo + '</td>' +
         (isAdmin() ? '<td style="text-align:right">' +
