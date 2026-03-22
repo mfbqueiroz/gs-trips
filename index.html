@@ -1010,7 +1010,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v3.3';
+const APP_VERSION = 'v3.4';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1364,6 +1364,8 @@ async function initApp() {
   }
   syncFleetFromRes();
   renderCurrentTab();
+  // Process any pending Tesla OAuth callback
+  setTimeout(processPendingTeslaCallback, 600);
   // Pre-compute financing badge
   setTimeout(function() {
     const today2 = ds(new Date());
@@ -4252,17 +4254,14 @@ async function renderTesla() {
         '<div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:500px">' +
         '<div style="font-weight:700;color:var(--amber);margin-bottom:8px">Nenhum veículo encontrado</div>' +
         '<div style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:14px">' +
-        'A conta autenticada não tem veículos associados.<br><br>' +
-        '<b>Verifique no app Tesla:</b><br>' +
-        '1. Abre o app Tesla no celular<br>' +
-        '2. Toca no perfil → anota o email<br>' +
-        '3. Clica Desconectar aqui e faz login com esse email<br><br>' +
-        '<b>No carro:</b> Controles → Segurança → Acesso a apps de terceiros → Ativar' +
+        'A conta autenticada não tem veículos Tesla associados.<br><br>' +
+        '<b>Verifique:</b><br>' +
+        '1. O email usado no login é o mesmo do app Tesla no celular?<br>' +
+        '2. No carro: Controles → Segurança → Acesso a apps de terceiros → Ativar<br>' +
         '</div>' +
-        '<div style="display:flex;gap:8px">' +
-        '<button class="btn primary" onclick="teslaRegisterApp()">Registrar app na regiao</button>' +
-        '<button class="btn" onclick="teslaDisconnect();teslaConnect()">Reconectar</button>' +
-        '<button class="btn" onclick="teslaDebug()">Diagnostico</button>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn primary" onclick="teslaDisconnect();teslaConnect()">↻ Reconectar com outra conta</button>' +
+        '<button class="btn" onclick="teslaDebug()">🔍 Diagnóstico</button>' +
         '</div>' +
         '</div>';
       return;
@@ -4520,13 +4519,42 @@ function getTeslaChargesForReservation(res) {
 // Check OAuth callback on load
 (async function checkTeslaCallback() {
   if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
-    const ok = await teslaHandleCallback();
-    if (ok) {
-      // Wait for app to load then switch to Tesla tab
-      setTimeout(() => switchTab('tesla'), 500);
+    // Store that we have a pending Tesla callback
+    const code  = new URLSearchParams(window.location.search).get('code');
+    const state = new URLSearchParams(window.location.search).get('state');
+    if (code && state) {
+      sessionStorage.setItem('tesla_pending_code',  code);
+      sessionStorage.setItem('tesla_pending_state', state);
+      // Clean URL immediately so it doesn't confuse the app
+      window.history.replaceState({}, '', window.location.pathname);
+      // Show a hint on the login screen
+      const hint = document.getElementById('login-err');
+      if (hint) {
+        hint.style.color = '#10B981';
+        hint.textContent = '✓ Tesla autorizado — faça login para continuar';
+      }
     }
   }
 })();
+
+async function processPendingTeslaCallback() {
+  const code  = sessionStorage.getItem('tesla_pending_code');
+  const state = sessionStorage.getItem('tesla_pending_state');
+  if (!code || !state) return;
+  sessionStorage.removeItem('tesla_pending_code');
+  sessionStorage.removeItem('tesla_pending_state');
+  // Inject into location search temporarily so teslaHandleCallback reads it
+  const savedSearch = window.location.search;
+  window.history.replaceState({}, '', window.location.pathname + '?code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state));
+  // Also set the state in localStorage so validation passes
+  localStorage.setItem('tesla_oauth_state', state);
+  const ok = await teslaHandleCallback();
+  window.history.replaceState({}, '', window.location.pathname);
+  if (ok) {
+    setTimeout(() => switchTab('tesla'), 300);
+    toast('⚡ Tesla conectado!', 'ok');
+  }
+}
 
 
 // ── Modal edit mode ──
