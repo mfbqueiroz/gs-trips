@@ -937,7 +937,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.2';
+const APP_VERSION = 'v2.3';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3503,9 +3503,8 @@ function teslaSetManualToken() {
 async function teslaHandleCallback() { return false; }
 
 async function teslaRefreshTokens() {
-  // Re-fetch with client_credentials
   try {
-    const res = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla-token', {
+    const res = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer gsadmin' },
       body: JSON.stringify({
@@ -3528,28 +3527,29 @@ async function teslaRefreshTokens() {
 
 async function teslaGet(path) {
   if (!T.accessToken) return null;
-  // Refresh if expired
   if (T.expiresAt && Date.now() > T.expiresAt - 60000) {
     const ok = await teslaRefreshTokens();
     if (!ok) { tClear(); renderTesla(); return null; }
   }
-  const url = TESLA_BASE + path;
+  // Route through Vercel proxy to avoid CORS
+  const PROXY = 'https://gs-rental-backend-gpke.vercel.app/api/tesla';
   let res;
   try {
-    res = await fetch(url, {
-      headers: { 'Authorization': 'Bearer ' + T.accessToken }
+    res = await fetch(PROXY, {
+      method: 'GET',
+      headers: {
+        'Authorization':  'Bearer gsadmin',
+        'X-Tesla-Token':  T.accessToken,
+        'X-Tesla-Path':   path,
+      }
     });
   } catch(e) {
-    throw new Error('Fetch failed: ' + e.message);
+    throw new Error('Proxy fetch failed: ' + e.message);
   }
-  if (res.status === 401) {
-    tClear();
-    renderTesla();
-    return null;
-  }
+  if (res.status === 401) { tClear(); renderTesla(); return null; }
   if (!res.ok) {
     const body = await res.text().catch(()=>'');
-    throw new Error('Tesla API ' + res.status + ': ' + body.slice(0,120));
+    throw new Error('Tesla proxy ' + res.status + ': ' + body.slice(0,120));
   }
   return res.json();
 }
