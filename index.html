@@ -849,7 +849,21 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v1.4';
+const APP_VERSION = 'v1.5';
+
+// Deep-remove undefined values — Firestore rejects them
+function sanitize(obj) {
+  if (Array.isArray(obj)) return obj.map(sanitize);
+  if (obj !== null && typeof obj === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (v === undefined) continue;          // drop undefined
+      out[k] = sanitize(v);
+    }
+    return out;
+  }
+  return obj === undefined ? null : obj;
+}
 
 // ── Firebase ──
 const FB_CONFIG = {
@@ -1016,10 +1030,10 @@ async function saveData() {
     // Photos → localStorage only (no size limit)
     savePhotosLocal(S.data.reservations);
 
-    // Strip photos before cloud save
+    // Strip photos + sanitize undefined (Firestore rejects undefined values)
     const resClean = S.data.reservations.map(r => {
       const { photosOut, photosIn, ...rest } = r;
-      return rest;
+      return sanitize(rest);
     });
 
     // Chunk reservations (~150 per doc ≈ 100KB each, well under 1MB limit)
@@ -1038,17 +1052,17 @@ async function saveData() {
     }
 
     // Meta written last — marks the save as complete
-    const meta = {
+    const meta = sanitize({
       fleet:       S.data.fleet        || [],
       vehicles:    S.data.vehicles     || [],
       categories:  S.data.categories   || [],
       financing:   S.data.financing    || [],
       investors:   S.data.investors    || [],
-      lastUpdated: S.data.lastUpdated,
+      lastUpdated: S.data.lastUpdated  || new Date().toISOString(),
       resChunks:   chunks.length,
       resTotal:    resClean.length,
       appVersion:  APP_VERSION,
-    };
+    });
     await db.collection('gsdata').doc('meta').set(meta);
 
     saveDot('saved');
