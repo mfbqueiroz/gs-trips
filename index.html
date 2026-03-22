@@ -927,22 +927,33 @@ function doLogout() {
 async function loadData() {
   loader(true, 'Sincronizando...');
   try {
-    // Load meta first to know how many chunks
     const metaSnap = await db.collection('gsdata').doc('meta').get();
+
+    // ── Firebase vazio: dados ainda não foram salvos ──
     if (!metaSnap.exists) {
-      // Try legacy 'main' doc for backwards compat
+      // Tenta doc legado 'main' (compatibilidade)
       const legacySnap = await db.collection('gsdata').doc('main').get();
       if (legacySnap.exists) {
         const d = legacySnap.data();
-        S.data = {
-          reservations: d.reservations || [],
-          fleet:        d.fleet        || [],
-          vehicles:     d.vehicles     || [],
-          categories:   d.categories   || [],
-          financing:    d.financing    || [],
-          investors:    d.investors    || [],
-          lastUpdated:  d.lastUpdated  || null,
-        };
+        // Só substitui se o Firebase tiver mais dados que o estado local
+        if ((d.reservations||[]).length >= S.data.reservations.length) {
+          S.data = {
+            reservations: d.reservations || [],
+            fleet:        d.fleet        || S.data.fleet,
+            vehicles:     d.vehicles     || S.data.vehicles,
+            categories:   d.categories   || S.data.categories,
+            financing:    d.financing    || S.data.financing,
+            investors:    d.investors    || S.data.investors,
+            lastUpdated:  d.lastUpdated  || null,
+          };
+          toast('Dados carregados ✓', 'ok');
+        } else {
+          toast('Firebase vazio — mantendo dados locais', '');
+        }
+      } else {
+        // Nenhum dado no Firebase — mantém o que está em memória
+        if (S.data.reservations.length > 0)
+          toast('Firebase sem dados — use Import JSON ou importe o Excel', '');
       }
       loader(false);
       return;
@@ -951,23 +962,31 @@ async function loadData() {
     const meta = metaSnap.data();
     const nChunks = meta.resChunks || 1;
 
-    // Load all chunks in parallel
+    // Carrega todos os chunks em paralelo
     const chunkPromises = [];
     for (let i = 0; i < nChunks; i++)
       chunkPromises.push(db.collection('gsdata').doc('res_' + i).get());
-    const [photoPromise, ...chunkSnaps] = await Promise.all([
+
+    const allSnaps = await Promise.all([
       db.collection('gsdata').doc('photos').get(),
       ...chunkPromises
     ]);
+    const photoSnap = allSnaps[0];
+    const chunkSnaps = allSnaps.slice(1);
 
-    // Reassemble reservations
     const allRes = [];
     chunkSnaps.forEach(snap => {
       if (snap.exists) allRes.push(...(snap.data().reservations || []));
     });
 
-    // Attach photos
-    const photos = photoPromise.exists ? photoPromise.data() : {};
+    // Só substitui dados locais se o Firebase tiver dados válidos
+    if (allRes.length === 0 && S.data.reservations.length > 0) {
+      toast('Firebase retornou vazio — mantendo dados locais', '');
+      loader(false);
+      return;
+    }
+
+    const photos = photoSnap.exists ? photoSnap.data() : {};
     allRes.forEach(r => {
       r.photosOut = photos[r.id + '_Out'] || [];
       r.photosIn  = photos[r.id + '_In']  || [];
@@ -983,9 +1002,11 @@ async function loadData() {
       lastUpdated:  meta.lastUpdated  || null,
     };
     console.log('Firebase load OK — ' + allRes.length + ' reservas, ' + nChunks + ' chunks');
+    toast('Sincronizado ✓ — ' + allRes.length + ' reservas', 'ok');
   } catch(e) {
     console.warn('Load error:', e);
-    toast('Erro ao carregar dados — verifique conexão', 'err');
+    // NÃO apaga dados locais em caso de erro de conexão
+    toast('Erro de conexão — dados locais mantidos', 'err');
   }
   loader(false);
 }
@@ -1052,10 +1073,13 @@ function scheduleSave() {
 }
 
 async function syncNow() {
+  const before = S.data.reservations.length;
   await loadData();
   syncFleetFromRes();
   renderCurrentTab();
-  toast('Dados sincronizados ✓', 'ok');
+  const after = S.data.reservations.length;
+  if (after === 0 && before > 0)
+    toast('⚠️ Sync retornou vazio — dados mantidos', 'err');
 }
 
 // ════════════════════════════════════════════════════════
