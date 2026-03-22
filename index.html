@@ -861,8 +861,28 @@ textarea.fld-input{resize:vertical;min-height:70px}
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn primary" id="tesla-connect-btn" onclick="teslaConnect()" style="display:none">🔗 Conectar Tesla</button>
           <button class="btn" onclick="teslaRefresh()" id="tesla-refresh-btn" style="display:none">↻ Atualizar</button>
-          <button class="btn" onclick="teslaDisconnect()" id="tesla-disconnect-btn" style="display:none" style="color:var(--red)">Desconectar</button>
+          <button class="btn" onclick="teslaDisconnect()" id="tesla-disconnect-btn" style="display:none">Desconectar</button>
         </div>
+      </div>
+      <div id="tesla-period-bar" style="display:none;margin-bottom:16px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fld-group">
+            <div class="fld-label">De</div>
+            <input type="date" class="fld-input" id="tesla-from" style="padding:6px 10px;width:160px" oninput="teslaFilterCharges()">
+          </div>
+          <div class="fld-group">
+            <div class="fld-label">Até</div>
+            <input type="date" class="fld-input" id="tesla-to" style="padding:6px 10px;width:160px" oninput="teslaFilterCharges()">
+          </div>
+          <div class="fld-group">
+            <div class="fld-label">$/kWh</div>
+            <input type="number" step="0.01" class="fld-input" id="tesla-rate" value="0.12" style="padding:6px 10px;width:90px" oninput="teslaFilterCharges()">
+          </div>
+          <button class="btn active" style="padding:7px 14px" onclick="teslaPeriodPreset(30)">30d</button>
+          <button class="btn" style="padding:7px 14px" onclick="teslaPeriodPreset(7)">7d</button>
+          <button class="btn" style="padding:7px 14px" onclick="teslaPeriodPreset(0)">Hoje</button>
+        </div>
+        <div id="tesla-period-totals" style="margin-top:12px"></div>
       </div>
       <div id="tesla-auth-banner" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;margin-bottom:16px">
         <div style="font-weight:700;color:var(--amber);margin-bottom:6px">⚡ Tesla Fleet API</div>
@@ -905,7 +925,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v2.1';
+const APP_VERSION = 'v2.2';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1515,7 +1535,7 @@ function renderAgenda() {
           ${r.fuelOut!=null?`<span class="res-chip">⛽ ${FUELS[r.fuelOut]||'?'}</span>`:''}
           ${(()=>{ if(r.fuelOut!=null&&r.fuelIn!=null&&r.fuelIn<r.fuelOut){ const used=(([0,.25,.5,.75,1])[r.fuelOut]-([0,.25,.5,.75,1])[r.fuelIn]); const cost=used*16*GAS_PPG; return cost>0?`<span class="res-chip" style="color:var(--orange)">⛽ -$${cost.toFixed(0)}</span>`:''; } return ''; })()}
           ${r.extras?`<span class="res-chip" style="color:var(--amber)">+ ${r.extras}</span>`:''}
-          ${r.total?`<span class="res-val">$${fmt$(r.total)}</span>`:''}
+          ${isAdmin()&&r.total?`<span class="res-val">$${fmt$(r.total)}</span>`:''}
         </div>
       </div>`;
     });
@@ -2175,7 +2195,7 @@ function buildModal(r, isEV, editMode) {
       <div class="info-box"><div class="info-lbl">Retorno</div><div class="info-val">${fmtD(r.returnDate)}</div></div>
       <div class="info-box"><div class="info-lbl">Dias</div><div class="info-val">${r.days||0}</div></div>
       <div class="info-box"><div class="info-lbl">Status</div><div class="info-val"><span class="status-badge ${sCls(r.status)}">${r.status||'—'}</span></div></div>
-      <div class="info-box"><div class="info-lbl">Total</div><div class="info-val" style="color:var(--green)">$${fmt$(r.total)}</div></div>
+      ${admin?`<div class="info-box"><div class="info-lbl">Total</div><div class="info-val" style="color:var(--green)">$${fmt$(r.total)}</div></div>`:''}
       ${admin?`<div class="info-box"><div class="info-lbl">Pago / Saldo</div><div class="info-val">$${fmt$(r.paid)} <span style="color:var(--orange)">/ $${fmt$(r.balance)}</span></div></div>`:''}
     </div>
   </div>
@@ -2221,6 +2241,9 @@ function buildModal(r, isEV, editMode) {
     <div class="m-section-title">📸 Fotos — Retorno do Cliente</div>
     <div class="photos-wrap" id="ph-In">${renderPhotos(r.photosIn||[],r.id,'In',canEdit)}</div>
   </div>
+
+  ${buildTeslaModalSection(r)}
+
 
   <div class="m-section">
     <div class="m-section-title">Extras / Cobranças</div>
@@ -3553,6 +3576,16 @@ async function renderTesla() {
   connectBtn && (connectBtn.style.display = 'none');
   refreshBtn && (refreshBtn.style.display = '');
   disconnBtn && (disconnBtn.style.display = '');
+  const periodBar = document.getElementById('tesla-period-bar');
+  if (periodBar) {
+    periodBar.style.display = '';
+    // Default: last 30 days
+    if (!document.getElementById('tesla-from').value) {
+      const d = new Date(); d.setDate(d.getDate()-30);
+      document.getElementById('tesla-from').value = d.toISOString().slice(0,10);
+      document.getElementById('tesla-to').value   = new Date().toISOString().slice(0,10);
+    }
+  }
 
   if (!out) return;
   out.innerHTML = '<div style="color:var(--muted2);padding:20px 0">Carregando veículos...</div>';
@@ -3568,29 +3601,31 @@ async function renderTesla() {
       return;
     }
 
+    T.vehicleData = []; // store for period filtering
+
     let html = '<div class="tesla-grid">';
 
     for (const v of vehicles) {
-      // Get detailed data for each vehicle
       let detail = null;
       let chargeHistory = [];
       try {
         const detailData = await teslaGet('/api/1/vehicles/' + v.id_s + '/vehicle_data?endpoints=charge_state%7Cdrive_state%7Cvehicle_state');
         detail = detailData?.response;
       } catch(e) {
-        console.warn('Vehicle data unavailable (may be sleeping):', v.display_name);
+        console.warn('Vehicle data unavailable:', v.display_name);
       }
-
       try {
         const histData = await teslaGet('/api/1/vehicles/' + v.id_s + '/charge_history');
         chargeHistory = histData?.response || [];
       } catch(e) {}
 
-      html += buildTeslaCard(v, detail, chargeHistory);
+      T.vehicleData.push({ v, detail, chargeHistory });
+      html += buildTeslaCard(v, detail, chargeHistory, null, null);
     }
 
     html += '</div>';
     out.innerHTML = html;
+    teslaFilterCharges(); // apply period filter
 
   } catch(e) {
     console.error('Tesla render error:', e);
@@ -3611,8 +3646,41 @@ async function renderTesla() {
   }
 }
 
-function buildTeslaCard(v, detail, chargeHistory) {
-  const charge = detail?.charge_state;
+function buildChargeRows(charges, rate, fromDate, toDate) {
+  const from = fromDate ? new Date(fromDate+'T00:00:00') : null;
+  const to   = toDate   ? new Date(toDate+'T23:59:59')   : null;
+  const filtered = charges.filter(h => {
+    if (!h.timestamp) return true;
+    const d = new Date(h.timestamp*1000);
+    if (from && d < from) return false;
+    if (to   && d > to)   return false;
+    return true;
+  });
+  if (!filtered.length) return { rows: '', totalKwh: 0, totalCost: 0, count: 0 };
+  let totalKwh = 0, totalCost = 0;
+  const rows = filtered.map(h => {
+    const ts   = h.timestamp ? new Date(h.timestamp*1000) : null;
+    const dt   = ts ? ts.toLocaleDateString('pt-BR') + ' ' + ts.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—';
+    const kwh  = h.charge_energy_added || 0;
+    const cost = kwh * rate;
+    const battBefore = h.battery_level != null ? h.battery_level + '%' : '—';
+    const battAfter  = h.battery_level != null && h.battery_level_added ? (h.battery_level + h.battery_level_added) + '%' : '—';
+    const loc  = h.charge_site_name || h.location?.name || '—';
+    totalKwh  += kwh;
+    totalCost += cost;
+    return `<tr>
+      <td style="white-space:nowrap">${dt}</td>
+      <td style="color:var(--amber);font-weight:600">${kwh.toFixed(1)} kWh</td>
+      <td style="color:var(--green)">$${cost.toFixed(2)}</td>
+      <td style="color:var(--muted2)">${battBefore} → ${battAfter}</td>
+      <td style="color:var(--muted2);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</td>
+    </tr>`;
+  }).join('');
+  return { rows, totalKwh, totalCost, count: filtered.length };
+}
+
+function buildTeslaCard(v, detail, chargeHistory, fromDate, toDate) {
+  const charge  = detail?.charge_state;
   const vehicle = detail?.vehicle_state;
   const isOnline   = v.state === 'online';
   const isCharging = charge?.charging_state === 'Charging';
@@ -3621,45 +3689,38 @@ function buildTeslaCard(v, detail, chargeHistory) {
   const stateLabel = isCharging ? '⚡ Carregando' : isOnline ? '✓ Online' : '💤 Dormindo';
   const stateClass = isCharging ? 'tesla-status-charging' : isOnline ? 'tesla-status-online' : 'tesla-status-sleeping';
 
-  const battPct  = charge?.battery_level ?? null;
+  const battPct   = charge?.battery_level ?? null;
   const battColor = battPct == null ? '#6B7280' : battPct > 60 ? '#10B981' : battPct > 20 ? '#F59E0B' : '#EF4444';
-  const estRange = charge?.est_battery_range ? Math.round(charge.est_battery_range * 1.609) + ' km' : '—';
+  const estRange  = charge?.est_battery_range ? Math.round(charge.est_battery_range * 1.609) + ' km' : '—';
   const chargeLimit = charge?.charge_limit_soc ? charge.charge_limit_soc + '%' : '—';
-  const odometer = vehicle?.odometer ? Math.round(vehicle.odometer * 1.609).toLocaleString() + ' km' : '—';
+  const odometer  = vehicle?.odometer ? Math.round(vehicle.odometer * 1.609).toLocaleString() + ' km' : '—';
+
+  const rate = parseFloat(document.getElementById('tesla-rate')?.value) || 0.12;
 
   // Match with GS fleet vehicle
   const fleetVeh = (S.data.vehicles||[]).find(fv =>
-    fv.id && (fv.vin === v.vin || v.display_name?.toLowerCase().includes(fv.id?.toLowerCase()))
+    fv.vin === v.vin || (fv.id && v.display_name?.toLowerCase().includes(fv.id?.toLowerCase()))
+  ) || (S.data.fleet||[]).find(fv =>
+    fv.id && v.display_name?.toLowerCase().includes(fv.id?.toLowerCase())
   );
-  const reservations = fleetVeh ? (S.data.reservations||[]).filter(r =>
-    r.vehicleId === fleetVeh.id &&
-    r.pickupDate <= new Date().toISOString().slice(0,10) &&
-    r.returnDate >= new Date().toISOString().slice(0,10)
-  ) : [];
-  const activeRes = reservations[0];
 
-  // Charge history table (last 5)
-  const recent = chargeHistory.slice(0,5);
-  const histRows = recent.map(h => {
-    const dt = h.timestamp ? new Date(h.timestamp*1000).toLocaleDateString('pt-BR') : '—';
-    const kwh = h.charge_energy_added ? h.charge_energy_added.toFixed(1) + ' kWh' : '—';
-    const cost = h.charge_energy_added ? '$' + (h.charge_energy_added * 0.12).toFixed(2) : '—';
-    const added = h.battery_level_added ? '+' + h.battery_level_added + '%' : '—';
-    return `<tr>
-      <td>${dt}</td>
-      <td style="color:var(--amber)">${kwh}</td>
-      <td style="color:var(--green)">${cost}</td>
-      <td>${added}</td>
-    </tr>`;
-  }).join('');
+  // Active reservation
+  const td = new Date().toISOString().slice(0,10);
+  const activeRes = fleetVeh ? (S.data.reservations||[]).find(r =>
+    r.vehicleId === fleetVeh.id && r.pickupDate <= td && r.returnDate >= td
+  ) : null;
 
-  return `<div class="tesla-car-card">
+  // Charges for selected period
+  const { rows: histRows, totalKwh, totalCost, count } = buildChargeRows(chargeHistory, rate, fromDate, toDate);
+
+  return `<div class="tesla-car-card" id="tesla-card-${v.id_s}">
     <div class="tesla-car-name">${v.display_name || 'Tesla'}</div>
     <div class="tesla-car-vin">${v.vin || ''} ${fleetVeh ? '· #' + fleetVeh.id : ''}</div>
     <span class="tesla-status-badge ${stateClass}">${stateLabel}</span>
 
     ${activeRes ? `<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px">
-      <span style="color:var(--green)">Em uso:</span> ${activeRes.fullName} até ${fmtD(activeRes.returnDate)}
+      <span style="color:var(--green);font-weight:700">Em uso:</span> ${activeRes.fullName}<br>
+      <span style="color:var(--muted2)">${fmtD(activeRes.pickupDate)} → ${fmtD(activeRes.returnDate)}</span>
     </div>` : ''}
 
     <div class="tesla-battery-wrap">
@@ -3677,22 +3738,105 @@ function buildTeslaCard(v, detail, chargeHistory) {
     </div>
 
     <div class="tesla-stat-row">
-      <div class="tesla-stat">
-        <div class="tesla-stat-val">${odometer}</div>
-        <div class="tesla-stat-lbl">Odômetro</div>
-      </div>
+      <div class="tesla-stat"><div class="tesla-stat-val">${odometer}</div><div class="tesla-stat-lbl">Odômetro</div></div>
       <div class="tesla-stat">
         <div class="tesla-stat-val">${charge?.charger_power ? charge.charger_power + ' kW' : '—'}</div>
         <div class="tesla-stat-lbl">${isCharging ? 'Carregando' : 'Potência'}</div>
       </div>
     </div>
 
-    ${histRows ? `<div style="font-size:11px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Últimas cargas</div>
+    <div style="font-size:11px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">
+      ⚡ Carregamentos no período — ${count} sessões
+    </div>
+    ${count > 0 ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--amber)">${totalKwh.toFixed(1)} kWh</div><div class="tesla-stat-lbl">Total carregado</div></div>
+      <div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--green)">$${totalCost.toFixed(2)}</div><div class="tesla-stat-lbl">Custo estimado</div></div>
+    </div>
     <div style="overflow-x:auto"><table class="tesla-charge-table">
-      <thead><tr><th>Data</th><th>kWh</th><th>Custo</th><th>Bateria</th></tr></thead>
+      <thead><tr><th>Data / Hora</th><th>kWh</th><th>Custo</th><th>Bateria</th><th>Local</th></tr></thead>
       <tbody>${histRows}</tbody>
-    </table></div>` : `<div style="color:var(--muted2);font-size:12px">Histórico de cargas não disponível${isSleeping?' (veículo dormindo)':''}</div>`}
+    </table></div>` :
+    `<div style="color:var(--muted2);font-size:12px;padding:8px 0">Nenhum carregamento no período${isSleeping?' (veículo dormindo)':''}</div>`}
   </div>`;
+}
+
+// Build Tesla section for reservation modal
+function buildTeslaModalSection(r) {
+  if (!T || !T.vehicleData || !T.vehicleData.length) return '';
+  const charges = getTeslaChargesForReservation(r);
+  if (!charges.length) return '';
+  const rate = parseFloat(document.getElementById('tesla-rate')?.value) || 0.12;
+  const result = buildChargeRows(charges, rate, r.pickupDate, r.returnDate);
+  if (!result.count) return '';
+  return '<div class="m-section">' +
+    '<div class="m-section-title">⚡ Carregamentos Tesla — ' + result.count + ' sessões</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">' +
+      '<div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--amber)">' + result.totalKwh.toFixed(1) + ' kWh</div><div class="tesla-stat-lbl">Total carregado</div></div>' +
+      '<div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--green)">$' + result.totalCost.toFixed(2) + '</div><div class="tesla-stat-lbl">Custo estimado</div></div>' +
+    '</div>' +
+    '<div style="overflow-x:auto"><table class="tesla-charge-table">' +
+      '<thead><tr><th>Data / Hora</th><th>kWh</th><th>Custo</th><th>Bateria</th><th>Local</th></tr></thead>' +
+      '<tbody>' + result.rows + '</tbody>' +
+    '</table></div>' +
+  '</div>';
+}
+
+// Period filter helpers
+function teslaFilterCharges() {
+  if (!T.vehicleData || !T.vehicleData.length) return;
+  const from = document.getElementById('tesla-from')?.value;
+  const to   = document.getElementById('tesla-to')?.value;
+  const rate = parseFloat(document.getElementById('tesla-rate')?.value) || 0.12;
+  const out  = document.getElementById('tesla-out');
+  if (!out) return;
+
+  let totalKwhAll = 0, totalCostAll = 0;
+  let html = '<div class="tesla-grid">';
+  T.vehicleData.forEach(({v, detail, chargeHistory}) => {
+    html += buildTeslaCard(v, detail, chargeHistory, from, to);
+    const { totalKwh, totalCost } = buildChargeRows(chargeHistory, rate, from, to);
+    totalKwhAll  += totalKwh;
+    totalCostAll += totalCost;
+  });
+  html += '</div>';
+  out.innerHTML = html;
+
+  const tot = document.getElementById('tesla-period-totals');
+  if (tot) {
+    tot.innerHTML = `<div style="display:flex;gap:20px;flex-wrap:wrap">
+      <span style="font-size:13px"><span style="color:var(--muted2)">Total kWh:</span> <b style="color:var(--amber)">${totalKwhAll.toFixed(1)} kWh</b></span>
+      <span style="font-size:13px"><span style="color:var(--muted2)">Custo estimado:</span> <b style="color:var(--green)">$${totalCostAll.toFixed(2)}</b></span>
+      <span style="font-size:13px"><span style="color:var(--muted2)">Taxa:</span> <b>$${rate}/kWh</b></span>
+    </div>`;
+  }
+}
+
+function teslaPeriodPreset(days) {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  const fi = document.getElementById('tesla-from');
+  const ti = document.getElementById('tesla-to');
+  if (fi) fi.value = from.toISOString().slice(0,10);
+  if (ti) ti.value = to.toISOString().slice(0,10);
+  teslaFilterCharges();
+}
+
+// Get charges for a specific reservation (by vehicle + date range)
+function getTeslaChargesForReservation(res) {
+  if (!T.vehicleData || !T.vehicleData.length) return [];
+  // Match vehicle
+  const vData = T.vehicleData.find(({v}) => {
+    const fv = (S.data.vehicles||[]).find(x => x.id === res.vehicleId);
+    return fv && (fv.vin === v.vin || v.display_name?.toLowerCase().includes(res.vehicleId?.toLowerCase()));
+  });
+  if (!vData) return [];
+  return (vData.chargeHistory || []).filter(h => {
+    if (!h.timestamp) return false;
+    const d = new Date(h.timestamp*1000).toISOString().slice(0,10);
+    return d >= res.pickupDate && d <= res.returnDate;
+  });
 }
 
 // Check OAuth callback on load
