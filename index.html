@@ -545,6 +545,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <span class="role-badge" id="role-badge"></span>
       <button class="hdr-btn" onclick="syncNow()" title="Sincronizar dados">↻ Sync</button>
       <button class="hdr-btn" id="btn-force-save" onclick="forceSaveNow()" title="Salvar todos os dados agora" style="display:none">💾 Salvar</button>
+      <button class="hdr-btn" id="btn-test-fb" onclick="testFirestore()" title="Testar conexão Firestore" style="display:none">🔍 Teste</button>
       <button class="hdr-btn" id="btn-export" onclick="exportJSON()" title="Exportar todos os dados como JSON">⬇ Export</button>
       <button class="hdr-btn" id="btn-import-json" onclick="document.getElementById('import-json-input').click()" title="Importar dados de um JSON exportado anteriormente">⬆ Import</button>
       <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(this.files[0])">
@@ -848,7 +849,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v1.3';
+const APP_VERSION = 'v1.4';
 
 // ── Firebase ──
 const FB_CONFIG = {
@@ -937,7 +938,7 @@ function doLogin() {
     btn.style.display = allowed.includes(role) ? '' : 'none';
   });
   // Show admin-only UI elements
-  const adminOnly = ['import-zone','btn-export','btn-import-json','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save'];
+  const adminOnly = ['import-zone','btn-export','btn-import-json','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = role === 'admin' ? '' : 'none';
@@ -3255,6 +3256,63 @@ async function forceSaveNow() {
   } catch(e) {
     if (btn) { btn.textContent = '💾 Salvar'; btn.disabled = false; }
   }
+}
+
+async function testFirestore() {
+  const results = [];
+  const log = (msg, ok) => {
+    results.push((ok ? '✅ ' : '❌ ') + msg);
+    console.log(msg);
+  };
+
+  // Test 1: write a tiny test doc
+  try {
+    await db.collection('gsdata').doc('_test').set({ ts: Date.now(), v: APP_VERSION });
+    log('WRITE: escrita no Firestore OK', true);
+  } catch(e) {
+    log('WRITE FAILED: ' + e.code + ' — ' + e.message, false);
+    alert('❌ Erro de escrita:\n' + e.code + '\n' + e.message + '\n\nVerifique as Regras do Firestore.');
+    return;
+  }
+
+  // Test 2: read it back
+  try {
+    const snap = await db.collection('gsdata').doc('_test').get();
+    log('READ: leitura OK — doc existe: ' + snap.exists, snap.exists);
+  } catch(e) {
+    log('READ FAILED: ' + e.code + ' — ' + e.message, false);
+  }
+
+  // Test 3: check meta doc
+  try {
+    const meta = await db.collection('gsdata').doc('meta').get();
+    if (meta.exists) {
+      const d = meta.data();
+      log('META: existe — ' + (d.resTotal||0) + ' reservas, ' + (d.resChunks||0) + ' chunks, v=' + (d.appVersion||'?'), true);
+    } else {
+      log('META: não existe ainda (normal se ainda não salvou)', true);
+    }
+  } catch(e) {
+    log('META READ FAILED: ' + e.code, false);
+  }
+
+  // Test 4: try saving current data
+  if (S.data.reservations.length > 0) {
+    try {
+      const resClean = S.data.reservations.slice(0,5).map(r => { const {photosOut,photosIn,...rest}=r; return rest; });
+      await db.collection('gsdata').doc('res_TEST').set({ reservations: resClean });
+      log('WRITE RESERVAS: teste com 5 reservas OK', true);
+      await db.collection('gsdata').doc('res_TEST').delete();
+    } catch(e) {
+      log('WRITE RESERVAS FAILED: ' + e.code + ' — ' + e.message, false);
+    }
+  }
+
+  const msg = results.join('\n') + '\n\n' +
+    (results.every(r=>r.startsWith('✅'))
+      ? '✅ Firestore funcionando! Tente salvar novamente.'
+      : '❌ Problema detectado. Verifique as regras.');
+  alert('Diagnóstico Firestore:\n\n' + msg);
 }
 </script>
 </body>
