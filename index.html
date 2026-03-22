@@ -523,7 +523,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <button class="tab-btn active" data-tab="agenda" onclick="switchTab('agenda')"><span class="tab-icon">📅 </span>Agenda</button>
       <button class="tab-btn" data-tab="financeiro" onclick="switchTab('financeiro')"><span class="tab-icon">💰 </span>Financeiro</button>
       <button class="tab-btn" data-tab="historico" onclick="switchTab('historico')"><span class="tab-icon">📋 </span>Histórico</button>
-      <button class="tab-btn" data-tab="frota" onclick="switchTab('frota')"><span class="tab-icon">🚗 </span>Frota</button>
+      <button class="tab-btn" data-tab="frota" onclick="switchTab('frota')"><span class="tab-icon">📊 </span>Overview</button>
       <button class="tab-btn" data-tab="veiculos" onclick="switchTab('veiculos')"><span class="tab-icon">🔧 </span>Veículos</button>
       <button class="tab-btn" data-tab="cotacao" onclick="switchTab('cotacao')"><span class="tab-icon">💲 </span>Cotação</button>
       <button class="tab-btn" data-tab="financiamento" onclick="switchTab('financiamento')"><span class="tab-icon">🏦 </span>Financiamento</button>
@@ -595,6 +595,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
         </div>
       </div>
       <div id="fin-detail"></div>
+      <div id="fin-analytics"></div>
     </section>
 
     <!-- ─── HISTORICO ─── -->
@@ -609,6 +610,18 @@ textarea.fld-input{resize:vertical;min-height:70px}
           <option value="">Todos status</option>
           <option>Confirmed</option><option>Pending</option>
           <option>Closed</option><option>Cancelled</option>
+        </select>
+        <select class="filter-sel" id="hist-year" onchange="renderHistorico()" style="width:90px">
+          <option value="">Ano</option>
+        </select>
+        <select class="filter-sel" id="hist-month" onchange="renderHistorico()" style="width:100px">
+          <option value="">Mês</option>
+          <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+          <option value="03">Março</option><option value="04">Abril</option>
+          <option value="05">Maio</option><option value="06">Junho</option>
+          <option value="07">Julho</option><option value="08">Agosto</option>
+          <option value="09">Setembro</option><option value="10">Outubro</option>
+          <option value="11">Novembro</option><option value="12">Dezembro</option>
         </select>
         <select class="filter-sel" id="hist-sort" onchange="renderHistorico()">
           <option value="pickup-desc">Data ↓</option>
@@ -638,7 +651,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
     <!-- ─── FROTA ─── -->
     <section class="tab-panel" id="panel-frota">
       <div class="frota-header">
-        <div class="section-title">Frota</div>
+        <div class="section-title">Overview</div>
         <div class="fleet-nav">
           <button class="year-nav-btn" onclick="changeFlotaM(-1)">‹</button>
           <div class="year-label" style="font-size:16px;min-width:160px" id="frota-lbl"></div>
@@ -940,6 +953,16 @@ async function initApp() {
 }
 
 function syncFleetFromRes() {
+  // Auto-create categories from vehicleTypes in reservations
+  if (!S.data.categories) S.data.categories = [];
+  const knownCats = new Set(S.data.categories.map(c=>c.name));
+  const typesFromRes = [...new Set((S.data.reservations||[]).map(r=>r.vehicleType).filter(Boolean))];
+  typesFromRes.forEach(t => {
+    if (!knownCats.has(t)) {
+      S.data.categories.push({name:t, daily:0, weekly:0, monthly:0, weekend:0, notes:''});
+      knownCats.add(t);
+    }
+  });
   const known = new Set(S.data.fleet.map(f => f.id));
   S.data.reservations.forEach(r => {
     if (r.vehicleId && !known.has(r.vehicleId)) {
@@ -1315,6 +1338,7 @@ function renderFinanceiro() {
   buildVtypeChart(yRes);
   buildLocChart(yRes);
   renderFinDetail(yRes);
+  if (S.finMonth === null) { try { renderFinAnalytics(); } catch(e){} }
 }
 
 function selMonth(m) {
@@ -1402,6 +1426,146 @@ function renderFinDetail(yRes) {
   });
   html+=`</tbody></table></div></div>`;
   el.innerHTML=html;
+  renderFinAnalytics();
+}
+
+function renderFinAnalytics() {
+  const el = document.getElementById('fin-analytics');
+  if (!el) return;
+  const y    = S.finYear;
+  const yRes = S.data.reservations.filter(r=>(r.pickupDate||'').startsWith(String(y)));
+  const active = yRes.filter(r=>r.status!=='Cancelled');
+
+  // --- Média de diárias por categoria ---
+  const catMap = {};
+  active.forEach(r => {
+    const cat = r.vehicleType || 'Sem categoria';
+    const days = r.days || 0;
+    const total = r.total || 0;
+    if (!catMap[cat]) catMap[cat] = {total:0, days:0, count:0};
+    catMap[cat].total += total;
+    catMap[cat].days  += days;
+    catMap[cat].count++;
+  });
+  const catRows = Object.entries(catMap).sort((a,b)=>b[1].total-a[1].total).map(([cat,v])=>{
+    const avg = v.days ? (v.total/v.days) : 0;
+    return `<tr><td>${cat}</td><td style="text-align:right">${v.count}</td>
+      <td style="text-align:right">${v.days}</td>
+      <td style="text-align:right;color:var(--amber);font-weight:600">$${fmt$(avg)}</td>
+      ${isAdmin()?`<td style="text-align:right;color:var(--green)">$${fmt$(v.total)}</td>`:''}
+    </tr>`;
+  }).join('');
+
+  // --- Carros mais alugados ---
+  const vehMap = {};
+  active.forEach(r => {
+    const id = r.vehicleId || '?';
+    if (!vehMap[id]) vehMap[id] = {type: r.vehicleType||'', count:0, days:0, total:0};
+    vehMap[id].count++;
+    vehMap[id].days += r.days||0;
+    vehMap[id].total += r.total||0;
+  });
+  const vehRows = Object.entries(vehMap).sort((a,b)=>b[1].count-a[1].count).map(([id,v],i)=>
+    `<tr>
+      <td style="color:var(--muted2);text-align:center">${i+1}</td>
+      <td style="color:var(--amber);font-family:'Barlow Condensed',sans-serif;font-weight:700">${id}</td>
+      <td style="color:var(--muted2);font-size:12px">${v.type}</td>
+      <td style="text-align:right">${v.count}</td>
+      <td style="text-align:right">${v.days}</td>
+      ${isAdmin()?`<td style="text-align:right;color:var(--green)">$${fmt$(v.total)}</td>`:''}
+    </tr>`
+  ).join('');
+
+  // --- Origem do cliente (cidade a partir da localização de saída) ---
+  const locMap = {};
+  active.forEach(r => {
+    const raw = r.locOut || 'Não informado';
+    const loc = raw.replace(/^\(P\)\s*/,'').trim() || 'Não informado';
+    locMap[loc] = (locMap[loc]||0) + 1;
+  });
+  const locRows = Object.entries(locMap).sort((a,b)=>b[1]-a[1]).map(([loc,n])=>{
+    const pct = active.length ? Math.round(n/active.length*100) : 0;
+    return `<tr>
+      <td>${loc}</td>
+      <td style="text-align:right">${n}</td>
+      <td style="text-align:right">${pct}%</td>
+      <td style="padding-left:8px"><div style="height:6px;background:var(--amber);border-radius:3px;width:${pct}%;min-width:4px"></div></td>
+    </tr>`;
+  }).join('');
+
+  // --- Ocupação por categoria ---
+  const daysInYear = 365;
+  const fleetByCat = {};
+  (S.data.fleet||[]).forEach(v => {
+    const cat = v.type || 'Sem categoria';
+    if (!fleetByCat[cat]) fleetByCat[cat] = 0;
+    fleetByCat[cat]++;
+  });
+  const occRows = Object.entries(catMap).sort((a,b)=>b[1].days-a[1].days).map(([cat,v])=>{
+    const nVehs = fleetByCat[cat] || 1;
+    const maxDays = nVehs * daysInYear;
+    const occ = Math.min(100, Math.round(v.days / maxDays * 100));
+    return `<tr>
+      <td>${cat}</td>
+      <td style="text-align:right">${nVehs} veíc.</td>
+      <td style="text-align:right">${v.days}d</td>
+      <td style="min-width:120px;padding-left:8px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${occ}%;background:${occ>70?'var(--green)':occ>40?'var(--amber)':'var(--orange)'};border-radius:4px"></div>
+          </div>
+          <span style="font-size:12px;font-weight:700;min-width:32px">${occ}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">📊 Média de diária por categoria — ${y}</div>
+        <div class="tbl-wrap"><table style="font-size:12px">
+          <thead><tr><th>Categoria</th><th style="text-align:right">Reservas</th>
+            <th style="text-align:right">Dias</th><th style="text-align:right">Média/dia</th>
+            ${isAdmin()?'<th style="text-align:right">Receita</th>':''}
+          </tr></thead>
+          <tbody>${catRows||'<tr><td colspan="5" style="text-align:center;color:var(--muted2)">Sem dados</td></tr>'}</tbody>
+        </table></div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">📍 Origem das retiradas — ${y}</div>
+        <div class="tbl-wrap"><table style="font-size:12px">
+          <thead><tr><th>Local</th><th style="text-align:right">Qtd</th><th style="text-align:right">%</th><th></th></tr></thead>
+          <tbody>${locRows||'<tr><td colspan="4" style="text-align:center;color:var(--muted2)">Sem dados</td></tr>'}</tbody>
+        </table></div>
+      </div>
+
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">🚗 Ocupação por categoria — ${y}</div>
+        <div class="tbl-wrap"><table style="font-size:12px">
+          <thead><tr><th>Categoria</th><th style="text-align:right">Frota</th><th style="text-align:right">Dias locados</th><th style="min-width:140px">Ocupação</th></tr></thead>
+          <tbody>${occRows||'<tr><td colspan="4" style="text-align:center;color:var(--muted2)">Sem dados</td></tr>'}</tbody>
+        </table></div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-title">🏆 Carros mais alugados — ${y}</div>
+        <div class="tbl-wrap" style="max-height:320px;overflow-y:auto"><table style="font-size:12px">
+          <thead><tr><th style="text-align:center">#</th><th>Veículo</th><th>Tipo</th>
+            <th style="text-align:right">Reservas</th><th style="text-align:right">Dias</th>
+            ${isAdmin()?'<th style="text-align:right">Receita</th>':''}
+          </tr></thead>
+          <tbody>${vehRows||'<tr><td colspan="6" style="text-align:center;color:var(--muted2)">Sem dados</td></tr>'}</tbody>
+        </table></div>
+      </div>
+
+    </div>
+  `;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1411,6 +1575,17 @@ function renderHistorico() {
   const q     = document.getElementById('hist-q').value.toLowerCase();
   const st    = document.getElementById('hist-st').value;
   const sort  = document.getElementById('hist-sort').value;
+  const ySel  = document.getElementById('hist-year');
+  const mSel  = document.getElementById('hist-month');
+  const yVal  = ySel?.value || '';
+  const mVal  = mSel?.value || '';
+
+  // Populate year selector
+  if (ySel && ySel.options.length <= 1) {
+    const years = [...new Set(S.data.reservations.map(r=>(r.pickupDate||'').slice(0,4)).filter(Boolean))].sort().reverse();
+    ySel.innerHTML = '<option value="">Ano</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    if (yVal) ySel.value = yVal;
+  }
 
   let res = [...S.data.reservations];
   if (q) res = res.filter(r =>
@@ -1421,6 +1596,8 @@ function renderHistorico() {
     (r.phone||'').includes(q)
   );
   if (st) res = res.filter(r=>(r.status||'')===st);
+  if (yVal) res = res.filter(r=>(r.pickupDate||'').startsWith(yVal));
+  if (mVal) res = res.filter(r=>(r.pickupDate||'').slice(5,7)===mVal);
 
   if (sort==='pickup-asc') res.sort((a,b)=>(a.pickupDate||'').localeCompare(b.pickupDate||''));
   else if (sort==='pickup-desc') res.sort((a,b)=>(b.pickupDate||'').localeCompare(a.pickupDate||''));
@@ -2081,8 +2258,16 @@ function importVehicleSummary(ws) {
     if (!S.data.fleet.find(f=>f.id===id))
       S.data.fleet.push({id, type:veh.category||veh.name.trim(), active:true});
   }
-  scheduleSave(); renderVeiculos();
-  toast(`✅ VehicleSummary: ${added} novos · ${updated} atualizados`, 'ok');
+  // Auto-create categories from vehicle types if they don't exist yet
+  const newCats = [...new Set(S.data.vehicles.map(v=>v.category).filter(Boolean))];
+  newCats.forEach(catName => {
+    if (!S.data.categories.find(c=>c.name===catName)) {
+      S.data.categories.push({ name:catName, daily:0, weekly:0, monthly:0, weekend:0, notes:'' });
+    }
+  });
+  if (!S.data.categories) S.data.categories = [];
+  scheduleSave(); renderVeiculos(); updateCotacaoSelect();
+  toast(`✅ VehicleSummary: ${added} novos · ${updated} atualizados · ${newCats.length} categorias sincronizadas`, 'ok');
 }
 
 // Frota.xlsx: Numero, Ano, Carro, Placa, Carfax, Valor(parcela), Payoff, Dia, Financeira, Jan..Dec
@@ -2099,7 +2284,17 @@ function importFrotaFinancing(ws) {
     const row = raw[i];
     const num = String(row[ci['numero']||0]||'').trim();
     if (!num || isNaN(Number(num))) continue;
-    const payAmt   = parseFloat(String(row[ci['valor']||5]||'0').replace(/[^0-9.]/g,'')) || 0;
+    // Handle Excel formula strings like '=7500/14'
+    const rawVal = row[ci['valor']||5]||'0';
+    const payAmt = (() => {
+      const s = String(rawVal);
+      if (s.startsWith('=')) {
+        const m = s.match(/=([0-9.]+)\/([0-9.]+)/);
+        if (m) return parseFloat(m[1]) / parseFloat(m[2]);
+        return parseFloat(s.replace(/[^0-9.]/g,'')) || 0;
+      }
+      return parseFloat(s.replace(/[^0-9.,-]/g,'').replace(',','.')) || 0;
+    })();
     const payoff   = parseFloat(String(row[ci['payoff']||6]||'0').replace(/[^0-9.]/g,'')) || 0;
     const dia      = parseInt(String(row[ci['dia']||7]||'1')) || 1;
     const bank     = String(row[ci['financeira']||8]||'').trim();
@@ -2129,6 +2324,23 @@ function importFrotaFinancing(ws) {
     if (!S.data.vehicles.find(v=>v.id===vehicleId))
       S.data.vehicles.push({id:vehicleId, name, category:'', year, color:'', vin:'', licensePlate:plate, mileage:0, notes:'', active:true});
   }
+  // Auto-create categories from vehicleTypes found in reservations for these vehicles
+  const finVehIds = new Set(S.data.financing.map(f=>f.vehicleId));
+  const resCats = [...new Set((S.data.reservations||[]).filter(r=>finVehIds.has(r.vehicleId)).map(r=>r.vehicleType).filter(Boolean))];
+  resCats.forEach(catName => {
+    if (!S.data.categories.find(c=>c.name===catName))
+      S.data.categories.push({ name:catName, daily:0, weekly:0, monthly:0, weekend:0, notes:'' });
+  });
+  // Auto-create vehicles from frota in vehicles list
+  (S.data.financing||[]).forEach(fin => {
+    if (!S.data.vehicles.find(v=>v.id===fin.vehicleId)) {
+      const desc = fin.description || '';
+      const parts = desc.split(' ');
+      S.data.vehicles.push({id:fin.vehicleId, name:desc, category:'', year:parts[0]||'', color:'', vin:'', licensePlate:'', mileage:0, notes:'', active:true});
+    }
+    if (!S.data.fleet.find(f=>f.id===fin.vehicleId))
+      S.data.fleet.push({id:fin.vehicleId, type:'', active:true});
+  });
   scheduleSave(); renderFinanciamento();
   toast(`✅ Frota: ${added} financiamentos novos · ${updated} atualizados`, 'ok');
 }
@@ -2138,15 +2350,32 @@ function importFrotaFinancing(ws) {
 // ════════════════════════════════════════════════════════
 function renderCotacao() {
   updateCotacaoSelect();
+  updateCotacaoLocations();
   calcCotacao();
+}
+
+function updateCotacaoLocations() {
+  const sel = document.getElementById('cot-loc');
+  if (!sel) return;
+  const locs = [...new Set([
+    ...(S.data.reservations||[]).map(r=>r.locOut).filter(Boolean),
+    ...(S.data.reservations||[]).map(r=>r.locIn).filter(Boolean),
+  ])].sort();
+  const airportKw = ['airport','mco','mia','fll','aeroporto'];
+  const isAirport = l => airportKw.some(k=>l.toLowerCase().includes(k));
+  sel.innerHTML = `<option value="no-airport">Não aeroporto</option>` +
+    locs.map(l=>`<option value="${isAirport(l)?'airport':'no-airport'}">${l}</option>`).join('');
 }
 
 function updateCotacaoSelect() {
   const sel = document.getElementById('cot-cat');
   if (!sel) return;
   const cats = S.data.categories || [];
+  // Fallback: use unique vehicleTypes from reservations if no categories set
+  const extra = cats.length ? [] : [...new Set((S.data.reservations||[]).map(r=>r.vehicleType).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Selecione ou digite a diária</option>' +
-    cats.map(c=>`<option value="${c.name}" data-daily="${c.daily}">${c.name} — $${fmt$(c.daily)}/dia</option>`).join('');
+    cats.map(c=>`<option value="${c.name}" data-daily="${c.daily}">${c.name} — $${fmt$(c.daily)}/dia</option>`).join('') +
+    extra.map(t=>`<option value="${t}" data-daily="0">${t}</option>`).join('');
 }
 
 function onCatChange() {
@@ -2478,6 +2707,8 @@ function buildInvDashboard(inv) {
   const pct  = inv.percentage ?? 40;
   const vehs = inv.vehicleIds || [];
   const today= ds(new Date());
+  const paidKey = invMonth!==null ? `${invYear}-${String(invMonth+1).padStart(2,'0')}` : String(invYear);
+  const invPaid = (inv.payments||[]).some(p=>p.period===paidKey);
   const y    = invYear;
   const res  = (S.data.reservations||[]).filter(r => {
     if (!vehs.includes(r.vehicleId)) return false;
@@ -2546,6 +2777,7 @@ function buildInvDashboard(inv) {
     <div class="inv-kpi-row">
       <div class="inv-kpi"><div class="inv-kpi-val">$${fmt$(totalBase)}</div><div class="inv-kpi-lbl">Base de diárias</div></div>
       <div class="inv-kpi"><div class="inv-kpi-val green">$${fmt$(invShare)}</div><div class="inv-kpi-lbl">A receber (${pct}%)</div></div>
+      <div class="inv-kpi"><div class="inv-kpi-val" style="color:var(--green)">${isAdmin()?`<button class="pay-confirm-btn" style="font-size:13px" onclick="markInvPaid('${inv.id}',${invYear},${invMonth??-1})">${invPaid?'✅ Pago':'Marcar pago'}</button>`:invPaid?'✅ Pago':'—'}</div><div class="inv-kpi-lbl">Status do período</div></div>
       <div class="inv-kpi"><div class="inv-kpi-val">${res.length}</div><div class="inv-kpi-lbl">Reservas</div></div>
       <div class="inv-kpi"><div class="inv-kpi-val">${totalDays}</div><div class="inv-kpi-lbl">Dias locados</div></div>
       <div class="inv-kpi"><div class="inv-kpi-val" style="color:#60a5fa">${activeNow}</div><div class="inv-kpi-lbl">Ativos hoje</div></div>
@@ -2643,6 +2875,23 @@ function buildInvForm(inv) {
     <div class="fld-group"><div class="fld-label">Observações</div>
       <input type="text" class="fld-input" id="if-notes" value="${inv?.notes||''}" placeholder="Contrato, observações..."></div>
   </div>`;
+}
+
+function markInvPaid(invId, year, month) {
+  if (!isAdmin()) return;
+  const inv = (S.data.investors||[]).find(i=>i.id===invId);
+  if (!inv) return;
+  if (!inv.payments) inv.payments = [];
+  const key = month>=0 ? `${year}-${String(month+1).padStart(2,'0')}` : String(year);
+  const idx = inv.payments.findIndex(p=>p.period===key);
+  if (idx>=0) {
+    inv.payments.splice(idx,1); // toggle off
+    toast('Marcação removida','');
+  } else {
+    inv.payments.push({period:key, paidDate:ds(new Date())});
+    toast('✅ Período marcado como pago','ok');
+  }
+  scheduleSave(); renderInvestidores();
 }
 
 function saveInvForm(existingId) {
