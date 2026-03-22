@@ -529,7 +529,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 <!-- ═══ APP ═══ -->
 <div id="app">
   <header>
-    <div class="logo">GS<span> TRIPS</span></div>
+    <div class="logo">GS<span> TRIPS</span><span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px" id="ver-badge"></span></div>
     <nav class="tabs" id="main-tabs">
       <button class="tab-btn active" data-tab="agenda" data-roles="admin,team" onclick="switchTab('agenda')"><span class="tab-icon">📅</span><span class="tab-label">Agenda</span></button>
       <button class="tab-btn" data-tab="frota" data-roles="admin,team" onclick="switchTab('frota')"><span class="tab-icon">📊</span><span class="tab-label">Overview</span></button>
@@ -544,6 +544,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <div class="save-dot" id="save-dot" title="Status de salvamento"></div>
       <span class="role-badge" id="role-badge"></span>
       <button class="hdr-btn" onclick="syncNow()" title="Sincronizar dados">↻ Sync</button>
+      <button class="hdr-btn" id="btn-force-save" onclick="forceSaveNow()" title="Salvar todos os dados agora" style="display:none">💾 Salvar</button>
       <button class="hdr-btn" id="btn-export" onclick="exportJSON()" title="Exportar todos os dados como JSON">⬇ Export</button>
       <button class="hdr-btn" id="btn-import-json" onclick="document.getElementById('import-json-input').click()" title="Importar dados de um JSON exportado anteriormente">⬆ Import</button>
       <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(this.files[0])">
@@ -847,6 +848,8 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
+const APP_VERSION = 'v1.3';
+
 // ── Firebase ──
 const FB_CONFIG = {
   apiKey: "AIzaSyCc31PRWUIZkmJlXACZkSDmx8okxx4YHWM",
@@ -934,7 +937,7 @@ function doLogin() {
     btn.style.display = allowed.includes(role) ? '' : 'none';
   });
   // Show admin-only UI elements
-  const adminOnly = ['import-zone','btn-export','btn-import-json','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn'];
+  const adminOnly = ['import-zone','btn-export','btn-import-json','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = role === 'admin' ? '' : 'none';
@@ -1009,42 +1012,55 @@ async function saveData() {
   try {
     S.data.lastUpdated = new Date().toISOString();
 
-    // Strip photos — save to localStorage only
+    // Photos → localStorage only (no size limit)
+    savePhotosLocal(S.data.reservations);
+
+    // Strip photos before cloud save
     const resClean = S.data.reservations.map(r => {
       const { photosOut, photosIn, ...rest } = r;
       return rest;
     });
-    savePhotosLocal(S.data.reservations); // persist photos locally
 
-    // Split into chunks
+    // Chunk reservations (~150 per doc ≈ 100KB each, well under 1MB limit)
     const chunks = [];
     for (let i = 0; i < resClean.length; i += CHUNK)
       chunks.push(resClean.slice(i, i + CHUNK));
     if (!chunks.length) chunks.push([]);
 
-    // Write all chunk docs sequentially (avoids Firestore batch 500-op limit)
+    console.log(`Saving ${resClean.length} reservas in ${chunks.length} chunks...`);
+
+    // Write chunks sequentially — if any fails we know which one
     for (let i = 0; i < chunks.length; i++) {
+      console.log(`  Writing res_${i} (${chunks[i].length} reservas)...`);
       await db.collection('gsdata').doc('res_' + i).set({ reservations: chunks[i] });
+      console.log(`  res_${i} OK`);
     }
 
-    // Write meta last (acts as commit marker)
-    await db.collection('gsdata').doc('meta').set({
-      fleet:        S.data.fleet        || [],
-      vehicles:     S.data.vehicles     || [],
-      categories:   S.data.categories   || [],
-      financing:    S.data.financing    || [],
-      investors:    S.data.investors    || [],
-      lastUpdated:  S.data.lastUpdated,
-      resChunks:    chunks.length,
-      resTotal:     resClean.length,
-    });
+    // Meta written last — marks the save as complete
+    const meta = {
+      fleet:       S.data.fleet        || [],
+      vehicles:    S.data.vehicles     || [],
+      categories:  S.data.categories   || [],
+      financing:   S.data.financing    || [],
+      investors:   S.data.investors    || [],
+      lastUpdated: S.data.lastUpdated,
+      resChunks:   chunks.length,
+      resTotal:    resClean.length,
+      appVersion:  APP_VERSION,
+    };
+    await db.collection('gsdata').doc('meta').set(meta);
 
     saveDot('saved');
-    console.log('Firestore save OK — ' + resClean.length + ' reservas, ' + chunks.length + ' docs');
+    console.log('✅ Firestore save complete — ' + resClean.length + ' reservas, ' + chunks.length + ' docs');
   } catch(e) {
-    console.error('Firestore save error:', e);
+    console.error('❌ Firestore save error:', e.code, e.message);
     saveDot('');
-    toast('Erro ao salvar: ' + e.message, 'err');
+    // Show prominent error — not just a toast
+    const msg = e.code === 'permission-denied'
+      ? '🔒 PERMISSÃO NEGADA\n\nVá ao console Firebase → Firestore → Regras e publique:\n\nrules_version = \'2\'\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /gsdata/{document} {\n      allow read, write: if true;\n    }\n  }\n}'
+      : '❌ Erro ao salvar: ' + e.message + '\n\nAbra o console (F12) para detalhes.';
+    alert(msg);
+    toast('Erro: ' + (e.code || e.message), 'err');
   }
 }
 
@@ -1074,6 +1090,7 @@ async function syncNow() {
 // ════════════════════════════════════════════════════════
 async function initApp() {
   document.getElementById('fin-year').textContent = S.finYear;
+  document.getElementById('ver-badge').textContent = APP_VERSION;
   updateFrotaLabel();
   await loadData();
   syncFleetFromRes();
@@ -3227,6 +3244,18 @@ function importJSON(file) {
 }
 
 document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+async function forceSaveNow() {
+  if (!isAdmin()) return;
+  const btn = document.getElementById('btn-force-save');
+  if (btn) { btn.textContent = '⏳ Salvando...'; btn.disabled = true; }
+  try {
+    await saveData();
+    if (btn) { btn.textContent = '✅ Salvo!'; setTimeout(()=>{ btn.textContent='💾 Salvar'; btn.disabled=false; }, 2000); }
+  } catch(e) {
+    if (btn) { btn.textContent = '💾 Salvar'; btn.disabled = false; }
+  }
+}
 </script>
 </body>
 </html>
