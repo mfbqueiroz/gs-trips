@@ -849,7 +849,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v1.5';
+const APP_VERSION = 'v1.6';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1438,11 +1438,17 @@ function renderAgenda() {
       const pillLabel = overdue ? '⚠ ATRASADO' : (e.type==='departure' ? '▲ SAÍDA' : '▼ RETORNO');
       const pillCls = overdue ? 'overdue' : e.type;
       const loc = e.type==='departure' ? r.locOut : r.locIn;
+      const evTime = e.type==='departure' ? r.pickupTime : r.returnTime;
+      const accStr = (r.accessories||[]).slice(0,3).join(' · ');
       html += `<div class="res-card ${cls}" onclick="openModal('${esc(r.id)}')">
         <div class="res-card-top">
           <span class="res-pill ${pillCls}">${pillLabel}</span>
-          <span class="res-num">#${r.id}</span>
+          <span style="display:flex;align-items:center;gap:6px">
+            ${evTime?`<span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:var(--amber)">🕐 ${evTime}</span>`:''}
+            <span class="res-num">#${r.id}</span>
+          </span>
         </div>
+        ${(r.accessories||[]).length?`<div style="font-size:11px;color:var(--amber);margin-bottom:4px">🎒 ${accStr}${(r.accessories||[]).length>3?' +'+((r.accessories||[]).length-3):''}</div>`:''}
         <div class="res-name">${r.fullName||'—'}</div>
         <div class="res-car">${r.vehicleType||r.vehicleId||'—'}</div>
         <div class="res-meta">
@@ -1452,7 +1458,7 @@ function renderAgenda() {
           ${r.fuelOut!=null?`<span class="res-chip">⛽ ${FUELS[r.fuelOut]||'?'}</span>`:''}
           ${(()=>{ if(r.fuelOut!=null&&r.fuelIn!=null&&r.fuelIn<r.fuelOut){ const used=(([0,.25,.5,.75,1])[r.fuelOut]-([0,.25,.5,.75,1])[r.fuelIn]); const cost=used*16*GAS_PPG; return cost>0?`<span class="res-chip" style="color:var(--orange)">⛽ -$${cost.toFixed(0)}</span>`:''; } return ''; })()}
           ${r.extras?`<span class="res-chip" style="color:var(--amber)">+ ${r.extras}</span>`:''}
-          ${isAdmin()&&r.total?`<span class="res-val">$${fmt$(r.total)}</span>`:''}
+          ${r.total?`<span class="res-val">$${fmt$(r.total)}</span>`:''}
         </div>
       </div>`;
     });
@@ -2041,40 +2047,76 @@ function openModal(id) {
 }
 
 function buildModal(r, isEV) {
-  const can = isAdmin();
+  const admin = isAdmin();
+  const canEdit = true; // both roles can edit operational fields
+  // Accessories list for checkboxes
+  const ACC_LIST = ['Cadeirinha Infantil','Carrinho de Bebê','GPS','Wifi','Rack de Teto','Booster'];
+  const selAcc = r.accessories || [];
+  const accBoxes = ACC_LIST.map(a =>
+    `<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:3px 0">
+      <input type="checkbox" ${selAcc.includes(a)?'checked':''} onchange="toggleAccessory('${a}',this.checked)">
+      <span>${a}</span>
+    </label>`
+  ).join('') +
+  `<div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+    <input type="text" class="fld-input" id="acc-custom" placeholder="Outro acessório..."
+      style="flex:1;padding:5px 8px;font-size:12px" onkeydown="if(event.key==='Enter'){addCustomAcc();event.preventDefault()}">
+    <button class="btn" style="padding:5px 10px;font-size:12px" onclick="addCustomAcc()">+</button>
+  </div>`;
+
   return `
+  <div class="m-section">
+    <div class="m-section-title">🚚 Entrega / Retirada</div>
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="info-lbl">⬆ Horário de Saída</div>
+        <div class="info-val">
+          <input type="time" class="fld-input" style="padding:4px 8px;font-size:14px"
+            value="${r.pickupTime||''}" oninput="updField('pickupTime',this.value)">
+        </div>
+      </div>
+      <div class="info-box">
+        <div class="info-lbl">⬇ Horário de Retorno</div>
+        <div class="info-val">
+          <input type="time" class="fld-input" style="padding:4px 8px;font-size:14px"
+            value="${r.returnTime||''}" oninput="updField('returnTime',this.value)">
+        </div>
+      </div>
+      <div class="info-box">
+        <div class="info-lbl">📍 Local de Saída</div>
+        <div class="info-val" style="font-size:13px;color:var(--amber)">${r.locOut||'—'}</div>
+      </div>
+      <div class="info-box">
+        <div class="info-lbl">📍 Local de Retorno</div>
+        <div class="info-val" style="font-size:13px;color:var(--muted2)">${r.locIn||'—'}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">🎒 Acessórios</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">
+      ${accBoxes}
+    </div>
+  </div>
+
   <div class="m-section">
     <div class="m-section-title">Informações da Reserva</div>
     <div class="info-grid">
       <div class="info-box"><div class="info-lbl">Cliente</div><div class="info-val">${r.fullName||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">Telefone</div><div class="info-val">${r.phone||'—'}</div></div>
-      ${can?`
       <div class="info-box"><div class="info-lbl">Cidade / País</div>
         <div class="info-val"><input type="text" class="fld-input" style="padding:2px 6px;height:auto;font-size:12px"
-          id="m-city" value="${r.city||''}" placeholder="Ex: São Paulo / Brasil"
+          value="${r.city||''}" placeholder="Ex: São Paulo / Brasil"
           oninput="updField('city',this.value)"></div></div>
-      <div class="info-box"><div class="info-lbl">Sexo</div>
-        <div class="info-val"><select class="filter-sel" id="m-sex" style="padding:2px 6px;height:auto;font-size:12px;width:100%"
-          onchange="updField('sex',this.value)">
-          <option value="">—</option>
-          <option value="M" ${r.sex==='M'?'selected':''}>Masculino</option>
-          <option value="F" ${r.sex==='F'?'selected':''}>Feminino</option>
-        </select></div></div>
-      <div class="info-box"><div class="info-lbl">Idade</div>
-        <div class="info-val"><input type="number" class="fld-input" style="padding:2px 6px;height:auto;font-size:12px"
-          id="m-age" value="${r.age||''}" placeholder="—" min="18" max="99"
-          oninput="updField('age',+this.value||null)"></div></div>
-      `:''}
       <div class="info-box"><div class="info-lbl">Veículo</div><div class="info-val">${r.vehicleType||'—'}</div></div>
       <div class="info-box"><div class="info-lbl">ID do Veículo</div><div class="info-val">${r.vehicleId||'—'}</div></div>
-      <div class="info-box"><div class="info-lbl">Saída</div><div class="info-val">${fmtD(r.pickupDate)} <span style="color:var(--amber);font-size:12px">${r.locOut?'('+r.locOut+')':''}</span></div></div>
-      <div class="info-box"><div class="info-lbl">Retorno</div><div class="info-val">${fmtD(r.returnDate)} <span style="color:var(--muted2);font-size:12px">${r.locIn?'('+r.locIn+')':''}</span></div></div>
+      <div class="info-box"><div class="info-lbl">Saída</div><div class="info-val">${fmtD(r.pickupDate)}</div></div>
+      <div class="info-box"><div class="info-lbl">Retorno</div><div class="info-val">${fmtD(r.returnDate)}</div></div>
       <div class="info-box"><div class="info-lbl">Dias</div><div class="info-val">${r.days||0}</div></div>
       <div class="info-box"><div class="info-lbl">Status</div><div class="info-val"><span class="status-badge ${sCls(r.status)}">${r.status||'—'}</span></div></div>
-      ${can?`
       <div class="info-box"><div class="info-lbl">Total</div><div class="info-val" style="color:var(--green)">$${fmt$(r.total)}</div></div>
-      <div class="info-box"><div class="info-lbl">Pago / Saldo</div><div class="info-val">$${fmt$(r.paid)} <span style="color:var(--orange)">/ $${fmt$(r.balance)}</span></div></div>
-      `:''}
+      ${admin?`<div class="info-box"><div class="info-lbl">Pago / Saldo</div><div class="info-val">$${fmt$(r.paid)} <span style="color:var(--orange)">/ $${fmt$(r.balance)}</span></div></div>`:''}
     </div>
   </div>
 
@@ -2084,12 +2126,12 @@ function buildModal(r, isEV) {
       <div class="fld-group">
         <div class="fld-label">Saída (mi)</div>
         <input type="number" class="fld-input" id="mi-out" value="${r.milesOut||''}" placeholder="—"
-          ${!can?'disabled':''} oninput="updField('milesOut',+this.value||null);updMilesDeltaById()">
+          oninput="updField('milesOut',+this.value||null);updMilesDeltaById()">
       </div>
       <div class="fld-group">
         <div class="fld-label">Retorno (mi)</div>
         <input type="number" class="fld-input" id="mi-in" value="${r.milesIn||''}" placeholder="—"
-          ${!can?'disabled':''} oninput="updField('milesIn',+this.value||null);updMilesDeltaById()">
+          oninput="updField('milesIn',+this.value||null);updMilesDeltaById()">
       </div>
     </div>
     <div class="miles-delta" id="miles-delta"></div>
@@ -2100,11 +2142,11 @@ function buildModal(r, isEV) {
     <div class="fld-row">
       <div class="fld-group">
         <div class="fld-label">Nível Saída</div>
-        <div class="fuel-row">${FUELS.map((_,i)=>`<button class="fuel-opt" id="fOut${i}" ${!can?'disabled':''}>${FUELS[i]}</button>`).join('')}</div>
+        <div class="fuel-row">${FUELS.map((_,i)=>`<button class="fuel-opt" id="fOut${i}">${FUELS[i]}</button>`).join('')}</div>
       </div>
       <div class="fld-group">
         <div class="fld-label">Nível Retorno</div>
-        <div class="fuel-row">${FUELS.map((_,i)=>`<button class="fuel-opt" id="fIn${i}" ${!can?'disabled':''}>${FUELS[i]}</button>`).join('')}</div>
+        <div class="fuel-row">${FUELS.map((_,i)=>`<button class="fuel-opt" id="fIn${i}">${FUELS[i]}</button>`).join('')}</div>
       </div>
     </div>
     <div id="fuel-est"></div>
@@ -2112,21 +2154,21 @@ function buildModal(r, isEV) {
 
   <div class="m-section">
     <div class="m-section-title">📸 Fotos — Entrega ao Cliente</div>
-    <div class="photos-wrap" id="ph-Out">${renderPhotos(r.photosOut||[],r.id,'Out',can)}</div>
+    <div class="photos-wrap" id="ph-Out">${renderPhotos(r.photosOut||[],r.id,'Out',canEdit)}</div>
   </div>
 
   <div class="m-section">
     <div class="m-section-title">📸 Fotos — Retorno do Cliente</div>
-    <div class="photos-wrap" id="ph-In">${renderPhotos(r.photosIn||[],r.id,'In',can)}</div>
+    <div class="photos-wrap" id="ph-In">${renderPhotos(r.photosIn||[],r.id,'In',canEdit)}</div>
   </div>
 
   <div class="m-section">
-    <div class="m-section-title">Extras / Cobranças adicionais</div>
+    <div class="m-section-title">Extras / Cobranças</div>
     <div class="fld-row">
       <div class="fld-group">
-        <div class="fld-label">Descrição (ex: gasolina, dano, multa)</div>
+        <div class="fld-label">Descrição</div>
         <input type="text" class="fld-input" id="m-extras"
-          value="${r.extras||''}" placeholder="Ex: Gasolina $45 + multa $120"
+          value="${r.extras||''}" placeholder="Ex: Gasolina, multa, dano..."
           oninput="updField('extras',this.value)">
       </div>
       <div class="fld-group">
@@ -2139,14 +2181,37 @@ function buildModal(r, isEV) {
   </div>
 
   <div class="m-section">
-    <div class="m-section-title">Notas internas</div>
-    <textarea class="fld-input" ${!can?'disabled':''} rows="3"
+    <div class="m-section-title">Notas</div>
+    <textarea class="fld-input" rows="3"
       oninput="updField('notes',this.value)">${r.notes||''}</textarea>
   </div>
 
   <input type="file" id="pu-Out" accept="image/*" multiple style="display:none" onchange="addPhotos('Out',this.files)">
   <input type="file" id="pu-In"  accept="image/*" multiple style="display:none" onchange="addPhotos('In',this.files)">
   `;
+}
+
+function toggleAccessory(name, checked) {
+  const r = curRes(); if (!r) return;
+  if (!r.accessories) r.accessories = [];
+  if (checked) { if (!r.accessories.includes(name)) r.accessories.push(name); }
+  else { r.accessories = r.accessories.filter(a => a !== name); }
+  scheduleSave();
+}
+
+function addCustomAcc() {
+  const inp = document.getElementById('acc-custom');
+  const val = inp?.value?.trim();
+  if (!val) return;
+  const r = curRes(); if (!r) return;
+  if (!r.accessories) r.accessories = [];
+  if (!r.accessories.includes(val)) {
+    r.accessories.push(val);
+    scheduleSave();
+    // Re-render accessories section
+    openModal(r.id);
+  }
+  inp.value = '';
 }
 
 function renderPhotos(photos, resId, dir, canEdit) {
@@ -2161,7 +2226,7 @@ function renderPhotos(photos, resId, dir, canEdit) {
 }
 
 function setFuel(dir, lvl) {
-  const r = curRes(); if (!r||!isAdmin()) return;
+  const r = curRes(); if (!r) return;
   r[`fuel${dir}`] = lvl;
   FUELS.forEach((_,i)=>{ const b=document.getElementById(`f${dir}${i}`); if(b) b.classList.toggle('sel',i===lvl); });
   const isEV = EV_KW.some(k=>(r.vehicleType||'').toLowerCase().includes(k));
@@ -2188,7 +2253,9 @@ function updFuelEst(r, isEV) {
 }
 
 function updField(field, val) {
-  const r = curRes(); if (!r||!isAdmin()) return;
+  const r = curRes(); if (!r) return;
+  // Protect financial fields from team
+  if (!isAdmin() && ['total','paid','balance'].includes(field)) return;
   r[field] = val;
   scheduleSave();
 }
