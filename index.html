@@ -8,6 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 :root {
   --bg: #0B0B0E;
@@ -533,6 +536,9 @@ textarea.fld-input{resize:vertical;min-height:70px}
       <div class="save-dot" id="save-dot" title="Status de salvamento"></div>
       <span class="role-badge" id="role-badge"></span>
       <button class="hdr-btn" onclick="syncNow()" title="Sincronizar dados">↻ Sync</button>
+      <button class="hdr-btn" onclick="exportJSON()" title="Exportar todos os dados como JSON">⬇ Export</button>
+      <button class="hdr-btn" onclick="document.getElementById('import-json-input').click()" title="Importar dados de um JSON exportado anteriormente" id="import-json-btn">⬆ Import</button>
+      <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(this.files[0])">
       <button class="hdr-btn" onclick="doLogout()">Sair</button>
     </div>
   </header>
@@ -833,7 +839,18 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const API     = 'https://gs-rental-backend-gpke.vercel.app/api/data';
+// ── Firebase ──
+const FB_CONFIG = {
+  apiKey: "AIzaSyCc31PRWUIZkmJlXACZkSDmx8okxx4YHWM",
+  authDomain: "gs-trips.firebaseapp.com",
+  projectId: "gs-trips",
+  storageBucket: "gs-trips.firebasestorage.app",
+  messagingSenderId: "385430418476",
+  appId: "1:385430418476:web:6f41e62f7952863f334d89"
+};
+firebase.initializeApp(FB_CONFIG);
+const db = firebase.firestore();
+
 const CREDS   = { 'gsadmin': 'admin', 'gs2026': 'team' };
 const FUELS   = ['E', '1/4', '1/2', '3/4', 'F'];
 const MONTHS  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -897,25 +914,32 @@ function doLogout() {
 async function loadData() {
   loader(true, 'Sincronizando...');
   try {
-    const res = await fetch(API, { headers: { 'Authorization': `Bearer ${S.token}` } });
-    if (res.ok) {
-      const json = await res.json();
-      let stored = json.data ?? json.value ?? json;
-      if (typeof stored === 'string') { try { stored = JSON.parse(stored); } catch(e) { stored = null; } }
-      if (stored && typeof stored === 'object' && stored.reservations) {
-        // Merge — preserve new arrays if backend doesn't have them yet
-        S.data = {
-          reservations: stored.reservations || [],
-          fleet:        stored.fleet        || [],
-          vehicles:     stored.vehicles     || [],
-          categories:   stored.categories   || [],
-          financing:    stored.financing    || [],
-          investors:    stored.investors    || [],
-          lastUpdated:  stored.lastUpdated  || null,
-        };
+    const snap = await db.collection('gsdata').doc('main').get();
+    if (snap.exists) {
+      const stored = snap.data();
+      S.data = {
+        reservations: stored.reservations || [],
+        fleet:        stored.fleet        || [],
+        vehicles:     stored.vehicles     || [],
+        categories:   stored.categories   || [],
+        financing:    stored.financing    || [],
+        investors:    stored.investors    || [],
+        lastUpdated:  stored.lastUpdated  || null,
+      };
+      // Load photos separately
+      const photoSnap = await db.collection('gsdata').doc('photos').get();
+      if (photoSnap.exists) {
+        const photos = photoSnap.data();
+        S.data.reservations.forEach(r => {
+          if (photos[r.id + '_Out']) r.photosOut = photos[r.id + '_Out'];
+          if (photos[r.id + '_In'])  r.photosIn  = photos[r.id + '_In'];
+        });
       }
     }
-  } catch(e) { console.warn('Load:', e); toast('Sem conexão — operando offline', 'err'); }
+  } catch(e) {
+    console.warn('Load error:', e);
+    toast('Erro ao carregar dados — verifique conexão', 'err');
+  }
   loader(false);
 }
 
@@ -924,24 +948,40 @@ async function saveData() {
   saveDot('saving');
   try {
     S.data.lastUpdated = new Date().toISOString();
-    const body = JSON.stringify(S.data);
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer gsadmin', 'Content-Type': 'application/json' },
-      body
+
+    // Separate photos from main data (Firestore 1MB doc limit)
+    const photos = {};
+    const resWithoutPhotos = S.data.reservations.map(r => {
+      if ((r.photosOut && r.photosOut.length) || (r.photosIn && r.photosIn.length)) {
+        if (r.photosOut?.length) photos[r.id + '_Out'] = r.photosOut;
+        if (r.photosIn?.length)  photos[r.id + '_In']  = r.photosIn;
+      }
+      const { photosOut, photosIn, ...rest } = r;
+      return rest;
     });
-    if (res.ok) {
-      saveDot('saved');
-    } else {
-      const txt = await res.text().catch(()=>'');
-      console.error('Save failed:', res.status, txt);
-      saveDot('');
-      toast(`Erro ao salvar (${res.status})`, 'err');
-    }
+
+    const mainDoc = {
+      reservations: resWithoutPhotos,
+      fleet:        S.data.fleet        || [],
+      vehicles:     S.data.vehicles     || [],
+      categories:   S.data.categories   || [],
+      financing:    S.data.financing    || [],
+      investors:    S.data.investors    || [],
+      lastUpdated:  S.data.lastUpdated,
+    };
+
+    // Use batch write for atomicity
+    const batch = db.batch();
+    batch.set(db.collection('gsdata').doc('main'),   mainDoc);
+    batch.set(db.collection('gsdata').doc('photos'), photos);
+    await batch.commit();
+
+    saveDot('saved');
+    console.log('Firebase save OK — ' + resWithoutPhotos.length + ' reservas');
   } catch(e) {
-    console.error('Save error:', e);
+    console.error('Firebase save error:', e);
     saveDot('');
-    toast('Sem conexão — dados não salvos', 'err');
+    toast('Erro ao salvar: ' + e.message, 'err');
   }
 }
 
@@ -3023,7 +3063,68 @@ function saveInvForm(existingId) {
   toast('Investidor salvo ✓','ok');
 }
 
+// ════════════════════════════════════════════════════════
+//  EXPORT / IMPORT JSON  — solução de persistência confiável
+// ════════════════════════════════════════════════════════
+function exportJSON() {
+  const filename = `gs-trips-${new Date().toISOString().slice(0,10)}.json`;
+  const blob = new Blob([JSON.stringify(S.data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+  toast(`✅ Exportado: ${filename}`, 'ok');
+}
 
+function importJSON(file) {
+  if (!file || !isAdmin()) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.reservations) { toast('JSON inválido — falta campo reservations', 'err'); return; }
+      // Merge: preserve photos/miles/notes/city/sex/age from current data
+      const existMap = {};
+      (S.data.reservations||[]).forEach(r => existMap[r.id] = r);
+      imported.reservations = (imported.reservations||[]).map(r => {
+        const p = existMap[r.id];
+        if (!p) return r;
+        return { ...r,
+          photosOut: p.photosOut?.length ? p.photosOut : (r.photosOut||[]),
+          photosIn:  p.photosIn?.length  ? p.photosIn  : (r.photosIn||[]),
+          milesOut: p.milesOut ?? r.milesOut,
+          milesIn:  p.milesIn  ?? r.milesIn,
+          fuelOut:  p.fuelOut  ?? r.fuelOut,
+          fuelIn:   p.fuelIn   ?? r.fuelIn,
+          notes:    p.notes    || r.notes || '',
+          city:     p.city     || r.city  || '',
+          sex:      p.sex      || r.sex   || '',
+          age:      p.age      ?? r.age   ?? null,
+        };
+      });
+      S.data = {
+        reservations: imported.reservations || [],
+        fleet:        imported.fleet        || S.data.fleet        || [],
+        vehicles:     imported.vehicles     || S.data.vehicles     || [],
+        categories:   imported.categories   || S.data.categories   || [],
+        financing:    imported.financing    || S.data.financing    || [],
+        investors:    imported.investors    || S.data.investors    || [],
+        lastUpdated:  imported.lastUpdated  || null,
+      };
+      syncFleetFromRes();
+      renderCurrentTab();
+      await saveData();
+      toast(`✅ ${imported.reservations.length} reservas importadas e salvas`, 'ok');
+    } catch(err) {
+      console.error(err);
+      toast('Erro ao ler JSON: ' + err.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+  document.getElementById('import-json-input').value = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
 </script>
 </body>
 </html>
