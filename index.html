@@ -1064,7 +1064,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v4.6';
+const APP_VERSION = 'v4.7';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1240,12 +1240,17 @@ async function loadData() {
     // Attach photos from localStorage
     loadPhotosLocal(allRes);
 
+    // Filter out demo data that may have been accidentally saved
+    const demoIds = new Set(['TESLA-Y1','TESLA-Y2','CAD-OPT1']);
+    const cleanFleet    = (meta.fleet||[]).filter(function(v){ return !demoIds.has(v.id); });
+    const cleanVehicles = (meta.vehicles||[]).filter(function(v){ return !demoIds.has(v.id); });
+    const cleanFin      = (meta.financing||[]).filter(function(f){ return !demoIds.has(f.vehicleId); });
     S.data = {
-      reservations: allRes,
-      fleet:        meta.fleet        || [],
-      vehicles:     meta.vehicles     || [],
+      reservations: allRes.filter(function(r){ return !r.id || !r.id.startsWith('D00'); }),
+      fleet:        cleanFleet,
+      vehicles:     cleanVehicles,
       categories:   meta.categories   || [],
-      financing:    meta.financing    || [],
+      financing:    cleanFin,
       investors:    meta.investors    || [],
       charges:      meta.charges      || [],
       lastUpdated:  meta.lastUpdated  || null,
@@ -1699,10 +1704,13 @@ function normDate(v) {
   if (!v) return '';
   if (v instanceof Date) return v.toISOString().split('T')[0];
   const s = String(v).trim();
+  // American format: MM/DD/YYYY (Rent Centric exports this)
   const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (m1) {
     const y = m1[3].length === 2 ? '20'+m1[3] : m1[3];
-    return `${y}-${m1[1].padStart(2,'0')}-${m1[2].padStart(2,'0')}`;
+    const month = m1[1].padStart(2,'0');
+    const day   = m1[2].padStart(2,'0');
+    return `${y}-${month}-${day}`; // MM/DD/YYYY → YYYY-MM-DD
   }
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split('T')[0];
   if (/^\d{5,}$/.test(s)) {
@@ -1776,8 +1784,8 @@ function renderAgenda() {
             <span class="res-num">#${r.id}</span>
           </span>
         </div>
-        ${(r.accessories||[]).length?`<div style="font-size:11px;color:var(--amber);margin-bottom:4px;font-weight:600">🎒 ${accStr}${(r.accessories||[]).length>3?' +'+((r.accessories||[]).length-3):''}</div>`:''}
-        ${r.extras?`<div style="font-size:11px;color:var(--orange);margin-bottom:4px;font-weight:600">📋 ${r.extras}${r.extrasVal?' · $'+fmt$(r.extrasVal):''}</div>`:''}
+        ${(r.accessories||[]).length?('<div style="font-size:11px;color:var(--amber);margin-bottom:4px;font-weight:600">🎒 '+accStr+((r.accessories||[]).length>3?' +'+(r.accessories.length-3):'')+'</div>'):''}
+        ${r.extras?('<div style="font-size:11px;color:var(--orange);margin-bottom:4px;font-weight:600">📋 '+r.extras+(r.extrasVal?' · $'+fmt$(r.extrasVal):'')+'</div>'):''}
         <div class="res-name">${r.fullName||'—'}</div>
         <div class="res-car">${r.vehicleType||r.vehicleId||'—'}</div>
         <div class="res-meta">
@@ -3878,16 +3886,25 @@ async function importTeslaCSV(files) {
 
 function autoLinkCharges() {
   (S.data.charges||[]).forEach(function(ch) {
-    if (ch.reservationId) return; // already linked
     const vin = ch.carVin;
     // Find vehicle by VIN
     const veh = (S.data.vehicles||[]).find(function(v){ return v.vin === vin; });
-    if (!veh) return;
+    if (!veh) {
+      if (!ch.reservationId) ch.categoria = 'operacional';
+      return;
+    }
     // Find reservation for this vehicle on this date
     const res = (S.data.reservations||[]).find(function(r) {
       return r.vehicleId === veh.id && r.pickupDate <= ch.date && r.returnDate >= ch.date;
     });
-    if (res) ch.reservationId = res.id;
+    if (res) {
+      ch.reservationId = res.id;
+      ch.clientName = res.fullName;
+      ch.vehicleId  = veh.id;
+      ch.categoria  = 'cliente';
+    } else {
+      if (!ch.reservationId) ch.categoria = 'operacional';
+    }
   });
 }
 
@@ -3990,8 +4007,10 @@ function renderCharges() {
     carCharges.forEach(function(ch) {
       const res = ch.reservationId ? (S.data.reservations||[]).find(function(r){ return r.id===ch.reservationId; }) : null;
       const resInfo = res
-        ? '<span style="color:var(--green);font-size:11px">#' + res.id + ' ' + (res.fullName||'') + '</span>'
-        : '<span style="color:var(--muted2);font-size:11px">—</span>';
+        ? '<span style="color:var(--green);font-size:11px">✓ #' + res.id + ' ' + (res.fullName||'') + '</span>'
+        : ch.categoria === 'operacional'
+          ? '<span style="color:var(--muted2);font-size:11px">🔧 Despesa operacional</span>'
+          : '<span style="color:var(--muted2);font-size:11px">— Sem reserva</span>';
 
       html += '<tr>' +
         '<td style="white-space:nowrap">' + fmtD(ch.date) + (ch.time?' <span style="color:var(--muted2)">'+ch.time+'</span>':'') + '</td>' +
