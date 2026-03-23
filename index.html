@@ -291,15 +291,15 @@ tbody tr:hover{background:rgba(245,158,11,0.04)}
 .fleet-cal thead th.col-today{color:var(--amber)}
 .fleet-cal td{padding:1px;border:1px solid rgba(42,42,53,0.3);background:var(--card)}
 .car-label-cell{
-  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-  padding:3px 8px;white-space:nowrap;border-right:2px solid var(--border) !important;
-  min-width:60px;background:var(--card2) !important;line-height:1.2;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;
+  padding:2px 6px;white-space:nowrap;border-right:2px solid var(--border) !important;
+  min-width:50px;background:var(--card2) !important;line-height:1.2;
 }
 .car-label-cell.inactive{color:var(--muted);text-decoration:line-through;opacity:0.45}
 .day-cell{
-  width:22px;min-width:22px;height:22px;
-  border-radius:3px;transition:opacity 0.1s;
-  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;
+  width:20px;min-width:20px;height:18px;
+  border-radius:2px;transition:opacity 0.1s;
+  display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;
 }
 .day-cell.empty{background:transparent}
 .day-cell.departure{background:rgba(16,185,129,0.35);color:var(--green);cursor:pointer}
@@ -444,17 +444,35 @@ textarea.fld-input{resize:vertical;min-height:70px}
   .hdr-btn{font-size:10px;padding:3px 5px}
   .day-cards{grid-template-columns:1fr}
   .modal-box{width:calc(100vw - 12px);max-height:92vh}
+  .day-cell{width:16px;min-width:16px;height:14px;font-size:7px}
+  .car-label-cell{font-size:10px;padding:1px 4px;min-width:40px}
 }
-@media(max-width:900px) and (orientation:landscape){
+@media(orientation:landscape) and (max-height:500px){
+  /* Mobile landscape — sidebar goes to bottom */
   #app-body{flex-direction:column}
-  .tabs{flex-direction:row;width:100%;height:50px;min-height:50px;border-right:none;border-top:1px solid var(--border);overflow-x:auto;overflow-y:hidden;padding:0 4px;order:2;flex-shrink:0}
-  main{order:1;overflow-y:auto}
-  .tab-btn{flex-direction:row;gap:5px;padding:0 10px;min-width:auto;height:50px;border-left:none;border-top:2px solid transparent;white-space:nowrap}
+  .tabs{
+    flex-direction:row;width:100%;height:46px;min-height:46px;
+    border-right:none;border-top:1px solid var(--border);
+    overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+    padding:0 2px;order:2;flex-shrink:0;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  main{order:1;overflow-y:auto;min-height:0}
+  .tab-btn{
+    flex-direction:row;gap:4px;padding:0 10px;
+    min-width:auto;height:46px;
+    border-left:none;border-top:2px solid transparent;
+    white-space:nowrap;flex-shrink:0;
+  }
   .tab-btn.active{border-left-color:transparent;border-top-color:var(--amber)}
   .tab-label{font-size:10px}
-  .tab-icon{font-size:15px}
-  .tab-panel{padding:10px 12px}
-  .day-cards{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+  .tab-icon{font-size:14px}
+  .tab-panel{padding:8px 10px 8px}
+  .day-cards{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  header{height:40px}
+  .hdr-btn{font-size:10px;padding:3px 6px}
+  .day-cell{width:16px;min-width:16px;height:14px;font-size:7px}
+  .car-label-cell{font-size:10px;padding:1px 4px;min-width:40px}
 }
 /* ── VEÍCULOS ── */
 .veh-table{width:100%;border-collapse:collapse;font-size:13px}
@@ -855,7 +873,10 @@ textarea.fld-input{resize:vertical;min-height:70px}
     <section class="tab-panel" id="panel-financiamento">
       <div class="section-header">
         <div class="section-title">Financiamentos</div>
-        <button class="btn primary" onclick="openAddFinModal()" id="add-fin-btn">+ Novo Financiamento</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="cleanZeroFins()" id="btn-clean-fins" style="display:none;font-size:11px;color:var(--red);border-color:rgba(239,68,68,.4)">🗑 Limpar $0.00</button>
+          <button class="btn primary" onclick="openAddFinModal()" id="add-fin-btn">+ Novo Financiamento</button>
+        </div>
       </div>
       <!-- Summary buttons -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="fin-summary-btns">
@@ -1077,7 +1098,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v5.1';
+const APP_VERSION = 'v5.3';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1202,7 +1223,7 @@ function doLogin() {
     btn.style.display = allowed.includes(effectiveRole) ? '' : 'none';
   });
   // Show admin-only UI elements
-  const adminOnly = ['import-zone','btn-import-tesla-csv','btn-vin-map','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
+  const adminOnly = ['import-zone','btn-import-tesla-csv','btn-vin-map','btn-clean-fins','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = role === 'admin' ? '' : 'none';
@@ -3241,6 +3262,13 @@ function renderFinanciamento() {
   const in15 = ds(new Date(Date.now() + 15*86400000));
   const in30 = ds(new Date(Date.now() + 30*86400000));
 
+  // Show clean button if there are $0 financings
+  const cleanBtn = document.getElementById('btn-clean-fins');
+  if (cleanBtn && isAdmin()) {
+    const hasZero = fins.some(function(fin){ return (fin.payments||[]).reduce(function(s,p){ return s+(p.amount||0); },0) === 0; });
+    cleanBtn.style.display = hasZero ? '' : 'none';
+  }
+
   // ── Collect all upcoming/overdue payments ──
   const alerts = [];
   // Apply filter
@@ -3383,6 +3411,20 @@ function renderFinanciamento() {
 }
 
 let S_finFilter = 'all';
+
+function cleanZeroFins() {
+  const before = (S.data.financing||[]).length;
+  // Remove financing where ALL payments are $0.00
+  S.data.financing = (S.data.financing||[]).filter(function(fin) {
+    const total = (fin.payments||[]).reduce(function(s,p){ return s+(p.amount||0); }, 0);
+    return total > 0;
+  });
+  const removed = before - S.data.financing.length;
+  if (removed === 0) { toast('Nenhum financiamento com $0.00 encontrado', ''); return; }
+  scheduleSave();
+  renderFinanciamento();
+  toast('✓ ' + removed + ' financiamento(s) com $0.00 removido(s)', 'ok');
+}
 
 function setFinFilter(f) {
   S_finFilter = f;
@@ -4402,7 +4444,7 @@ const TESLA_CLIENT_SECRET = 'ta-secret.U^XuBXsuNKVf1fc+';
 const TESLA_REDIRECT_URI  = 'https://mfbqueiroz.github.io/gs-trips/';
 const TESLA_BASE          = 'https://fleet-api.prd.na.vn.cloud.tesla.com';
 const TESLA_AUTH_BASE     = 'https://auth.tesla.com/oauth2/v3';
-const TESLA_SCOPES        = 'openid offline_access vehicle_device_data vehicle_charging_cmds';
+const TESLA_SCOPES        = 'openid offline_access vehicle_device_data vehicle_charging_cmds vehicle_location vehicle_cmds vehicle_specs energy_device_data';
 
 let T = {
   accessToken:  localStorage.getItem('tesla_access_token')  || null,
@@ -4766,7 +4808,7 @@ async function renderTesla() {
 
       // Vehicle data
       try {
-        const d = await teslaGet('/api/1/vehicles/' + v.id_s + '/vehicle_data?endpoints=charge_state%7Cdrive_state%7Cvehicle_state');
+        const d = await teslaGet('/api/1/vehicles/' + v.id_s + '/vehicle_data?endpoints=charge_state%7Cdrive_state%7Cvehicle_state%7Clocation_data%7Cvehicle_config%7Cclimate_state%7Cgui_settings');
         detail = d ? d.response : null;
       } catch(e) { console.warn('Detail error:', v.display_name, e.message); }
 
@@ -4861,19 +4903,31 @@ function buildChargeRows(charges, rate, fromDate, toDate) {
 function buildTeslaCard(v, detail, chargeHistory, fromDate, toDate) {
   const charge  = detail ? detail.charge_state : null;
   const vehicle = detail ? detail.vehicle_state : null;
+  const drive   = detail ? detail.drive_state   : null;
+  const climate = detail ? detail.climate_state : null;
+  const config  = detail ? detail.vehicle_config : null;
   const isOnline   = v.state === 'online';
   const isCharging = charge && charge.charging_state === 'Charging';
   const isSleeping = v.state === 'asleep' || v.state === 'offline';
+  const isDriving  = drive && (drive.shift_state === 'D' || drive.shift_state === 'R');
 
-  const stateLabel = isCharging ? 'Carregando' : isOnline ? 'Online' : 'Dormindo';
-  const stateClass = isCharging ? 'tesla-status-charging' : isOnline ? 'tesla-status-online' : 'tesla-status-sleeping';
+  const stateLabel = isDriving ? 'Em movimento' : isCharging ? 'Carregando' : isOnline ? 'Online' : 'Dormindo';
+  const stateClass = isDriving ? 'tesla-status-charging' : isCharging ? 'tesla-status-charging' : isOnline ? 'tesla-status-online' : 'tesla-status-sleeping';
 
-  const battPct   = charge ? charge.battery_level : null;
-  const battColor = battPct == null ? '#6B7280' : battPct > 60 ? '#10B981' : battPct > 20 ? '#F59E0B' : '#EF4444';
-  const estRange  = (charge && charge.est_battery_range) ? Math.round(charge.est_battery_range * 1.609) + ' km' : '--';
+  const battPct    = charge ? charge.battery_level : null;
+  const battColor  = battPct == null ? '#6B7280' : battPct > 60 ? '#10B981' : battPct > 20 ? '#F59E0B' : '#EF4444';
+  const estRange   = (charge && charge.est_battery_range) ? Math.round(charge.est_battery_range * 1.609) + ' km' : '--';
   const chargeLimit = (charge && charge.charge_limit_soc) ? charge.charge_limit_soc + '%' : '--';
-  const odometer  = (vehicle && vehicle.odometer) ? Math.round(vehicle.odometer * 1.609).toLocaleString() + ' km' : '--';
-  const model     = v.vehicle_config ? v.vehicle_config.car_type : (v.display_name || 'Tesla');
+  const odometer   = (vehicle && vehicle.odometer) ? Math.round(vehicle.odometer * 1.609).toLocaleString() + ' km' : '--';
+  const speed      = (drive && drive.speed) ? Math.round(drive.speed * 1.609) + ' km/h' : null;
+  const locked     = vehicle ? vehicle.locked : null;
+  const tempInside = (climate && climate.inside_temp) ? climate.inside_temp.toFixed(1) + '°C' : null;
+  const tempOut    = (climate && climate.outside_temp) ? climate.outside_temp.toFixed(1) + '°C' : null;
+  const acOn       = climate ? climate.is_climate_on : false;
+  const lat        = drive ? drive.latitude  : null;
+  const lng        = drive ? drive.longitude : null;
+  const model      = config ? (config.car_type || config.trim_badging || v.display_name) : (v.display_name || 'Tesla');
+  const color      = config ? config.exterior_color : null;
 
   const rateEl = document.getElementById('tesla-rate');
   const rate = parseFloat(rateEl ? rateEl.value : '0.12') || 0.12;
@@ -4929,10 +4983,37 @@ function buildTeslaCard(v, detail, chargeHistory, fromDate, toDate) {
   html += '</div>';
 
   // Stats row
-  html += '<div class="tesla-stat-row" style="margin-bottom:14px">';
-  html += '<div class="tesla-stat"><div class="tesla-stat-val">' + odometer + '</div><div class="tesla-stat-lbl">Odometro</div></div>';
-  html += '<div class="tesla-stat"><div class="tesla-stat-val">' + (charge && charge.charger_power ? charge.charger_power + ' kW' : '--') + '</div><div class="tesla-stat-lbl">' + (isCharging ? 'Carregando' : 'Potencia') + '</div></div>';
+  html += '<div class="tesla-stat-row" style="margin-bottom:10px">';
+  html += '<div class="tesla-stat"><div class="tesla-stat-val">' + odometer + '</div><div class="tesla-stat-lbl">Odômetro</div></div>';
+  html += '<div class="tesla-stat"><div class="tesla-stat-val">' + (charge && charge.charger_power ? charge.charger_power + ' kW' : '--') + '</div><div class="tesla-stat-lbl">' + (isCharging ? 'Carregando' : 'Potência') + '</div></div>';
+  if (speed) html += '<div class="tesla-stat"><div class="tesla-stat-val" style="color:var(--amber)">' + speed + '</div><div class="tesla-stat-lbl">Velocidade</div></div>';
   html += '</div>';
+
+  // Extra info row
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:11px">';
+  if (locked !== null) html += '<span style="background:var(--card);border-radius:6px;padding:3px 8px;color:' + (locked?'var(--green)':'var(--red)') + '">' + (locked?'🔒 Trancado':'🔓 Destrancado') + '</span>';
+  if (tempInside) html += '<span style="background:var(--card);border-radius:6px;padding:3px 8px;color:var(--muted2)">🌡 ' + tempInside + ' (interno)</span>';
+  if (tempOut)    html += '<span style="background:var(--card);border-radius:6px;padding:3px 8px;color:var(--muted2)">' + tempOut + ' (externo)</span>';
+  if (acOn)       html += '<span style="background:var(--card);border-radius:6px;padding:3px 8px;color:var(--blue)">❄️ Clima ligado</span>';
+  if (isCharging && charge) {
+    html += '<span style="background:rgba(16,185,129,.15);border-radius:6px;padding:3px 8px;color:var(--green)">⚡ ' + (charge.charge_energy_added||0).toFixed(1) + ' kWh adicionados</span>';
+    if (charge.minutes_to_full_charge) html += '<span style="background:var(--card);border-radius:6px;padding:3px 8px;color:var(--amber)">⏱ ' + charge.minutes_to_full_charge + ' min p/ cheio</span>';
+  }
+  if (lat && lng) html += '<a href="https://maps.google.com/?q=' + lat + ',' + lng + '" target="_blank" style="background:var(--card);border-radius:6px;padding:3px 8px;color:var(--blue);text-decoration:none">📍 Ver no Maps</a>';
+  if (color) html += '<span style="background:var(--card);border-radius:6px;padding:3px 8px;color:var(--muted2)">' + color + '</span>';
+  html += '</div>';
+
+  // Commands (only when online)
+  if (isOnline && isAdmin()) {
+    var vid = v.id_s;
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
+    html += '<button class="btn" style="font-size:10px;padding:4px 10px" data-vid="' + vid + '" data-cmd="honk_horn" onclick="teslaCmd(this.dataset.vid,this.dataset.cmd)">📯 Buzina</button>';
+    html += '<button class="btn" style="font-size:10px;padding:4px 10px" data-vid="' + vid + '" data-cmd="flash_lights" onclick="teslaCmd(this.dataset.vid,this.dataset.cmd)">💡 Piscar</button>';
+    html += '<button class="btn" style="font-size:10px;padding:4px 10px" data-vid="' + vid + '" data-cmd="' + (locked?'door_unlock':'door_lock') + '" onclick="teslaCmd(this.dataset.vid,this.dataset.cmd)">' + (locked?'🔓 Destrancar':'🔒 Trancar') + '</button>';
+    if (!acOn) html += '<button class="btn" style="font-size:10px;padding:4px 10px" data-vid="' + vid + '" data-cmd="auto_conditioning_start" onclick="teslaCmd(this.dataset.vid,this.dataset.cmd)">❄️ Ligar Clima</button>';
+    else       html += '<button class="btn" style="font-size:10px;padding:4px 10px;color:var(--orange)" data-vid="' + vid + '" data-cmd="auto_conditioning_stop" onclick="teslaCmd(this.dataset.vid,this.dataset.cmd)">❄️ Desligar Clima</button>';
+    html += '</div>';
+  }
 
   // Charge history
   html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin-bottom:8px">';
@@ -5296,6 +5377,33 @@ async function testFirestore() {
       ? '✅ Firestore funcionando! Tente salvar novamente.'
       : '❌ Problema detectado. Verifique as regras.');
   alert('Diagnóstico Firestore:\n\n' + msg);
+}
+
+async function teslaCmd(vehicleId, cmd) {
+  if (!T.accessToken) return;
+  const labels = { honk_horn:'Buzinando...', flash_lights:'Piscando...', door_lock:'Trancando...', door_unlock:'Destrancando...', auto_conditioning_start:'Ligando clima...', auto_conditioning_stop:'Desligando clima...' };
+  toast((labels[cmd]||cmd) + ' aguarde', '');
+  try {
+    const res = await fetch('https://gs-rental-backend-gpke.vercel.app/api/tesla', {
+      method: 'POST',
+      headers: {
+        'Authorization':  'Bearer gsadmin',
+        'Content-Type':   'application/json',
+        'X-Tesla-Token':  T.accessToken,
+        'X-Tesla-Path':   '/api/1/vehicles/' + vehicleId + '/command/' + cmd,
+      },
+      body: '{}',
+    });
+    const data = await res.json().catch(()=>({}));
+    if (data.response && data.response.result) {
+      toast('✓ Comando enviado!', 'ok');
+      setTimeout(function(){ teslaRefresh(); }, 2000);
+    } else {
+      toast('Erro: ' + (data.response && data.response.reason ? data.response.reason : JSON.stringify(data).slice(0,80)), 'err');
+    }
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
 }
 
 async function teslaDebugVehicle(vehicleId) {
