@@ -1074,7 +1074,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v4.8';
+const APP_VERSION = 'v5.0';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1588,7 +1588,21 @@ function processReservations(raw) {
     const idx = S.data.reservations.findIndex(r => r.id === res.id);
     if (idx >= 0) {
       const prev = S.data.reservations[idx];
-      S.data.reservations[idx] = { ...res, milesOut: prev.milesOut, milesIn: prev.milesIn, fuelOut: prev.fuelOut, fuelIn: prev.fuelIn, photosOut: prev.photosOut||[], photosIn: prev.photosIn||[], notes: prev.notes||'' };
+      S.data.reservations[idx] = { ...res,
+        // Preserve all manually-edited fields
+        milesOut: prev.milesOut, milesIn: prev.milesIn,
+        fuelOut: prev.fuelOut, fuelIn: prev.fuelIn,
+        photosOut: prev.photosOut||[], photosIn: prev.photosIn||[],
+        notes: prev.notes||'',
+        pickupTime:  prev.pickupTime  || res.pickupTime  || '',
+        returnTime:  prev.returnTime  || res.returnTime  || '',
+        accessories: prev.accessories || [],
+        extras:      prev.extras      || '',
+        extrasVal:   prev.extrasVal   || 0,
+        city:        prev.city        || '',
+        age:         prev.age         || null,
+        sex:         prev.sex         || '',
+      };
       updated++;
     } else {
       S.data.reservations.push({ ...res, photosOut:[], photosIn:[], notes:'' });
@@ -1667,7 +1681,15 @@ function processRentalDetails(raw) {
         fuelOut: res.fuelOut !== undefined ? res.fuelOut : prev.fuelOut,
         fuelIn: prev.fuelIn,
         photosOut: prev.photosOut || [], photosIn: prev.photosIn || [],
-        notes: prev.notes || ''
+        notes:       prev.notes       || '',
+        pickupTime:  prev.pickupTime  || res.pickupTime  || '',
+        returnTime:  prev.returnTime  || res.returnTime  || '',
+        accessories: prev.accessories || [],
+        extras:      prev.extras      || '',
+        extrasVal:   prev.extrasVal   || 0,
+        city:        prev.city        || res.city || '',
+        age:         prev.age         || res.age  || null,
+        sex:         prev.sex         || res.sex  || '',
       };
       updated++;
     } else {
@@ -1797,7 +1819,7 @@ function renderAgenda() {
         ${(r.accessories||[]).length?('<div style="font-size:11px;color:var(--amber);margin-bottom:4px;font-weight:600">🎒 '+accStr+((r.accessories||[]).length>3?' +'+(r.accessories.length-3):'')+'</div>'):''}
         ${r.extras?('<div style="font-size:11px;color:var(--orange);margin-bottom:4px;font-weight:600">📋 '+r.extras+(r.extrasVal?' · $'+fmt$(r.extrasVal):'')+'</div>'):''}
         <div class="res-name">${r.fullName||'—'}</div>
-        <div class="res-car">${r.vehicleType||r.vehicleId||'—'}</div>
+        <div class="res-car">${r.vehicleId||'—'} <span style="color:var(--muted2);font-size:11px">${r.vehicleType?'· '+r.vehicleType:''}</span></div>
         <div class="res-meta">
           ${loc?`<span class="res-loc">${loc}</span>`:''}
           <span class="res-chip">${r.days||0}d</span>

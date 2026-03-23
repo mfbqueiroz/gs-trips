@@ -1,4 +1,4 @@
-const CACHE = 'gs-trips-v1.6';
+const CACHE = 'gs-trips-v4.9';
 const STATIC = [
   '/gs-trips/',
   '/gs-trips/index.html',
@@ -33,6 +33,19 @@ self.addEventListener('fetch', e => {
   // Always network for Firebase (real-time data)
   if (url.includes('firestore.googleapis.com') || url.includes('firebase')) {
     return; // let browser handle
+  }
+  // Network-first for index.html — always get latest version
+  if (url.includes('index.html') || url.endsWith('/gs-trips/') || url.endsWith('/gs-trips')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
   }
   e.respondWith(
     caches.match(e.request).then(cached => {
