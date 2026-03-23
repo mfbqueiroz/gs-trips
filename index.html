@@ -447,32 +447,51 @@ textarea.fld-input{resize:vertical;min-height:70px}
   .day-cell{width:16px;min-width:16px;height:14px;font-size:7px}
   .car-label-cell{font-size:10px;padding:1px 4px;min-width:40px}
 }
+@media(orientation:landscape) and (max-height:500px),
+       body.landscape-mode #app-body ~ * ,
+       body.landscape-mode .tabs{flex-direction:row}
+{/* placeholder */}
+
+/* Landscape mobile class applied by JS */
+body.landscape-mode #app-body{flex-direction:column}
+body.landscape-mode .tabs{
+  flex-direction:row !important;width:100% !important;height:46px !important;min-height:46px !important;
+  border-right:none !important;border-top:1px solid var(--border) !important;
+  overflow-x:auto !important;overflow-y:hidden !important;scrollbar-width:none;
+  padding:0 2px !important;order:2 !important;flex-shrink:0 !important;
+}
+body.landscape-mode .tabs::-webkit-scrollbar{display:none}
+body.landscape-mode main{order:1 !important;overflow-y:auto !important;min-height:0 !important}
+body.landscape-mode .tab-btn{
+  flex-direction:row !important;gap:4px !important;padding:0 10px !important;
+  min-width:auto !important;height:46px !important;
+  border-left:none !important;border-top:2px solid transparent !important;
+  white-space:nowrap !important;flex-shrink:0 !important;
+}
+body.landscape-mode .tab-btn.active{border-left-color:transparent !important;border-top-color:var(--amber) !important}
+body.landscape-mode .tab-label{font-size:10px !important}
+body.landscape-mode .tab-icon{font-size:14px !important}
+body.landscape-mode .tab-panel{padding:8px 10px !important}
+body.landscape-mode .day-cards{grid-template-columns:repeat(auto-fill,minmax(200px,1fr)) !important}
+body.landscape-mode header{height:40px !important}
+body.landscape-mode .hdr-btn{font-size:10px !important;padding:3px 6px !important}
+body.landscape-mode .day-cell{width:16px !important;min-width:16px !important;height:14px !important;max-height:14px !important;font-size:7px !important}
+body.landscape-mode .car-label-cell{font-size:10px !important;padding:1px 4px !important;min-width:40px !important}
+
 @media(orientation:landscape) and (max-height:500px){
-  /* Mobile landscape — sidebar goes to bottom */
-  #app-body{flex-direction:column}
-  .tabs{
-    flex-direction:row;width:100%;height:46px;min-height:46px;
-    border-right:none;border-top:1px solid var(--border);
-    overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
-    padding:0 2px;order:2;flex-shrink:0;
-  }
-  .tabs::-webkit-scrollbar{display:none}
-  main{order:1;overflow-y:auto;min-height:0}
-  .tab-btn{
-    flex-direction:row;gap:4px;padding:0 10px;
-    min-width:auto;height:46px;
-    border-left:none;border-top:2px solid transparent;
-    white-space:nowrap;flex-shrink:0;
-  }
-  .tab-btn.active{border-left-color:transparent;border-top-color:var(--amber)}
-  .tab-label{font-size:10px}
-  .tab-icon{font-size:14px}
-  .tab-panel{padding:8px 10px 8px}
-  .day-cards{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
-  header{height:40px}
-  .hdr-btn{font-size:10px;padding:3px 6px}
-  .day-cell{width:16px;min-width:16px;height:14px;font-size:7px}
-  .car-label-cell{font-size:10px;padding:1px 4px;min-width:40px}
+  body:not(.landscape-mode) #app-body{flex-direction:column}
+  body:not(.landscape-mode) .tabs{flex-direction:row;width:100%;height:46px;min-height:46px;border-right:none;border-top:1px solid var(--border);overflow-x:auto;overflow-y:hidden;padding:0 2px;order:2;flex-shrink:0}
+  body:not(.landscape-mode) main{order:1;overflow-y:auto;min-height:0}
+  body:not(.landscape-mode) .tab-btn{flex-direction:row;gap:4px;padding:0 10px;min-width:auto;height:46px;border-left:none;border-top:2px solid transparent;white-space:nowrap;flex-shrink:0}
+  body:not(.landscape-mode) .tab-btn.active{border-left-color:transparent;border-top-color:var(--amber)}
+  body:not(.landscape-mode) .tab-label{font-size:10px}
+  body:not(.landscape-mode) .tab-icon{font-size:14px}
+  body:not(.landscape-mode) .tab-panel{padding:8px 10px}
+  body:not(.landscape-mode) .day-cards{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  body:not(.landscape-mode) header{height:40px}
+  body:not(.landscape-mode) .hdr-btn{font-size:10px;padding:3px 6px}
+  body:not(.landscape-mode) .day-cell{width:16px;min-width:16px;height:14px;max-height:14px;font-size:7px}
+  body:not(.landscape-mode) .car-label-cell{font-size:10px;padding:1px 4px;min-width:40px}
 }
 /* ── VEÍCULOS ── */
 .veh-table{width:100%;border-collapse:collapse;font-size:13px}
@@ -1098,7 +1117,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v5.5';
+const APP_VERSION = 'v5.6';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1278,7 +1297,13 @@ async function loadData() {
     const demoIds = new Set(['TESLA-Y1','TESLA-Y2','CAD-OPT1']);
     const cleanFleet    = (meta.fleet||[]).filter(function(v){ return !demoIds.has(v.id); });
     const cleanVehicles = (meta.vehicles||[]).filter(function(v){ return !demoIds.has(v.id); });
-    const cleanFin      = (meta.financing||[]).filter(function(f){ return !demoIds.has(f.vehicleId); });
+    const cleanFin      = (meta.financing||[]).filter(function(f){
+      if (demoIds.has(f.vehicleId)) return false;
+      // Remove zero-value financings from demo
+      if (!f.payments || !f.payments.length) return false;
+      const total = f.payments.reduce(function(s,p){ return s+(p.amount||0); }, 0);
+      return total > 0;
+    });
     S.data = {
       reservations: allRes.filter(function(r){ return !r.id || !r.id.startsWith('D00'); }),
       fleet:        cleanFleet,
@@ -3414,9 +3439,10 @@ let S_finFilter = 'all';
 
 function cleanZeroFins() {
   const before = (S.data.financing||[]).length;
-  // Remove financing where ALL payments are $0.00
+  // Remove financing where ALL payments are $0.00 OR no payments
   S.data.financing = (S.data.financing||[]).filter(function(fin) {
-    const total = (fin.payments||[]).reduce(function(s,p){ return s+(p.amount||0); }, 0);
+    if (!fin.payments || !fin.payments.length) return false;
+    const total = fin.payments.reduce(function(s,p){ return s+(p.amount||0); }, 0);
     return total > 0;
   });
   const removed = before - S.data.financing.length;
@@ -5286,6 +5312,15 @@ function exportReservationReport() {
 }
 
 // Register PWA Service Worker
+// Orientation detection for mobile landscape
+function updateOrientation() {
+  const isLandscape = window.innerWidth > window.innerHeight && window.innerHeight < 500;
+  document.body.classList.toggle('landscape-mode', isLandscape);
+}
+window.addEventListener('resize', updateOrientation);
+window.addEventListener('orientationchange', function(){ setTimeout(updateOrientation, 100); });
+updateOrientation();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/gs-trips/sw.js')
