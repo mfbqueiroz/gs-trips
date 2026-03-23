@@ -1064,7 +1064,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v4.4';
+const APP_VERSION = 'v4.6';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1121,13 +1121,12 @@ const CREDS = {
   'gs_marcelo':   'admin',
   'gs_diogo':     'admin',
   'gs_gabriela':  'admin',
-  'gsadmin':      'admin',
   'gs_jonathan':  'team',
   'gs_fernando':  'team',
   'gs2026':       'team',
   'gsdemo':       'demo',
 };
-const DEMO_NAMES = { gs_marcelo:'Marcelo', gs_diogo:'Diogo', gs_gabriela:'Gabriela', gsadmin:'Admin', gs_jonathan:'Jonathan', gs_fernando:'Fernando', gs2026:'Equipe', gsdemo:'Demo' };
+const DEMO_NAMES = { gs_marcelo:'Marcelo', gs_diogo:'Diogo', gs_gabriela:'Gabriela', gs_jonathan:'Jonathan', gs_fernando:'Fernando', gs2026:'Equipe', gsdemo:'Demo' };
 const FUELS   = ['E', '1/4', '1/2', '3/4', 'F'];
 const MONTHS  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const MSHORT  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1146,7 +1145,7 @@ let S = {
   charts: {}, modal: null, saveTimer: null, mgmtOpen: false,
 };
 
-const isAdmin = () => S.role === 'admin' || S.role === 'demo';
+const isAdmin = () => S.role === 'admin';
 const isDemo  = () => S.role === 'demo';
 
 // ════════════════════════════════════════════════════════
@@ -1186,15 +1185,14 @@ function doLogin() {
   // Show/hide tabs based on role
   document.querySelectorAll('.tab-btn[data-roles]').forEach(btn => {
     const allowed = btn.dataset.roles.split(',');
-    // demo sees same tabs as admin
-    const effectiveRole = role === 'demo' ? 'admin' : role;
+    const effectiveRole = (role === 'demo') ? 'admin' : role;
     btn.style.display = allowed.includes(effectiveRole) ? '' : 'none';
   });
   // Show admin-only UI elements
   const adminOnly = ['import-zone','btn-import-tesla-csv','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = (role === 'admin' || role === 'demo') ? '' : 'none';
+    if (el) el.style.display = role === 'admin' ? '' : 'none';
   });
   initApp();
 }
@@ -1274,7 +1272,7 @@ async function loadData() {
 }
 
 async function saveData() {
-  if (!isAdmin()) return;
+  if (!isAdmin() || isDemo()) return; // demo never saves to Firestore
   saveDot('saving');
   try {
     S.data.lastUpdated = new Date().toISOString();
@@ -1333,7 +1331,7 @@ async function saveData() {
 }
 
 function scheduleSave() {
-  if (!isAdmin()) return;
+  if (!isAdmin() || isDemo()) return; // demo never saves
   saveDot('saving');
   clearTimeout(S.saveTimer);
   S.saveTimer = setTimeout(saveData, 1800);
@@ -4995,7 +4993,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 
 async function forceSaveNow() {
-  if (!isAdmin()) return;
+  if (!isAdmin() || isDemo()) return;
   const btn = document.getElementById('btn-force-save');
   if (btn) { btn.textContent = '⏳ Salvando...'; btn.disabled = true; }
   try {
