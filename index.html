@@ -857,6 +857,15 @@ textarea.fld-input{resize:vertical;min-height:70px}
         <div class="section-title">Financiamentos</div>
         <button class="btn primary" onclick="openAddFinModal()" id="add-fin-btn">+ Novo Financiamento</button>
       </div>
+      <!-- Summary buttons -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="fin-summary-btns">
+        <button class="btn active" onclick="setFinFilter('all')" id="finf-all">Todos</button>
+        <button class="btn" onclick="setFinFilter('overdue')" id="finf-overdue" style="color:var(--red);border-color:rgba(239,68,68,.4)">🚨 Atrasados</button>
+        <button class="btn" onclick="setFinFilter('today')" id="finf-today" style="color:var(--amber);border-color:rgba(245,158,11,.4)">📅 Hoje</button>
+        <button class="btn" onclick="setFinFilter('7')" id="finf-7">7 dias</button>
+        <button class="btn" onclick="setFinFilter('15')" id="finf-15">15 dias</button>
+        <button class="btn" onclick="setFinFilter('30')" id="finf-30">30 dias</button>
+      </div>
       <div id="fin-alerts" style="margin-bottom:16px"></div>
       <div id="fin-list-out"></div>
     </section>
@@ -941,6 +950,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn" id="btn-import-tesla-csv" onclick="document.getElementById('tesla-csv-input').click()" style="display:none">⬆ CSV Tesla</button>
           <input type="file" id="tesla-csv-input" accept=".csv" multiple style="display:none" onchange="importTeslaCSV(this.files)">
+          <button class="btn" id="btn-vin-map" onclick="showVinMapping()" style="display:none">🔗 Vincular VINs</button>
           <button class="btn primary" id="btn-add-charge" onclick="openChargeModal()" style="display:none">+ Registrar Carga</button>
         </div>
       </div>
@@ -1064,7 +1074,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v4.7';
+const APP_VERSION = 'v4.8';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -1189,7 +1199,7 @@ function doLogin() {
     btn.style.display = allowed.includes(effectiveRole) ? '' : 'none';
   });
   // Show admin-only UI elements
-  const adminOnly = ['import-zone','btn-import-tesla-csv','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
+  const adminOnly = ['import-zone','btn-import-tesla-csv','btn-vin-map','add-inv-btn','add-fin-btn','add-veh-btn','add-cat-btn','veh-import-btn','btn-force-save','btn-test-fb','btn-add-charge'];
   adminOnly.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = role === 'admin' ? '' : 'none';
@@ -3203,11 +3213,26 @@ function renderFinanciamento() {
   const today = ds(new Date());
   const todayD = new Date();
   const in7  = ds(new Date(Date.now() + 7*86400000));
+  const in15 = ds(new Date(Date.now() + 15*86400000));
   const in30 = ds(new Date(Date.now() + 30*86400000));
 
   // ── Collect all upcoming/overdue payments ──
   const alerts = [];
-  fins.forEach((fin, fi) => {
+  // Apply filter
+  const filtFins = fins.filter(function(fin) {
+    if (S_finFilter === 'all') return true;
+    return (fin.payments||[]).some(function(p) {
+      if (p.paid) return false;
+      if (S_finFilter === 'overdue') return p.date < today;
+      if (S_finFilter === 'today')   return p.date === today;
+      if (S_finFilter === '7')       return p.date >= today && p.date <= in7;
+      if (S_finFilter === '15')      return p.date >= today && p.date <= in15;
+      if (S_finFilter === '30')      return p.date >= today && p.date <= in30;
+      return true;
+    });
+  });
+
+  filtFins.forEach((fin, fi) => {
     (fin.payments||[]).forEach((p, pi) => {
       if (p.paid) return;
       const isOverdue = p.date < today;
@@ -3281,7 +3306,7 @@ function renderFinanciamento() {
   }
 
   let html = '';
-  fins.forEach((fin, fi) => {
+  filtFins.forEach((fin, fi) => {
     const payments = fin.payments || [];
     const paid = payments.filter(p=>p.paid).length;
     const total = payments.length;
@@ -3312,14 +3337,15 @@ function renderFinanciamento() {
               const isOverdue = !isPaid && p.date < today;
               const cls = isPaid ? 'fin-pay-paid' : isOverdue ? 'fin-pay-due' : 'fin-pay-future';
               const icon = isPaid ? '✅' : isOverdue ? '⚠️' : '⏳';
-              return `<tr class="${cls}">
+              const fiReal = fins.indexOf(fin);
+              return `<tr class="${cls}" style="cursor:pointer" onclick="isAdmin()&&togglePayment(${fiReal},${pi},${!isPaid})">
                 <td>${p.num||pi+1}</td>
                 <td>${fmtD(p.date)}</td>
                 <td>$${fmt$(p.amount)}</td>
-                <td>${icon} ${isPaid ? 'Pago em '+fmtD(p.paidDate||p.date) : isOverdue ? 'Atrasado' : 'Pendente'}</td>
+                <td>${icon} ${isPaid ? 'Pago em '+fmtD(p.paidDate||p.date) : isOverdue ? '⚠ Atrasado' : 'Pendente'}</td>
                 ${isAdmin()?`<td>${isPaid
-                  ? `<button class="pay-undo-btn" onclick="togglePayment(${fi},${pi},false)">Desfazer</button>`
-                  : `<button class="pay-confirm-btn" onclick="togglePayment(${fi},${pi},true)">Confirmar</button>`
+                  ? `<button class="pay-undo-btn" onclick="event.stopPropagation();togglePayment(${fiReal},${pi},false)">Desfazer</button>`
+                  : `<button class="pay-confirm-btn" onclick="event.stopPropagation();togglePayment(${fiReal},${pi},true)">Confirmar</button>`
                 }</td>`:''}
               </tr>`;
             }).join('')}
@@ -3331,8 +3357,18 @@ function renderFinanciamento() {
   el.innerHTML = html;
 }
 
+let S_finFilter = 'all';
+
+function setFinFilter(f) {
+  S_finFilter = f;
+  document.querySelectorAll('[id^="finf-"]').forEach(function(b) { b.classList.remove('active'); });
+  const btn = document.getElementById('finf-' + f);
+  if (btn) btn.classList.add('active');
+  renderFinanciamento();
+}
+
 function toggleFinCard(fi) {
-  const el = document.getElementById(`fin-payments-${fi}`);
+  const el = document.getElementById('fin-payments-' + fi);
   if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 
@@ -3887,25 +3923,102 @@ async function importTeslaCSV(files) {
 function autoLinkCharges() {
   (S.data.charges||[]).forEach(function(ch) {
     const vin = ch.carVin;
-    // Find vehicle by VIN
-    const veh = (S.data.vehicles||[]).find(function(v){ return v.vin === vin; });
-    if (!veh) {
-      if (!ch.reservationId) ch.categoria = 'operacional';
-      return;
+    if (!vin) { ch.categoria = ch.categoria || 'operacional'; return; }
+
+    // 1. Find vehicle by VIN in vehicles list
+    var veh = (S.data.vehicles||[]).find(function(v){ return v.vin && v.vin.trim() === vin.trim(); });
+
+    // 2. If not found in vehicles, try fleet (may have vin field)
+    if (!veh) veh = (S.data.fleet||[]).find(function(v){ return v.vin && v.vin.trim() === vin.trim(); });
+
+    // 3. If still not found, try matching by carId (may already be set to vehicleId)
+    var vehicleIds = [];
+    if (veh) {
+      vehicleIds = [veh.id];
+    } else {
+      // Try all vehicles/fleet entries as fallback - log for debug
+      console.log('autoLink: no vehicle found for VIN', vin, '— trying all fleet ids');
+      // Use carId directly if it was set during import
+      if (ch.carId && ch.carId !== vin) vehicleIds = [ch.carId];
     }
-    // Find reservation for this vehicle on this date
-    const res = (S.data.reservations||[]).find(function(r) {
-      return r.vehicleId === veh.id && r.pickupDate <= ch.date && r.returnDate >= ch.date;
-    });
+
+    // 4. Find reservation for this vehicle on this date
+    var res = null;
+    for (var vi = 0; vi < vehicleIds.length; vi++) {
+      res = (S.data.reservations||[]).find(function(r) {
+        return r.vehicleId === vehicleIds[vi] && r.pickupDate <= ch.date && r.returnDate >= ch.date;
+      });
+      if (res) break;
+    }
+
     if (res) {
       ch.reservationId = res.id;
-      ch.clientName = res.fullName;
-      ch.vehicleId  = veh.id;
-      ch.categoria  = 'cliente';
+      ch.clientName    = res.fullName;
+      ch.vehicleId     = veh ? veh.id : ch.carId;
+      ch.categoria     = 'cliente';
     } else {
-      if (!ch.reservationId) ch.categoria = 'operacional';
+      ch.categoria = 'operacional';
     }
   });
+}
+
+// Show a dialog to manually map VINs to vehicle IDs
+function showVinMapping() {
+  const charges = S.data.charges || [];
+  const unmapped = [...new Set(charges.filter(function(c){ return c.categoria !== 'cliente'; }).map(function(c){ return c.carVin; }).filter(Boolean))];
+  if (!unmapped.length) { toast('Todos os carregamentos já estão vinculados!', 'ok'); return; }
+
+  const vehicles = (S.data.vehicles||[]).filter(function(v){ return v.active !== false; });
+  let html = '<div style="background:var(--surface);border-radius:12px;padding:20px;max-width:500px;margin:auto">';
+  html += '<div style="font-weight:800;font-size:18px;margin-bottom:12px">🔗 Vincular VINs aos carros</div>';
+  html += '<div style="font-size:12px;color:var(--muted2);margin-bottom:14px">Associe cada VIN ao ID do veículo no sistema:</div>';
+  unmapped.forEach(function(vin) {
+    const count = charges.filter(function(c){ return c.carVin===vin; }).length;
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    html += '<div style="font-size:11px;font-family:monospace;color:var(--amber);flex:1">'+vin.slice(-8)+' ('+count+' cargas)</div>';
+    html += '<select class="fld-input" id="vinmap_'+vin+'" style="padding:4px 8px;flex:1">';
+    html += '<option value="">— Selecione —</option>';
+    vehicles.forEach(function(v){ html += '<option value="'+v.id+'">'+(v.id)+' — '+(v.name||v.category||'')+'</option>'; });
+    html += '</select></div>';
+  });
+  html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">';
+  html += '<button class="btn" onclick="closeVinMap()">Cancelar</button>';
+  html += '<button class="btn primary" onclick="applyVinMapping()">Aplicar</button>';
+  html += '</div></div>';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'vin-map-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+}
+
+function closeVinMap() {
+  var o = document.getElementById('vin-map-overlay');
+  if (o) o.parentNode.removeChild(o);
+}
+
+function applyVinMapping() {
+  const charges = S.data.charges || [];
+  const unmapped = [...new Set(charges.filter(function(c){ return c.categoria !== 'cliente'; }).map(function(c){ return c.carVin; }).filter(Boolean))];
+  let applied = 0;
+  unmapped.forEach(function(vin) {
+    const sel = document.getElementById('vinmap_'+vin);
+    if (!sel || !sel.value) return;
+    const vehicleId = sel.value;
+    // Set vin on vehicle
+    const veh = (S.data.vehicles||[]).find(function(v){ return v.id===vehicleId; });
+    if (veh) { veh.vin = vin; }
+    // Update all charges with this VIN
+    charges.forEach(function(ch) {
+      if (ch.carVin === vin) { ch.carId = vehicleId; applied++; }
+    });
+  });
+  document.getElementById('vin-map-overlay').remove();
+  autoLinkCharges();
+  scheduleSave();
+  renderCharges();
+  toast(applied + ' carregamentos vinculados!', 'ok');
 }
 
 function renderCharges() {
