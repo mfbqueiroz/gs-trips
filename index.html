@@ -288,7 +288,7 @@ tbody tr:hover{background:rgba(245,158,11,0.04)}
   letter-spacing:0.04em;text-transform:uppercase;font-weight:700;
   border-bottom:1px solid var(--border);background:var(--card2);
 }
-.fleet-cal thead th.col-today{color:var(--amber)}
+.fleet-cal thead th.col-today{color:var(--amber);border-bottom:2px solid var(--amber)}
 .fleet-cal td{padding:0;border:1px solid rgba(42,42,53,0.3);background:var(--card);height:18px;max-height:18px;overflow:hidden}
 .car-label-cell{
   font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;
@@ -305,7 +305,7 @@ tbody tr:hover{background:rgba(245,158,11,0.04)}
 .day-cell.departure{background:rgba(16,185,129,0.35);color:var(--green);cursor:pointer}
 .day-cell.active-trip{background:rgba(59,130,246,0.2);color:var(--blue);cursor:pointer}
 .day-cell.return{background:rgba(249,115,22,0.35);color:var(--orange);cursor:pointer}
-.day-cell.today-cell{background:rgba(245,158,11,0.08)}
+.day-cell.today-cell{}
 .day-cell:hover{opacity:0.75}
 .day-cell.weekend-bg{background:rgba(42,42,53,0.5)}
 
@@ -1117,7 +1117,7 @@ body.landscape-mode .car-label-cell{font-size:10px !important;padding:1px 4px !i
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v5.6';
+const APP_VERSION = 'v5.7';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -4876,6 +4876,18 @@ async function renderTesla() {
     const msg = e.message || String(e);
     if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized')) {
       tClear(); renderTesla(); return;
+    }
+    if (msg.includes('missing scopes') || msg.includes('missing_scopes')) {
+      tClear();
+      const out2 = document.getElementById('tesla-out');
+      if (out2) out2.innerHTML = '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:16px;max-width:480px">' +
+        '<div style="font-weight:700;color:var(--amber);margin-bottom:8px">⚡ Novos escopos necessários</div>' +
+        '<div style="font-size:13px;color:var(--muted2);margin-bottom:14px;line-height:1.6">O token atual não tem os novos escopos (localização, comandos, clima).<br>Precisa reconectar para autorizar os novos acessos.</div>' +
+        '<button class="btn primary" onclick="teslaConnect()" style="width:100%">⚡ Reconectar com novos escopos</button>' +
+      '</div>';
+      const banner2 = document.getElementById('tesla-auth-banner');
+      if (banner2) banner2.style.display = 'none';
+      return;
     }
     out.innerHTML = '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:16px;color:var(--red)">' +
       '<b>Erro Tesla API:</b> ' + msg +
