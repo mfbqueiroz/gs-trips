@@ -289,15 +289,15 @@ tbody tr:hover{background:rgba(245,158,11,0.04)}
   border-bottom:1px solid var(--border);background:var(--card2);
 }
 .fleet-cal thead th.col-today{color:var(--amber)}
-.fleet-cal td{padding:2px;border:1px solid rgba(42,42,53,0.3);background:var(--card)}
+.fleet-cal td{padding:1px;border:1px solid rgba(42,42,53,0.3);background:var(--card)}
 .car-label-cell{
   font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
-  padding:6px 10px;white-space:nowrap;border-right:2px solid var(--border) !important;
-  min-width:72px;background:var(--card2) !important;
+  padding:3px 8px;white-space:nowrap;border-right:2px solid var(--border) !important;
+  min-width:60px;background:var(--card2) !important;line-height:1.2;
 }
 .car-label-cell.inactive{color:var(--muted);text-decoration:line-through;opacity:0.45}
 .day-cell{
-  width:26px;min-width:26px;height:26px;
+  width:22px;min-width:22px;height:22px;
   border-radius:3px;transition:opacity 0.1s;
   display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;
 }
@@ -1025,7 +1025,10 @@ textarea.fld-input{resize:vertical;min-height:70px}
             </div>
             <div class="fld-group">
               <div class="fld-label">Reserva vinculada</div>
-              <div id="cm-reservation-info" style="font-size:12px;color:var(--muted2);padding:8px 10px;background:var(--card2);border-radius:6px;min-height:36px"></div>
+              <select class="fld-input" id="cm-reservation-sel" onchange="onChargeResSel(this.value)">
+                <option value="">— Nenhuma (despesa operacional) —</option>
+              </select>
+              <div id="cm-reservation-info" style="font-size:11px;color:var(--muted2);margin-top:4px"></div>
             </div>
             <div class="fld-group">
               <div class="fld-label">Notas</div>
@@ -1074,7 +1077,7 @@ textarea.fld-input{resize:vertical;min-height:70px}
 // ════════════════════════════════════════════════════════
 //  CONFIG
 // ════════════════════════════════════════════════════════
-const APP_VERSION = 'v5.0';
+const APP_VERSION = 'v5.1';
 
 // Deep-remove undefined values — Firestore rejects them
 function sanitize(obj) {
@@ -3354,7 +3357,7 @@ function renderFinanciamento() {
         <table class="fin-pay-table">
           <thead><tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th>${isAdmin()?'<th></th>':''}</tr></thead>
           <tbody>
-            ${payments.map((p,pi) => {
+            ${payments.filter(p => (p.amount||0) > 0).map((p,pi) => {
               const isPaid = !!p.paid;
               const isOverdue = !isPaid && p.date < today;
               const cls = isPaid ? 'fin-pay-paid' : isOverdue ? 'fin-pay-due' : 'fin-pay-future';
@@ -3959,18 +3962,32 @@ function autoLinkCharges() {
       vehicleIds = [veh.id];
     } else {
       // Try all vehicles/fleet entries as fallback - log for debug
-      console.log('autoLink: no vehicle found for VIN', vin, '— trying all fleet ids');
+      // Log all available VINs to help debug
+    const availVins = (S.data.vehicles||[]).map(function(v){ return v.id + ':' + (v.vin||'no-vin'); });
+    console.log('autoLink: VIN not found:', vin, '| Available:', availVins.join(', '));
       // Use carId directly if it was set during import
       if (ch.carId && ch.carId !== vin) vehicleIds = [ch.carId];
     }
 
     // 4. Find reservation for this vehicle on this date
     var res = null;
-    for (var vi = 0; vi < vehicleIds.length; vi++) {
+    // Also add carId as a possible vehicleId match
+    var allVehicleIds = vehicleIds.slice();
+    if (ch.carId && allVehicleIds.indexOf(ch.carId) < 0) allVehicleIds.push(ch.carId);
+    for (var vi = 0; vi < allVehicleIds.length; vi++) {
+      var vid = allVehicleIds[vi];
       res = (S.data.reservations||[]).find(function(r) {
-        return r.vehicleId === vehicleIds[vi] && r.pickupDate <= ch.date && r.returnDate >= ch.date;
+        return r.vehicleId === vid && r.pickupDate <= ch.date && r.returnDate >= ch.date;
       });
       if (res) break;
+    }
+    // If still not found, try partial vehicleId match (e.g. "406" in "GS-406")
+    if (!res && allVehicleIds.length) {
+      res = (S.data.reservations||[]).find(function(r) {
+        return allVehicleIds.some(function(vid) {
+          return r.vehicleId && (r.vehicleId.includes(vid) || vid.includes(r.vehicleId));
+        }) && r.pickupDate <= ch.date && r.returnDate >= ch.date;
+      });
     }
 
     if (res) {
@@ -4204,12 +4221,14 @@ function openChargeModal(id) {
   // Populate car selector
   const carSel = document.getElementById('cm-car');
   const evCars = getEVCars();
-  // Include all fleet/vehicles as fallback
   const allCars = evCars.length ? evCars : (S.data.vehicles||[]).concat(S.data.fleet||[]);
   carSel.innerHTML = '<option value="">— Selecione o carro —</option>' +
     allCars.map(function(v) {
       return '<option value="' + v.id + '">' + v.id + (v.name||v.type ? ' — '+(v.name||v.type||'') : '') + '</option>';
     }).join('');
+
+  // Populate reservation selector
+  populateChargeResSel('', null);
 
   if (id) {
     // Edit existing
@@ -4247,24 +4266,88 @@ function closeChargeModal() {
   if (overlay) overlay.style.display = 'none';
 }
 
+function updateChargeResFromSel() {
+  const sel  = document.getElementById('cm-reservation-sel');
+  const info = document.getElementById('cm-reservation-info');
+  if (!sel || !info) return;
+  const res = sel.value ? (S.data.reservations||[]).find(function(r){ return r.id===sel.value; }) : null;
+  info.innerHTML = res ? '✓ ' + res.fullName + ' · ' + fmtD(res.pickupDate) + ' → ' + fmtD(res.returnDate) : '';
+}
+
+function populateChargeResSel(carId, selectedId) {
+  const sel = document.getElementById('cm-reservation-sel');
+  if (!sel) return;
+  const ress = carId
+    ? (S.data.reservations||[]).filter(function(r){ return r.vehicleId===carId; })
+    : (S.data.reservations||[]);
+  const sorted = ress.slice().sort(function(a,b){ return b.pickupDate.localeCompare(a.pickupDate); });
+  sel.innerHTML = '<option value="">— Despesa operacional —</option>' +
+    sorted.map(function(r) {
+      return '<option value="' + r.id + '"' + (r.id===selectedId?' selected':'') + '>' +
+        '#' + r.id + ' ' + (r.fullName||'') + ' (' + fmtD(r.pickupDate) + '→' + fmtD(r.returnDate) + ')</option>';
+    }).join('');
+  updateChargeResFromSel();
+}
+
 function updateChargeReservationInfo() {
   const carId = document.getElementById('cm-car').value;
   const date  = document.getElementById('cm-date').value;
+  const sel   = document.getElementById('cm-reservation-sel');
   const el    = document.getElementById('cm-reservation-info');
-  if (!el) return;
-  if (!carId || !date) { el.textContent = 'Selecione o carro e a data para vincular automaticamente'; return; }
+  if (!sel) return;
 
-  // Find active reservation for this car on this date
-  const res = (S.data.reservations||[]).find(function(r) {
-    return r.vehicleId === carId && r.pickupDate <= date && r.returnDate >= date;
+  // Build reservation options for this car (match by vehicleId OR vin)
+  const veh = (S.data.vehicles||[]).find(function(v){ return v.id===carId || v.vin===carId; });
+  const vehicleIds = [carId];
+  if (veh && veh.id !== carId) vehicleIds.push(veh.id);
+  if (veh && veh.vin && vehicleIds.indexOf(veh.vin)<0) vehicleIds.push(veh.vin);
+
+  // Filter reservations that include this date and match this vehicle
+  const matching = (S.data.reservations||[]).filter(function(r) {
+    const matchCar = vehicleIds.indexOf(r.vehicleId) >= 0 ||
+                     vehicleIds.some(function(vid){ return r.vehicleId&&(r.vehicleId.includes(vid)||vid.includes(r.vehicleId)); });
+    const matchDate = !date || (r.pickupDate <= date && r.returnDate >= date);
+    return matchCar;
   });
+
+  // Auto-select if there's an exact date match
+  const autoRes = date ? matching.find(function(r){ return r.pickupDate<=date && r.returnDate>=date; }) : null;
+
+  // Populate select
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="">— Nenhuma (despesa operacional) —</option>';
+  matching.sort(function(a,b){ return b.pickupDate.localeCompare(a.pickupDate); });
+  matching.forEach(function(r) {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = '#' + r.id + ' — ' + (r.fullName||'') + ' (' + fmtD(r.pickupDate) + '→' + fmtD(r.returnDate) + ')';
+    if (autoRes && r.id === autoRes.id) opt.selected = true;
+    else if (curVal === r.id) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  if (!matching.length && !date) {
+    sel.innerHTML = '<option value="">— Selecione carro e data primeiro —</option>';
+  }
+
+  if (el) {
+    if (autoRes) {
+      el.innerHTML = '<span style="color:var(--green)">✓ Data coincide com esta reserva</span>';
+    } else if (date && matching.length === 0) {
+      el.textContent = 'Nenhuma reserva para este carro';
+    } else {
+      el.textContent = '';
+    }
+  }
+}
+
+function onChargeResSel(resId) {
+  const el = document.getElementById('cm-reservation-info');
+  if (!el) return;
+  if (!resId) { el.textContent = 'Será registrado como despesa operacional'; return; }
+  const res = (S.data.reservations||[]).find(function(r){ return r.id===resId; });
   if (res) {
-    el.innerHTML = '<span style="color:var(--green)">✓ Vinculado automaticamente:</span> #' + res.id + ' — ' + (res.fullName||'') +
-      ' <span style="color:var(--muted2)">(' + fmtD(res.pickupDate) + ' → ' + fmtD(res.returnDate) + ')</span>';
-    el.dataset.resId = res.id;
-  } else {
-    el.textContent = 'Nenhuma reserva ativa nesta data para este carro';
-    delete el.dataset.resId;
+    el.innerHTML = '<span style="color:var(--green)">✓</span> ' + res.fullName + ' · ' + fmtD(res.pickupDate) + ' → ' + fmtD(res.returnDate);
   }
 }
 
@@ -4276,8 +4359,8 @@ function saveCharge() {
   const kwh      = parseFloat(document.getElementById('cm-kwh').value)  || 0;
   const location = document.getElementById('cm-location').value.trim();
   const notes    = document.getElementById('cm-notes').value.trim();
-  const resEl    = document.getElementById('cm-reservation-info');
-  const resId    = resEl ? resEl.dataset.resId : null;
+  const resSel   = document.getElementById('cm-reservation-sel');
+  const resId    = resSel ? resSel.value || null : null;
 
   if (!carId) { toast('Selecione o carro', 'err'); return; }
   if (!date)  { toast('Informe a data', 'err'); return; }
